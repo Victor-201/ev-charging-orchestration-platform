@@ -1,0 +1,518 @@
+# ══════════════════════════════════════════════════════════════════════
+# EV Charging Platform – Full Stack Docker Compose
+#
+# Run:   cd deployment/docker && docker compose up -d --build
+# Stop:  cd deployment/docker && docker compose down
+# Reset: cd deployment/docker && docker compose down -v --remove-orphans
+#
+# Port map (host → container):
+#   Kong Gateway:    8000:8000  (proxy), 8001:8001 (admin)
+#   iam-service:               3001:3001
+#   analytics-service:         3002:3002
+#   ev-infrastructure-service: 3003:3003
+#   session-service:           3004:3004
+#   billing-service:           3007:3007
+#   notification-service:      3008:3008
+#   telemetry-service:         3009:3009
+#   ocpp-gateway-service:      3010:3010 / 9001:9001
+#   RabbitMQ UI:               15672:15672
+# ══════════════════════════════════════════════════════════════════════
+
+networks:
+  ev_net:
+    driver: bridge
+    name: ev_net
+
+volumes:
+  pg_iam:          {}
+  pg_infra:        {}
+  pg_session:      {}
+  pg_billing:      {}
+  pg_analytics:    {}
+  pg_notify:       {}
+  redis_data:      {}
+  rmq_data:        {}
+  prom_data:       {}
+  grafana_data:    {}
+  clickhouse_data: {}
+
+# ── YAML Anchors ──────────────────────────────────────────────────────
+
+x-app-environment: &app-env
+  NODE_ENV:       production
+  DB_PORT:        5432
+  DB_USER:        ${PG_USER}
+  DB_PASSWORD:    ${PG_PASSWORD}
+  REDIS_HOST:     redis
+  REDIS_PORT:     6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  REDIS_DB:       0
+  RABBITMQ_URL:   amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+
+x-pg-defaults: &pg-defaults
+  image: postgres:16-alpine
+  restart: unless-stopped
+  networks: [ev_net]
+
+x-pg-health: &pg-health
+  interval: 5s
+  timeout: 5s
+  retries: 15
+  start_period: 10s
+
+x-svc-defaults: &svc-defaults
+  restart: unless-stopped
+  networks: [ev_net]
+  volumes:
+    - ./secrets:/run/secrets:ro
+
+x-svc-health: &svc-health
+  interval: 15s
+  timeout: 10s
+  retries: 8
+  start_period: 90s
+
+x-svc-depends-infra: &svc-depends-infra
+  redis:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
+
+services:
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 1 – DATABASES (one PostgreSQL instance per service)
+# ════════════════════════════════════════════════════════════════════════
+
+  postgres-iam:
+    <<: *pg-defaults
+    container_name: ev-pg-iam
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_iam_db
+    volumes:
+      - pg_iam:/var/lib/postgresql/data
+      - ../../database/schema/iam_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/iam_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_iam_db"]
+      <<: *pg-health
+
+  postgres-infra:
+    <<: *pg-defaults
+    container_name: ev-pg-infra
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_infrastructure_db
+    volumes:
+      - pg_infra:/var/lib/postgresql/data
+      - ../../database/schema/ev_infra_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/ev_infra_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_infrastructure_db"]
+      <<: *pg-health
+
+  postgres-session:
+    <<: *pg-defaults
+    container_name: ev-pg-session
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_session_db
+    volumes:
+      - pg_session:/var/lib/postgresql/data
+      - ../../database/schema/session_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/session_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_session_db"]
+      <<: *pg-health
+
+  postgres-billing:
+    <<: *pg-defaults
+    container_name: ev-pg-billing
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_billing_db
+    volumes:
+      - pg_billing:/var/lib/postgresql/data
+      - ../../database/schema/billing_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/billing_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_billing_db"]
+      <<: *pg-health
+
+  postgres-analytics:
+    <<: *pg-defaults
+    container_name: ev-pg-analytics
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_analytics_db
+    volumes:
+      - pg_analytics:/var/lib/postgresql/data
+      - ../../database/schema/analytics_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/analytics_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_analytics_db"]
+      <<: *pg-health
+
+  postgres-notification:
+    <<: *pg-defaults
+    container_name: ev-pg-notify
+    environment:
+      <<: *app-env
+      POSTGRES_USER:     ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ev_notification_db
+    volumes:
+      - pg_notify:/var/lib/postgresql/data
+      - ../../database/schema/notification_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ../../database/seeds/notification_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_notification_db"]
+      <<: *pg-health
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 2 – MESSAGE BROKER & CACHE
+# ════════════════════════════════════════════════════════════════════════
+
+  redis:
+    image: redis:7-alpine
+    container_name: ev-redis
+    restart: unless-stopped
+    networks: [ev_net]
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ev-rabbitmq
+    restart: unless-stopped
+    networks: [ev_net]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rmq_data:/var/lib/rabbitmq
+      - ../messaging/rabbitmq-definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ../messaging/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    ports:
+      - "15672:15672"   # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 2B – ANALYTICAL DATABASE
+# ════════════════════════════════════════════════════════════════════════
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: ev-clickhouse
+    restart: unless-stopped
+    networks: [ev_net]
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query='SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 3 – APPLICATION SERVICES
+# Port allocation (host = container):
+#   3001 iam | 3002 analytics | 3003 ev-infra | 3004 session
+#   3007 billing | 3008 notification | 3009 telemetry | 3010 ocpp-gw
+# ════════════════════════════════════════════════════════════════════════
+
+  iam-service:
+    build:
+      context: ../../backend/iam-service
+      dockerfile: Dockerfile
+    image: ev/iam-service:local
+    container_name: ev-iam
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:                    3001
+      DB_HOST:                 postgres-iam
+      DB_NAME:                 ev_iam_db
+      JWT_PRIVATE_KEY_PATH:    /run/secrets/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH:     /run/secrets/jwt_public.pem
+      JWT_ISSUER:              ev-iam-service
+      JWT_AUDIENCE:            ev-platform
+      JWT_EXPIRES_IN:          900s
+      JWT_REFRESH_EXPIRES_IN:  604800s
+    depends_on:
+      postgres-iam:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3001:3001"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      <<: *svc-health
+
+  analytics-service:
+    build:
+      context: ../../backend/analytics-service
+      dockerfile: Dockerfile
+    image: ev/analytics-service:local
+    container_name: ev-analytics
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3002
+      DB_HOST: postgres-analytics
+      DB_NAME: ev_analytics_db
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      JWT_ISSUER:          ev-iam-service
+      JWT_AUDIENCE:        ev-platform
+    depends_on:
+      postgres-analytics:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3002:3002"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      <<: *svc-health
+
+  ev-infrastructure-service:
+    build:
+      context: ../../backend/ev-infrastructure-service
+      dockerfile: Dockerfile
+    image: ev/ev-infrastructure-service:local
+    container_name: ev-infrastructure
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3003
+      DB_HOST: postgres-infra
+      DB_NAME: ev_infrastructure_db
+      REDIS_DB: 1
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      JWT_ISSUER:          ev-iam-service
+      JWT_AUDIENCE:        ev-platform
+    depends_on:
+      postgres-infra:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3003:3003"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3003/health || exit 1"]
+      <<: *svc-health
+
+  session-service:
+    build:
+      context: ../../backend/session-service
+      dockerfile: Dockerfile
+    image: ev/session-service:local
+    container_name: ev-session
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3004
+      DB_HOST: postgres-session
+      DB_NAME: ev_session_db
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      JWT_ISSUER:          ev-iam-service
+      JWT_AUDIENCE:        ev-platform
+    depends_on:
+      postgres-session:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3004:3004"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3004/health || exit 1"]
+      <<: *svc-health
+
+  billing-service:
+    build:
+      context: ../../backend/billing-service
+      dockerfile: Dockerfile
+    image: ev/billing-service:local
+    container_name: ev-billing
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3007
+      DB_HOST: postgres-billing
+      DB_NAME: ev_billing_db
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      JWT_ISSUER:          ev-iam-service
+      JWT_AUDIENCE:        ev-platform
+      # URL nội bộ → ev-infrastructure-service (tính phí TOU + Idle Fee)
+      EV_INFRA_BASE_URL: http://ev-infrastructure:3003
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+      ev-infrastructure-service:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3007:3007"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3007/health || exit 1"]
+      <<: *svc-health
+
+  notification-service:
+    build:
+      context: ../../backend/notification-service
+      dockerfile: Dockerfile
+    image: ev/notification-service:local
+    container_name: ev-notify
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3008
+      DB_HOST: postgres-notification
+      DB_NAME: ev_notification_db
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
+      JWT_ISSUER:          ev-iam-service
+      JWT_AUDIENCE:        ev-platform
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3008:3008"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3008/health || exit 1"]
+      <<: *svc-health
+
+  telemetry-ingestion-service:
+    build:
+      context: ../../backend/telemetry-ingestion-service
+      dockerfile: Dockerfile
+    image: ev/telemetry-ingestion-service:local
+    container_name: ev-telemetry
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:             3009
+      CLICKHOUSE_HOST:  clickhouse
+      CLICKHOUSE_PORT:  8123
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      <<: *svc-depends-infra
+    ports: ["3009:3009"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3009/health || exit 1"]
+      <<: *svc-health
+
+  ocpp-gateway-service:
+    build:
+      context: ../../backend/ocpp-gateway-service
+      dockerfile: Dockerfile
+    image: ev/ocpp-gateway-service:local
+    container_name: ev-ocpp-gw
+    <<: *svc-defaults
+    environment:
+      <<: *app-env
+      PORT:    3010
+      WS_PORT: 9001
+    depends_on:
+      <<: *svc-depends-infra
+    ports: ["3010:3010", "9001:9001"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3010/health || exit 1"]
+      <<: *svc-health
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 4 – API GATEWAY
+# ════════════════════════════════════════════════════════════════════════
+
+  kong:
+    image: kong:3.6-ubuntu
+    container_name: ev-kong
+    restart: unless-stopped
+    networks: [ev_net]
+    environment:
+      KONG_DATABASE:           "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_LISTEN:       "0.0.0.0:8000"
+      KONG_ADMIN_LISTEN:       "0.0.0.0:8001"
+      KONG_PROXY_ACCESS_LOG:   /dev/stdout
+      KONG_ADMIN_ACCESS_LOG:   /dev/stdout
+      KONG_PROXY_ERROR_LOG:    /dev/stderr
+      KONG_ADMIN_ERROR_LOG:    /dev/stderr
+      KONG_LOG_LEVEL:          warn
+    volumes:
+      - ../gateway/kong.yml:/etc/kong/kong.yml:ro
+    ports:
+      - "8000:8000"   # Proxy
+      - "8001:8001"   # Admin API
+    depends_on:
+      iam-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+# ════════════════════════════════════════════════════════════════════════
+# LAYER 5 – OBSERVABILITY (opt-in via --profile observability)
+#
+# Usage: docker compose --profile observability up -d
+# ════════════════════════════════════════════════════════════════════════
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: ev-prometheus
+    restart: unless-stopped
+    networks: [ev_net]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom_data:/prometheus
+    ports: ["9090:9090"]
+    profiles: ["observability"]
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: ev-grafana
+    restart: unless-stopped
+    networks: [ev_net]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["9091:3000"]
+    depends_on: [prometheus]
+    profiles: ["observability"]
