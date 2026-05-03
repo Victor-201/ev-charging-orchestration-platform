@@ -1,0 +1,115 @@
+import { DomainEvent } from './domain-event.base';
+
+// ─── session.booking_created_v1 ──────────────────────────────────────────────────────────
+
+export class BookingCreatedEvent extends DomainEvent {
+  readonly eventType = 'session.booking_created_v1';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly startTime: Date,
+    public readonly endTime: Date,
+  ) {
+    super();
+  }
+}
+
+// ─── Deposit Requested (auto-trigger sau khi booking.create) ──────────────────
+
+export class SessionReservedEvent extends DomainEvent {
+  readonly eventType = 'session.reserved_v1';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly depositAmount: number,
+  ) {
+    super();
+  }
+}
+
+// ─── Booking Confirmed (auto sau khi payment thành công) ──────────────────────
+
+export class BookingConfirmedEvent extends DomainEvent {
+  readonly eventType = 'booking.confirmed';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly qrToken: string,
+    public readonly depositAmount: number,
+    public readonly startTime: Date,
+    public readonly endTime: Date,
+  ) {
+    super();
+  }
+}
+
+// ─── Booking Cancelled (hoàn 100% deposit vào ví) ────────────────────────────
+
+export class BookingCancelledEvent extends DomainEvent {
+  readonly eventType = 'booking.cancelled';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly reason: string,
+    public readonly depositTransactionId: string | null,
+    public readonly refundAmount: number,
+  ) {
+    super();
+  }
+}
+
+// ─── Booking Completed (QR đã quét, session bắt đầu) ────────────────────────
+
+export class BookingCompletedEvent extends DomainEvent {
+  readonly eventType = 'booking.completed';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly depositAmount: number,
+    public readonly depositTransactionId: string | null,
+  ) {
+    super();
+  }
+}
+
+// ─── Booking Expired (5 phút không thanh toán) ───────────────────────────────
+
+export class BookingExpiredEvent extends DomainEvent {
+  readonly eventType = 'booking.expired';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+  ) {
+    super();
+  }
+}
+
+// ─── Booking No-Show (phạt 20% deposit) ──────────────────────────────────────
+
+export class BookingNoShowEvent extends DomainEvent {
+  readonly eventType = 'booking.no_show';
+
+  constructor(
+    public readonly bookingId: string,
+    public readonly userId: string,
+    public readonly chargerId: string,
+    public readonly penaltyAmount: number,
+    public readonly refundAmount: number,
+    public readonly depositTransactionId: string | null,
+  ) {
+    super();
+  }
+}
+
