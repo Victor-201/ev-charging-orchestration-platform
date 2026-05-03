@@ -13,3 +13,6 @@ yarn-error.log
 
 # MacOS
 .DS_Store
+
+# Secrets
+backend/notification-service/secrets/*.json
