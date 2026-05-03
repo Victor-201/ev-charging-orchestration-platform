@@ -1,0 +1,72 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: ev-platform
+
+scrape_configs:
+
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["ev-auth:3001"]
+    metrics_path: /metrics
+
+  - job_name: "analytics-service"
+    static_configs:
+      - targets: ["ev-analytics:3002"]
+    metrics_path: /metrics
+
+  - job_name: "station-service"
+    static_configs:
+      - targets: ["ev-station:3003"]
+    metrics_path: /metrics
+
+  - job_name: "booking-service"
+    static_configs:
+      - targets: ["ev-booking:3004"]
+    metrics_path: /metrics
+
+  - job_name: "user-service"
+    static_configs:
+      - targets: ["ev-user:3005"]
+    metrics_path: /metrics
+
+  - job_name: "charging-service"
+    static_configs:
+      - targets: ["ev-charging:3006"]
+    metrics_path: /metrics
+
+  - job_name: "payment-service"
+    static_configs:
+      - targets: ["ev-payment:3007"]
+    metrics_path: /metrics
+
+  - job_name: "notification-service"
+    static_configs:
+      - targets: ["ev-notify:3008"]
+    metrics_path: /metrics
+
+  - job_name: "telemetry-ingestion-service"
+    static_configs:
+      - targets: ["ev-telemetry:3009"]
+    metrics_path: /metrics
+
+  - job_name: "kong"
+    static_configs:
+      - targets: ["ev-kong:8001"]
+    metrics_path: /metrics
+
+  - job_name: "rabbitmq"
+    static_configs:
+      - targets: ["ev-rabbitmq:15692"]
+    metrics_path: /metrics
+
+  - job_name: "ocpp-gateway-service"
+    static_configs:
+      - targets: ["ev-ocpp-gw:3010"]
+    metrics_path: /metrics
+
+  - job_name: "clickhouse"
+    static_configs:
+      - targets: ["ev-clickhouse:9363"]   # clickhouse-exporter port
+    metrics_path: /metrics
