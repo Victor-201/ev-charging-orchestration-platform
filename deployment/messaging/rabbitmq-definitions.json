@@ -1,0 +1,278 @@
+{
+  "rabbit_version": "3.13.0",
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "ev_user",
+      "password_hash": "fqz6qpjHBDQbU/51Hs37DXtWaKDo0dfLwf/VB0/sc6GvfIkw",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"],
+      "limits": {}
+    }
+  ],
+  "permissions": [
+    {
+      "user": "ev_user",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "ev.charging",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "ev.charging.dlx",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "notification.booking.created",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-dead-letter-routing-key": "dlq.notification.booking.created",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification.booking.cancelled",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-dead-letter-routing-key": "dlq.notification.booking.cancelled",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification.booking.completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-dead-letter-routing-key": "dlq.notification.booking.completed",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification.payment.success",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification.charging.started",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "notification.charging.completed",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "booking.slot.available",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "booking.post-cancel-queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "booking.post-complete-queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "analytics.booking.all",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "analytics.payment.all",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "analytics.session.all",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ev.charging.dlx"
+      }
+    },
+    {
+      "name": "dlq.all",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.booking.created",
+      "destination_type": "queue",
+      "routing_key": "booking.created",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.booking.cancelled",
+      "destination_type": "queue",
+      "routing_key": "booking.cancelled",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.booking.completed",
+      "destination_type": "queue",
+      "routing_key": "booking.completed",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.payment.success",
+      "destination_type": "queue",
+      "routing_key": "payment.success",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.charging.started",
+      "destination_type": "queue",
+      "routing_key": "charging.started",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "notification.charging.completed",
+      "destination_type": "queue",
+      "routing_key": "charging.completed",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "booking.slot.available",
+      "destination_type": "queue",
+      "routing_key": "slot.available",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "booking.post-cancel-queue",
+      "destination_type": "queue",
+      "routing_key": "booking.cancelled",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "booking.post-complete-queue",
+      "destination_type": "queue",
+      "routing_key": "booking.completed",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "analytics.booking.all",
+      "destination_type": "queue",
+      "routing_key": "booking.#",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "analytics.payment.all",
+      "destination_type": "queue",
+      "routing_key": "payment.#",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging",
+      "vhost": "/",
+      "destination": "analytics.session.all",
+      "destination_type": "queue",
+      "routing_key": "charging.#",
+      "arguments": {}
+    },
+    {
+      "source": "ev.charging.dlx",
+      "vhost": "/",
+      "destination": "dlq.all",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    }
+  ]
+}
