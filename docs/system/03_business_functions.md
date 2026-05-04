@@ -1,8 +1,5 @@
 # Business Functions — EV Charging Platform
 
-> Reverse-engineered from controllers, use-cases, domain aggregates, and event consumers.
-
----
 # IAM Service
 
 ## [01] Đăng ký tài khoản
@@ -105,6 +102,7 @@
   3. OCPP Gateway dùng MAC để tự start session khi xe cắm
 
 ---
+
 # Infrastructure Service (Station)
 
 ## [10] Quản lý Trạm sạc (CRUD)
@@ -174,6 +172,7 @@
   3. Khi trạm bảo trì: charger tự động OFFLINE
 
 ---
+
 # Session Service (Booking & Charging)
 
 ## [16] Đặt lịch sạc (Booking)
@@ -270,6 +269,7 @@
   3. Publish tới ev.telemetry exchange → analytics
 
 ---
+
 # Billing Service (Payment & Wallet)
 
 ## [24] Nạp tiền vào Ví (VNPay)
@@ -356,6 +356,7 @@
   4. set end_date = NOW() + duration_days
 
 ---
+
 # Notification Service
 
 ## [31] Gửi thông báo đa kênh
@@ -403,6 +404,7 @@
   3. Upsert notification_preferences per user
 
 ---
+
 # Analytics Service
 
 ## [35] Thu thập & Tổng hợp Events
@@ -459,6 +461,7 @@
   3. daily breakdown N ngày gần nhất
 
 ---
+
 # Telemetry Ingestion Service
 
 ## [40] Thu thập Telemetry từ Charger
@@ -474,6 +477,7 @@
   5. analytics-service consume → cập nhật hourly stats
 
 ---
+
 # OCPP Gateway Service
 
 ## [41] Quản lý kết nối Charger qua OCPP 1.6
@@ -491,6 +495,7 @@
   7. StartTransaction/StopTransaction: charger confirm → publish events
 
 ---
+
 # Event Flow Summary (RabbitMQ)
 
 ```
