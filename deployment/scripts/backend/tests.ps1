@@ -38,7 +38,7 @@ Write-Host "========================================================"
 Write-Host ""
 
 foreach ($svc in $services) {
-    $backendDir = Resolve-Path (Join-Path $PSScriptRoot "..\..\backend")
+    $backendDir = Resolve-Path (Join-Path $PSScriptRoot "..\..\..\backend")
     $dir        = Join-Path $backendDir $svc
     $jestBin    = Join-Path $dir "node_modules\.bin\jest.cmd"
 

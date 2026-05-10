@@ -13,7 +13,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ComposeDir = Join-Path $ScriptDir "..\docker"
+$ComposeDir = Join-Path $ScriptDir "..\..\docker"
 $ComposeFile = Join-Path $ComposeDir "docker-compose.yml"
 $EnvFile    = Join-Path $ComposeDir ".env"
 

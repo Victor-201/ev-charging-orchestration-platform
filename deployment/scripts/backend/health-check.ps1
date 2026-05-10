@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # ==============================================================================
-# health-check.ps1 - Print health status of all platform services
+# health-check.ps1 - Kiem tra trang thai toan bo platform services
 # ==============================================================================
 
 $ErrorActionPreference = 'Stop'
@@ -21,7 +21,7 @@ $SERVICES = [ordered]@{
 
 Write-Host ""
 Write-Host "==============================================="
-Write-Host "  EV Charging Platform - Trạng thái hệ thống"
+Write-Host "  EV Charging Platform - Trang thai he thong"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -36,7 +36,7 @@ function Check-Http {
             Write-Host "  [OK]  $($Name.PadRight(30)) $Url" -ForegroundColor Green
             $script:PASS++
         } else {
-            Write-Host "  [LỖI] $($Name.PadRight(30)) $Url  (HTTP $($res.StatusCode))" -ForegroundColor Red
+            Write-Host "  [LOI] $($Name.PadRight(30)) $Url  (HTTP $($res.StatusCode))" -ForegroundColor Red
             $script:FAIL++
         }
     } catch {
@@ -44,18 +44,17 @@ function Check-Http {
         if ($_.Exception -is [System.Net.WebException] -and $null -ne $_.Exception.Response) {
             $actual = [int]$_.Exception.Response.StatusCode
         }
-        
         if ($actual -match "^(401|403|404)$") {
              Write-Host "  [OK]  $($Name.PadRight(30)) $Url" -ForegroundColor Green
              $script:PASS++
         } else {
-             Write-Host "  [LỖI] $($Name.PadRight(30)) $Url  (HTTP $actual)" -ForegroundColor Red
+             Write-Host "  [LOI] $($Name.PadRight(30)) $Url  (HTTP $actual)" -ForegroundColor Red
              $script:FAIL++
         }
     }
 }
 
-Write-Host "  Trạng thái Container:"
+Write-Host "  Trang thai Container:"
 $CONTAINERS = @(
   "ev-iam", "ev-analytics", "ev-infrastructure", "ev-session",
   "ev-billing", "ev-notify", "ev-telemetry", "ev-ocpp-gw",
@@ -69,28 +68,41 @@ foreach ($c in $CONTAINERS) {
     if ($runningContainers -match "(?m)^$c$") {
         $status = (docker inspect --format="{{.State.Status}}" $c) 2>$null
         $health = (docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}" $c) 2>$null
-        
         if ($status -eq "running") {
             Write-Host "  [>]   $($c.PadRight(30)) status=$($status.PadRight(10)) health=$health" -ForegroundColor Green
         } else {
             Write-Host "  [!]   $($c.PadRight(30)) status=$($status.PadRight(10)) health=$health" -ForegroundColor Red
         }
     } else {
-        Write-Host "  [?]   $($c.PadRight(30)) (không chạy)" -ForegroundColor Yellow
+        Write-Host "  [?]   $($c.PadRight(30)) (khong chay)" -ForegroundColor Yellow
     }
 }
 
 Write-Host ""
-Write-Host "  Các điểm kết nối HTTP (Endpoints):"
+Write-Host "  Cac diem ket noi HTTP (Endpoints):"
 foreach ($key in $SERVICES.Keys) {
     Check-Http -Name $key -Url $SERVICES[$key]
 }
 
+# Kiem tra ngrok tunnel
+Write-Host ""
+Write-Host "  Ngrok Tunnel:"
+try {
+    $ngrok = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" -ErrorAction Stop -TimeoutSec 3
+    $tunnel = ($ngrok.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -First 1).public_url
+    if ($tunnel) {
+        Write-Host "  [OK]  ngrok                          $tunnel" -ForegroundColor Green
+    } else {
+        Write-Host "  [---] ngrok                          Khong co tunnel HTTPS" -ForegroundColor DarkGray
+    }
+} catch {
+    Write-Host "  [---] ngrok                          Khong chay (localhost:4040 khong phan hoi)" -ForegroundColor DarkGray
+}
+
 Write-Host ""
 Write-Host "==============================================="
-Write-Host "  Kết quả: $PASS TỐT  $FAIL LỖI"
+Write-Host "  Ket qua: $PASS TOT  $FAIL LOI"
 Write-Host "==============================================="
 Write-Host ""
 
 if ($FAIL -gt 0) { exit 1 } else { exit 0 }
-

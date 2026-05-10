@@ -13,7 +13,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ComposeDir  = Join-Path $ScriptDir "..\docker"
+$ComposeDir  = Join-Path $ScriptDir "..\..\docker"
 $ComposeFile = Join-Path $ComposeDir "docker-compose.yml"
 $EnvFile     = Join-Path $ComposeDir ".env"
 
@@ -119,7 +119,7 @@ Write-Host "    telemetry         -> http://localhost:3009/health"
 Write-Host "    ocpp-gateway      -> http://localhost:3010/health"
 Write-Host ""
 Write-Host "  Lenh ho tro:" -ForegroundColor Cyan
-Write-Host "    Test He Thong:  .\deployment\scripts\smoke-test.ps1"
-Write-Host "    Kiem tra API:   .\deployment\scripts\health-check.ps1"
-Write-Host "    Chay Unit Test: .\deployment\scripts\tests.ps1"
+Write-Host "    Test He Thong:  .\deployment\scripts\backend\smoke-test.ps1"
+Write-Host "    Kiem tra API:   .\deployment\scripts\backend\health-check.ps1"
+Write-Host "    Chay Unit Test: .\deployment\scripts\backend\tests.ps1"
 Write-Host ""
