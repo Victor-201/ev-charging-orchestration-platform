@@ -1,122 +1,116 @@
-# Hướng Dẫn Sử Dụng Scripts Triển Khai (Deployment Scripts)
+# Huong Dan Su Dung Scripts Trien Khai (Deployment Scripts)
 
-Tài liệu này hướng dẫn cách sử dụng bộ công cụ tự động hóa PowerShell (`.ps1`) trong thư mục `deployment/scripts/` để khởi chạy, kiểm tra, dừng và reset toàn bộ hệ thống EV Charging Microservices.
+Tai lieu nay huong dan toan bo bo cong cu tu dong hoa PowerShell (`.ps1`) trong thu muc `deployment/scripts/` de quan ly **backend microservices** (Docker) va **frontend Flutter mobile app**.
 
-> **Yêu cầu:** PowerShell 5.1+ (Windows) hoặc PowerShell 7+ (pwsh). Docker Desktop phải đang chạy.
-> Nếu bị chặn bởi Execution Policy, chạy lệnh sau một lần: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-
----
-
-## Tổng Quan Các Scripts
-
-| Script                  | Mục đích                                           | Tham số chính                  |
-| ----------------------- | -------------------------------------------------- | ------------------------------ |
-| `start.ps1`             | Khởi chạy toàn bộ hệ thống                         | `-Rebuild`                     |
-| `stop.ps1`              | Dừng hệ thống                                      | `-Clean`                       |
-| `reset.ps1`             | Xóa sạch và khởi chạy lại từ đầu                   | `-Force`                       |
-| `health-check.ps1`      | Kiểm tra trạng thái tất cả containers và endpoints | _(không có)_                   |
-| `logs.ps1`              | Xem log hệ thống linh hoạt (hỗ trợ nhiều terminal) | `-Service`, `-All`, `-AllApps` |
-| `smoke-test.ps1`        | Test tích hợp qua API Gateway (Kong)               | `[GatewayUrl]`                 |
-| `tests.ps1`             | Chạy Unit Test toàn bộ 8 microservices             | `-Coverage`, `-Pattern`        |
-| `validate-rabbitmq.ps1` | Kiểm tra Zero-Loss messaging (RabbitMQ DLQ)        | _(không có)_                   |
+> **Yeu cau chung:**
+>
+> - PowerShell 5.1+ (Windows) hoac PowerShell 7+ (`pwsh`)
+> - Neu bi chan boi Execution Policy, chay mot lan: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+> - Tat ca lenh chay tu **thu muc goc du an** (`ev-charging-orchestration-platform/`)
 
 ---
 
-## 1. Khởi Chạy Hệ Thống (`start.ps1`)
+## PHAN 1 - BACKEND (Docker Microservices)
 
-Khởi chạy toàn bộ hạ tầng (Docker containers, Volumes, Networks) và chờ cho đến khi 18 containers chuyển sang trạng thái `healthy`.
+> **Yeu cau them:** Docker Desktop dang chay.
 
-**Cú pháp:**
+### Tong Quan
+
+| Script                  | Muc dich                              | Tham so chinh                  |
+| ----------------------- | ------------------------------------- | ------------------------------ |
+| `start.ps1`             | Khoi chay he thong Docker Compose     | `-Rebuild`, `-Ngrok`           |
+| `stop.ps1`              | Dung he thong + dung ngrok            | `-Clean`                       |
+| `reset.ps1`             | Xoa sach + restart tu dau             | `-Force`                       |
+| `health-check.ps1`      | Kiem tra trang thai services + ngrok  | _(khong co)_                   |
+| `logs.ps1`              | Xem log container linh hoat           | `-Service`, `-All`, `-AllApps` |
+| `smoke-test.ps1`        | Test tich hop qua API Gateway         | `-Gateway <URL>`               |
+| `tests.ps1`             | Chay Unit Test 8 microservices        | `-Coverage`, `-Pattern`        |
+| `validate-rabbitmq.ps1` | Kiem tra Zero-Loss RabbitMQ DLQ       | _(khong co)_                   |
+| `clickhouse-check.ps1`  | Kiem tra nhanh ClickHouse + telemetry | `-Url`, `-Detail`              |
+
+---
+
+### 1.1. Khoi Chay He Thong (`start.ps1`)
+
+Khoi chay toan bo ha tang (Docker containers, Volumes, Networks) va cho 18 containers chuyen sang trang thai `healthy`.
+Mac dinh khong chay ngrok. Them `-Ngrok` de bat tunnel.
+
+**Ngrok static domain:** `https://impeditive-incredible-jordy.ngrok-free.dev`
 
 ```powershell
-.\deployment\scripts\start.ps1 [-Rebuild]
+.\deployment\scripts\backend\start.ps1              # Khoi dong binh thuong (khong ngrok)
+.\deployment\scripts\backend\start.ps1 -Rebuild     # Force rebuild toan bo image
+.\deployment\scripts\backend\start.ps1 -Ngrok       # Khoi dong + chay ngrok tunnel
+.\deployment\scripts\backend\start.ps1 -Rebuild -Ngrok  # Rebuild va chay ngrok
 ```
 
-| Lệnh                                      | Mô tả                                               |
-| ----------------------------------------- | --------------------------------------------------- |
-| `.\deployment\scripts\start.ps1`          | Chạy bình thường (build image nếu có thay đổi)      |
-| `.\deployment\scripts\start.ps1 -Rebuild` | Ép build lại toàn bộ image, bỏ qua Docker cache     |
+**Quy trinh start.ps1:**
 
-Script tự động polling từng container, timeout tối đa **120 giây/container**.
+1. Tat container cu (giai phong port)
+2. Build image (neu `-Rebuild`)
+3. Khoi dong Docker Compose
+4. _(Tuy chon - neu co `-Ngrok`)_ Kill ngrok cu → khoi dong ngrok → xac nhan tunnel qua `localhost:4040`
+5. Poll health check tung container, timeout 120 giay/container
+
+> **Yeu cau ngrok (chi khi dung `-Ngrok`):** Cai dat ngrok va dang nhap: `ngrok config add-authtoken <token>`
+> Tai ve tai: https://ngrok.com/download
 
 ---
 
-## 2. Dừng Hệ Thống (`stop.ps1`)
-
-Tắt hệ thống microservices một cách gọn gàng.
-
-**Cú pháp:**
+### 1.2. Dung He Thong (`stop.ps1`)
 
 ```powershell
-.\deployment\scripts\stop.ps1 [-Clean]
+.\deployment\scripts\backend\stop.ps1          # Dung containers + dung ngrok, giu volumes
+.\deployment\scripts\backend\stop.ps1 -Clean   # Dung + XOA VINH VIEN tat ca Volumes
 ```
 
-| Lệnh                                   | Mô tả                                                          |
-| -------------------------------------- | -------------------------------------------------------------- |
-| `.\deployment\scripts\stop.ps1`        | Dừng containers, giữ nguyên Volumes (dữ liệu DB được bảo toàn) |
-| `.\deployment\scripts\stop.ps1 -Clean` | Dừng và **XÓA VĨNH VIỄN** tất cả Volumes                       |
+Script tu dong tat process `ngrok` neu dang chay.
 
 ---
 
-## 3. Reset Toàn Hệ Thống (`reset.ps1`)
+### 1.3. Reset Toan He Thong (`reset.ps1`)
 
-"Nút hạt nhân" — xóa sạch toàn bộ hệ thống rồi tự động build và chạy lại từ đầu. Dùng khi hệ thống kẹt lỗi nặng hoặc cần một môi trường demo hoàn toàn mới.
-
-**Cú pháp:**
+"Nut hat nhan" - xoa sach + build lai + chay lai tu dau. Tuong duong `stop.ps1 -Clean -> start.ps1 -Rebuild`.
 
 ```powershell
-.\deployment\scripts\reset.ps1 [-Force]
-```
-
-Script sẽ hỏi xác nhận `[y/N]` trước khi thực thi. Tương đương chạy tuần tự:
-
-```
-stop.ps1 -Clean  →  start.ps1 -Rebuild
+.\deployment\scripts\backend\reset.ps1          # Hoi xac nhan [y/N]
+.\deployment\scripts\backend\reset.ps1 -Force   # Khong hoi, thuc thi ngay
 ```
 
 ---
 
-## 4. Kiểm Tra Sức Khỏe (`health-check.ps1`)
+### 1.4. Kiem Tra Suc Khoe (`health-check.ps1`)
 
-Đánh giá trạng thái thực tế của toàn hệ thống ở 2 cấp độ: **Docker Container Status** và **HTTP API Status**.
-
-**Cú pháp:**
+Danh gia trang thai o 2 cap: Docker Container Status + HTTP API Status. Kiem tra them ngrok tunnel.
 
 ```powershell
-.\deployment\scripts\health-check.ps1
+.\deployment\scripts\backend\health-check.ps1
 ```
 
-**Kết quả:**
+**Ket qua:**
 
-- Kiểm tra 18 containers (`ev-pg-*`, `ev-redis`, `ev-rabbitmq`, `ev-kong`, 8 app services).
-- Gọi HTTP đến `/health` của 8 microservices, RabbitMQ UI và Kong Admin.
-- In ra tổng kết `N OK / M FAIL`, trả về exit code `1` nếu có lỗi.
+- Kiem tra 11 HTTP endpoints (8 services + Kong + Kong Admin + RabbitMQ)
+- Kiem tra ngrok tunnel qua `http://localhost:4040/api/tunnels`
+- Kiem tra 18 containers (trang thai + health)
+- In `N TOT  M LOI`, exit code `1` neu co loi
 
 ---
 
-## 5. Xem Log Hệ Thống (`logs.ps1`)
-
-Tiện ích xem log linh hoạt, hỗ trợ realtime (`-f`) theo dõi tất cả 18 container trong hệ thống (App, DB, Infra) cùng lúc trên các cửa sổ riêng biệt để dễ debug.
-
-**Cú pháp:**
+### 1.5. Xem Log He Thong (`logs.ps1`)
 
 ```powershell
-.\deployment\scripts\logs.ps1 [-Service <tên>] [-All] [-AllApps] [-AllInfra] [-AllDb] [-AllSystemSplit] [-NoFollow] [-Tail <số_dòng>]
+.\deployment\scripts\backend\logs.ps1 -Service ev-iam            # 1 service, terminal hien tai
+.\deployment\scripts\backend\logs.ps1 -Service ev-iam,ev-pg-iam  # Nhieu services -> nhieu cua so
+.\deployment\scripts\backend\logs.ps1 -AllApps                   # 8 cua so cho 8 app services
+.\deployment\scripts\backend\logs.ps1 -AllInfra                  # 4 cua so (kong, redis, rmq, ch)
+.\deployment\scripts\backend\logs.ps1 -AllDb                     # 6 cua so PostgreSQL
+.\deployment\scripts\backend\logs.ps1 -AllSystemSplit            # 18 cua so toan bo he thong
+.\deployment\scripts\backend\logs.ps1 -All                       # Gop tat ca vao 1 man hinh
+.\deployment\scripts\backend\logs.ps1 -Service ev-iam -NoFollow  # In roi dung
+.\deployment\scripts\backend\logs.ps1 -Service ev-iam -Tail 500  # 500 dong cuoi
 ```
 
-| Lệnh                                                      | Mô tả                                                                         |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `.\deployment\scripts\logs.ps1 -Service ev-kong`          | Xem realtime log 1 service trên terminal hiện tại                             |
-| `.\deployment\scripts\logs.ps1 -Service ev-iam,ev-pg-iam` | Xem realtime nhiều service, tự động mở ra **các cửa sổ terminal riêng biệt**  |
-| `.\deployment\scripts\logs.ps1 -AllApps`                  | Tự động mở **8 cửa sổ riêng biệt** cho 8 app services                         |
-| `.\deployment\scripts\logs.ps1 -AllInfra`                 | Tự động mở **4 cửa sổ riêng biệt** cho hạ tầng (kong, redis, rmq, clickhouse) |
-| `.\deployment\scripts\logs.ps1 -AllDb`                    | Tự động mở **6 cửa sổ riêng biệt** cho các database PostgreSQL                |
-| `.\deployment\scripts\logs.ps1 -AllSystemSplit`           | Tự động mở **18 cửa sổ riêng biệt** cho TOÀN BỘ hệ thống!                     |
-| `.\deployment\scripts\logs.ps1 -All`                      | Gộp tất cả log của toàn hệ thống chung vào 1 màn hình lớn                     |
-
-_(Mặc định logs luôn ở dạng **realtime** (`-f` / follow) và hiển thị `100` dòng cuối. Bạn có thể dùng `-NoFollow` để chỉ in ra rồi dừng, hoặc `-Tail 500` để xem nhiều dòng hơn)_
-
-**Danh sách 18 Container hỗ trợ:**
+**18 Container ho tro:**
 
 - **App (8):** `ev-iam`, `ev-analytics`, `ev-infrastructure`, `ev-session`, `ev-billing`, `ev-notify`, `ev-telemetry`, `ev-ocpp-gw`
 - **Infra (4):** `ev-kong`, `ev-redis`, `ev-rabbitmq`, `ev-clickhouse`
@@ -124,152 +118,327 @@ _(Mặc định logs luôn ở dạng **realtime** (`-f` / follow) và hiển th
 
 ---
 
-## 6. Test Tích Hợp — Smoke Test (`smoke-test.ps1`)
+### 1.6. Smoke Test (`smoke-test.ps1`)
 
-Đóng vai trò như một client bên ngoài (Web/Mobile App). Gửi HTTP request qua API Gateway (Kong - `http://localhost:8000`) để đảm bảo routing và auth guard hoạt động đúng.
-
-**Cú pháp:**
+Dong vai client ben ngoai, gui HTTP qua API Gateway (Kong) de kiem tra routing va auth guard.
 
 ```powershell
-.\deployment\scripts\smoke-test.ps1 [-Gateway <URL>]
+.\deployment\scripts\backend\smoke-test.ps1                                # Gateway mac dinh localhost:8000
+.\deployment\scripts\backend\smoke-test.ps1 -Gateway "http://staging:8000" # Gateway tuy chinh
+# Test qua ngrok (thiet bi that)
+.\deployment\scripts\backend\smoke-test.ps1 -Gateway "https://impeditive-incredible-jordy.ngrok-free.dev"
 ```
 
-| Lệnh                                                                 | Mô tả                                             |
-| -------------------------------------------------------------------- | ------------------------------------------------- |
-| `.\deployment\scripts\smoke-test.ps1`                                | Test qua gateway mặc định `http://localhost:8000` |
-| `.\deployment\scripts\smoke-test.ps1 -Gateway "http://staging:8000"` | Test qua gateway tùy chỉnh                        |
+**Endpoints duoc test:**
 
-**Các endpoint được test:**
-
-| Service        | Endpoint                                     | Expected |
-| -------------- | -------------------------------------------- | -------- |
-| IAM            | `POST /api/v1/auth/register` (missing body)  | `400`    |
-| IAM            | `POST /api/v1/auth/login` (missing creds)    | `400`    |
-| IAM            | `GET /api/v1/users/me` (no token)            | `401`    |
-| Infrastructure | `GET /api/v1/stations` (public list)         | `200`    |
-| Session        | `POST /api/v1/bookings` (no token)           | `401`    |
-| Session        | `POST /api/v1/charging/start` (no token)     | `401`    |
-| Billing        | `GET /api/v1/wallets/balance` (no token)     | `401`    |
-| Billing        | `POST /api/v1/payments/pay` (no token)       | `401`    |
-| Notification   | `GET /api/v1/notifications` (no token)       | `401`    |
-| Analytics      | `GET /api/v1/analytics/dashboard` (no token) | `401`    |
-| Telemetry      | `POST /api/v1/telemetry/ingest` (missing body) | `400`  |
-| OCPP Gateway   | `GET /api/v1/ocpp/health`                    | `200`    |
-| Kong Admin     | `GET http://localhost:8001`                  | `200`    |
-| RabbitMQ UI    | `GET http://localhost:15672`                 | `200`    |
+| Service        | Endpoint                                       | Expected |
+| -------------- | ---------------------------------------------- | -------- |
+| IAM            | `POST /api/v1/auth/register` (missing body)    | `400`    |
+| IAM            | `POST /api/v1/auth/login` (missing creds)      | `400`    |
+| IAM            | `GET /api/v1/users/me` (no token)              | `401`    |
+| Infrastructure | `GET /api/v1/stations` (public)                | `200`    |
+| Session        | `POST /api/v1/bookings` (no token)             | `401`    |
+| Session        | `POST /api/v1/charging/start` (no token)       | `401`    |
+| Billing        | `GET /api/v1/wallets/balance` (no token)       | `401`    |
+| Billing        | `POST /api/v1/payments/pay` (no token)         | `401`    |
+| Notification   | `GET /api/v1/notifications` (no token)         | `401`    |
+| Analytics      | `GET /api/v1/analytics/dashboard` (no token)   | `401`    |
+| Telemetry      | `POST /api/v1/telemetry/ingest` (missing body) | `400`    |
+| OCPP Gateway   | `GET /api/v1/ocpp/health`                      | `200`    |
+| Kong Admin     | `GET http://localhost:8001`                    | `200`    |
+| RabbitMQ UI    | `GET http://localhost:15672`                   | `200`    |
 
 ---
 
-## 7. Chạy Unit Test (`tests.ps1`)
+### 1.7. Unit Test (`tests.ps1`)
 
-Duyệt qua toàn bộ 8 thư mục backend microservices, chạy `jest` trên từng dịch vụ, và tổng hợp báo cáo Pass/Fail.
-
-**Cú pháp:**
+Duyet qua 8 thu muc backend, chay `jest`, tong hop Pass/Fail.
 
 ```powershell
-.\deployment\scripts\tests.ps1 [-Coverage] [-Pattern <TenFile>]
+.\deployment\scripts\backend\tests.ps1                     # Toan bo test suite
+.\deployment\scripts\backend\tests.ps1 -Coverage           # Kem bao cao code coverage
+.\deployment\scripts\backend\tests.ps1 -Pattern "booking"  # Chi test file khop pattern
 ```
 
-| Lệnh                                                | Mô tả                               |
-| --------------------------------------------------- | ----------------------------------- |
-| `.\deployment\scripts\tests.ps1`                    | Chạy toàn bộ Unit Test Suite        |
-| `.\deployment\scripts\tests.ps1 -Coverage`          | Chạy kèm báo cáo Code Coverage      |
-| `.\deployment\scripts\tests.ps1 -Pattern "booking"` | Chạy chỉ các file test khớp pattern |
+> Script bo qua (`SKIP`) service chua co `node_modules` hoac chua co file `*.spec.ts`.
 
-> **Lưu ý:** Script bỏ qua (`SKIP`) các service chưa cài `node_modules` hoặc chưa có file `*.spec.ts`.
-
-**Danh sách services được test:**
-
-```
-iam-service
-ev-infrastructure-service
-session-service
-billing-service
-notification-service
-analytics-service
-telemetry-ingestion-service
-ocpp-gateway-service
-```
+**Services duoc test:** `iam-service`, `ev-infrastructure-service`, `session-service`, `billing-service`, `notification-service`, `analytics-service`, `telemetry-ingestion-service`, `ocpp-gateway-service`
 
 ---
 
-## 8. Kiểm Tra Zero-Loss RabbitMQ (`validate-rabbitmq.ps1`)
+### 1.8. Validate RabbitMQ (`validate-rabbitmq.ps1`)
 
-Truy vấn RabbitMQ Management API để đảm bảo không có message nào bị mất — tất cả queue rỗng và các Dead Letter Queue (DLQ) không có message.
-
-**Cú pháp:**
+Truy van RabbitMQ Management API - dam bao khong co message bi mat, DLQ rong.
 
 ```powershell
-.\deployment\scripts\validate-rabbitmq.ps1
+.\deployment\scripts\backend\validate-rabbitmq.ps1
 ```
 
-**Kết quả có thể:**
-
-| Trạng thái                | Ý nghĩa                                           |
+| Trang thai                | Y nghia                                           |
 | ------------------------- | ------------------------------------------------- |
-| `[V] VALIDATION PASSED`   | 100% messages đã được xử lý, không mất dữ liệu    |
-| `[!] PASSED WITH WARNING` | Không mất message nhưng còn pending trong queue   |
-| `[X] VALIDATION FAILED`   | Có message trong DLQ — cần kiểm tra consumer logs |
+| `[V] VALIDATION PASSED`   | 100% messages da xu ly, khong mat du lieu         |
+| `[!] PASSED WITH WARNING` | Khong mat message nhung con pending trong queue   |
+| `[X] VALIDATION FAILED`   | Co message trong DLQ - can kiem tra consumer logs |
 
-> **Credential mặc định:** `ev_user:ev_secret` (cấu hình trong `deployment/docker/.env`)
-
----
-
-## Luồng Làm Việc Khuyên Dùng
-
-### Khởi động dự án lần đầu
-
-```powershell
-# 1. Khởi chạy toàn bộ hệ thống (build images)
-.\deployment\scripts\start.ps1
-
-# 2. Xác nhận tất cả services healthy
-.\deployment\scripts\health-check.ps1
-
-# 3. Chạy smoke test để đảm bảo routing đúng
-.\deployment\scripts\smoke-test.ps1
-```
-
-### Trước khi demo / submit
-
-```powershell
-# Reset sạch dữ liệu, build lại toàn bộ image không cần hỏi
-.\deployment\scripts\reset.ps1 -Force
-
-# Kiểm tra không mất event
-.\deployment\scripts\validate-rabbitmq.ps1
-
-# Chạy unit test toàn bộ
-.\deployment\scripts\tests.ps1
-```
-
-### Debug hệ thống bị lỗi
-
-```powershell
-# Xem trạng thái từng container và HTTP endpoint
-.\deployment\scripts\health-check.ps1
-
-# Xem log của một service cụ thể
-docker logs ev-iam --tail 50
-
-# Reset và khởi động lại nếu không fix được
-.\deployment\scripts\reset.ps1
-```
+> **Credential mac dinh:** `ev_user:ev_secret` (cau hinh trong `deployment/docker/.env`)
 
 ---
 
-## Cổng Mạng Hệ Thống
+### 1.9. Kiem Tra ClickHouse (`clickhouse-check.ps1`)
 
-| Service                | URL                            | Ghi chú                      |
-| ---------------------- | ------------------------------ | ---------------------------- |
-| Kong Gateway (API)     | `http://localhost:8000`        | Tất cả API client đi qua đây |
-| Kong Admin             | `http://localhost:8001`        | Quản lý routes/plugins       |
-| RabbitMQ UI            | `http://localhost:15672`       | Credentials: `guest/guest`   |
-| IAM Service            | `http://localhost:3001/health` |                              |
-| Analytics Service      | `http://localhost:3002/health` |                              |
-| Infrastructure Service | `http://localhost:3003/health` |                              |
-| Session Service        | `http://localhost:3004/health` |                              |
-| Billing Service        | `http://localhost:3007/health` |                              |
-| Notification Service   | `http://localhost:3008/health` |                              |
-| Telemetry Service      | `http://localhost:3009/health` |                              |
-| OCPP Gateway           | `http://localhost:3010/health` |                              |
+Kiem tra nhanh toan bo stack ClickHouse: ket noi, database, table, row count, partition, TTL, container health, va trang thai ket noi tu `telemetry-service`.
+
+```powershell
+# Kiem tra mac dinh (localhost:8123)
+.\deployment\scripts\backend\clickhouse-check.ps1
+
+# Chi dinh URL tuy chinh (vi du dung Docker internal)
+.\deployment\scripts\backend\clickhouse-check.ps1 -Url http://localhost:8123
+
+# Hien thi them schema cot cua bang telemetry_logs
+.\deployment\scripts\backend\clickhouse-check.ps1 -Detail
+```
+
+**Cac muc kiem tra:**
+
+| Muc           | Noi dung                                                    |
+| ------------- | ----------------------------------------------------------- |
+| [1] Ping      | `GET /ping` -> phai phan hoi `Ok`                           |
+| [2] Version   | SELECT version()                                            |
+| [3] Database  | `ev_telemetry` da duoc tao chua                             |
+| [4] Table     | `telemetry_logs` - row count, partitions, TTL               |
+| [5] Container | `ev-clickhouse` trang thai Docker health                    |
+| [6] Service   | `http://localhost:3009/health` clickhouse connection status |
+
+**Ket qua exit code:**
+
+- `exit 0` - Tat ca OK (co the co CANH BAO)
+- `exit 1` - Co loi nghiem trong (khong ket noi duoc, container down)
+
+---
+
+## PHAN 2 - FRONTEND (Flutter Mobile App)
+
+> **Yeu cau them:** Flutter SDK da cai dat va trong `PATH`.
+
+### Tong Quan
+
+| Script      | Muc dich                        | Tham so chinh                                          |
+| ----------- | ------------------------------- | ------------------------------------------------------ |
+| `setup.ps1` | Thiet lap moi truong lan dau    | `-GenKeystore`, `-SkipDoctor`                          |
+| `run.ps1`   | Chay app tren thiet bi/emulator | `-Flavor`, `-Device`, `-ApiUrl`, `-Release`            |
+| `build.ps1` | Build APK / AAB / IPA           | `-Target`, `-Flavor`, `-Release`, `-Analyze`, `-Clean` |
+| `test.ps1`  | Chay unit test + coverage       | `-Coverage`, `-Filter`, `-Widget`                      |
+
+---
+
+### 2.1. Thiet Lap Moi Truong (`setup.ps1`)
+
+Chay **mot lan duy nhat** khi clone du an hoac cai may moi.
+
+```powershell
+.\deployment\scripts\frontend\setup.ps1                # Kiem tra moi truong + pub get
+.\deployment\scripts\frontend\setup.ps1 -GenKeystore   # Tao Android signing keystore
+.\deployment\scripts\frontend\setup.ps1 -SkipDoctor    # Bo qua flutter doctor
+```
+
+**Cac buoc script thuc hien:**
+
+1. Kiem tra Flutter SDK version
+2. Chay `flutter doctor -v` (tru khi `-SkipDoctor`)
+3. Chay `flutter pub get`
+4. Kiem tra ADB + thiet bi ket noi
+5. Kiem tra `google-services.json` (Firebase)
+6. Kiem tra `android/key.properties` (signing)
+7. _(Tuy chon)_ Tao keystore release bang `keytool`
+
+> **Bao mat:** `android/key.properties` va `*.keystore` da duoc them vao `.gitignore`. **Khong commit len git.**
+
+---
+
+### 2.2. Chay App (`run.ps1`)
+
+Script **tu dong phat hien ngrok URL** (uu tien dung ngrok khi chay dev) thay cho localhost.
+
+```powershell
+# Chay dev - tu dong dung ngrok URL neu ngrok dang chay
+.\deployment\scripts\frontend\run.ps1
+
+# Chi dinh API URL (thiet bi that + backend local)
+.\deployment\scripts\frontend\run.ps1 -ApiUrl http://192.168.1.100:8000
+
+# Dung ngrok URL co dinh
+.\deployment\scripts\frontend\run.ps1 -ApiUrl https://impeditive-incredible-jordy.ngrok-free.dev
+
+# Emulator Android (10.0.2.2 = localhost may tinh)
+.\deployment\scripts\frontend\run.ps1 -ApiUrl http://10.0.2.2:8000
+
+# Chi dinh device ID cu the
+.\deployment\scripts\frontend\run.ps1 -Device 5137bf8c
+
+# Chay release mode
+.\deployment\scripts\frontend\run.ps1 -Flavor staging -Release
+```
+
+**Flavors & Application ID:**
+
+| Flavor    | Application ID                           | API URL mac dinh                             |
+| --------- | ---------------------------------------- | -------------------------------------------- |
+| `dev`     | `com.evcharging.ev_charging_app.dev`     | Auto-detect ngrok -> `http://localhost:8000` |
+| `staging` | `com.evcharging.ev_charging_app.staging` | `http://staging.ev-charging.local:8000`      |
+| `prod`    | `com.evcharging.ev_charging_app`         | `https://api.ev-charging.vn`                 |
+
+> **Uu tien API URL khi flavor=dev:**
+>
+> 1. Tham so `-ApiUrl` (neu truyen vao)
+> 2. Ngrok tunnel (tu dong lay qua `http://localhost:4040/api/tunnels`)
+> 3. `http://localhost:8000` (fallback)
+
+---
+
+### 2.3. Build App (`build.ps1`)
+
+```powershell
+# APK debug (dev)
+.\deployment\scripts\frontend\build.ps1
+
+# APK release staging voi analyze
+.\deployment\scripts\frontend\build.ps1 -Target apk -Flavor staging -Release -Analyze
+
+# AAB production release - upload len Google Play Console
+.\deployment\scripts\frontend\build.ps1 -Target appbundle -Flavor prod -Release
+
+# Build sach tu dau
+.\deployment\scripts\frontend\build.ps1 -Target apk -Flavor dev -Clean
+```
+
+| Tham so    | Gia tri                       | Mo ta                                        |
+| ---------- | ----------------------------- | -------------------------------------------- |
+| `-Target`  | `apk` \| `appbundle` \| `ipa` | Loai artifact dau ra                         |
+| `-Flavor`  | `dev` \| `staging` \| `prod`  | Build flavor                                 |
+| `-Release` | switch                        | Bat minify + shrink + obfuscate              |
+| `-Analyze` | switch                        | Chay `flutter analyze` truoc khi build       |
+| `-Clean`   | switch                        | Chay `flutter clean` + `pub get` truoc       |
+| `-ApiUrl`  | string                        | Ghi de API URL (mac dinh: auto-detect ngrok) |
+
+**Voi `-Release`:**
+
+- `--obfuscate` + `--split-debug-info=build/debug-info/<flavor>/`
+- Signing tu `android/key.properties`
+- Artifact: `build/app/outputs/bundle/<flavor>Release/*.aab`
+
+---
+
+### 2.4. Chay Test (`test.ps1`)
+
+```powershell
+.\deployment\scripts\frontend\test.ps1                      # Tat ca unit tests
+.\deployment\scripts\frontend\test.ps1 -Coverage            # Bao cao coverage
+.\deployment\scripts\frontend\test.ps1 -Filter "Booking"    # Chi test khop ten
+.\deployment\scripts\frontend\test.ps1 -Widget              # Bao gom widget tests
+.\deployment\scripts\frontend\test.ps1 -Coverage -Widget -Filter "Auth"
+```
+
+**Coverage report:** `coverage/lcov.info` - in % dong duoc cover. HTML report: `choco install lcov` -> `coverage/html/index.html`
+
+---
+
+## Luong Lam Viec Khuyen Dung
+
+### Khoi dong du an lan dau (Full Stack)
+
+```powershell
+# 1. Setup moi truong Flutter
+.\deployment\scripts\frontend\setup.ps1 -GenKeystore
+
+# 2. Khoi dong backend (khong ngrok)
+.\deployment\scripts\backend\start.ps1
+
+# 3. Xac nhan backend healthy
+.\deployment\scripts\backend\health-check.ps1
+
+# 4. Chay app Flutter (localhost hoac emulator)
+.\deployment\scripts\frontend\run.ps1
+```
+
+### Khoi dong voi Ngrok (thiet bi that)
+
+```powershell
+# Khoi dong backend + bat ngrok tunnel
+.\deployment\scripts\backend\start.ps1 -Ngrok
+
+# Chay app Flutter - tu dong dung ngrok URL
+.\deployment\scripts\frontend\run.ps1
+```
+
+### Truoc khi demo / submit
+
+```powershell
+# Reset backend sach, build lai
+.\deployment\scripts\backend\reset.ps1 -Force
+
+# Kiem tra khong mat event
+.\deployment\scripts\backend\validate-rabbitmq.ps1
+
+# Chay backend test
+.\deployment\scripts\backend\tests.ps1
+
+# Chay frontend test
+.\deployment\scripts\frontend\test.ps1 -Coverage
+
+# Build AAB production
+.\deployment\scripts\frontend\build.ps1 -Target appbundle -Flavor prod -Release -Analyze
+
+# Test qua ngrok (can chay start.ps1 -Ngrok truoc)
+.\deployment\scripts\backend\smoke-test.ps1 -Gateway "https://impeditive-incredible-jordy.ngrok-free.dev"
+```
+
+### Debug backend loi
+
+```powershell
+.\deployment\scripts\backend\health-check.ps1          # Kiem tra container + HTTP + ngrok
+.\deployment\scripts\backend\logs.ps1 -Service ev-iam  # Xem log service loi
+.\deployment\scripts\backend\smoke-test.ps1            # Test routing qua Kong
+.\deployment\scripts\backend\reset.ps1                 # Reset neu khong fix duoc
+```
+
+### Debug frontend loi
+
+```powershell
+flutter devices                                                                    # Kiem tra thiet bi
+.\deployment\scripts\frontend\test.ps1                                    # Chay unit tests
+.\deployment\scripts\frontend\run.ps1 -ApiUrl http://10.0.2.2:8000       # Chay tren emulator
+.\deployment\scripts\frontend\run.ps1 -ApiUrl https://impeditive-incredible-jordy.ngrok-free.dev
+flutter analyze                                                                    # Kiem tra loi code
+```
+
+---
+
+## Cong Mang & Endpoints
+
+### Backend
+
+| Service                | URL                                                  | Ghi chu                      |
+| ---------------------- | ---------------------------------------------------- | ---------------------------- |
+| Kong Gateway (API)     | `http://localhost:8000`                              | Tat ca API client di qua day |
+| Ngrok Tunnel           | `https://impeditive-incredible-jordy.ngrok-free.dev` | Public URL cho thiet bi that |
+| Ngrok Dashboard        | `http://localhost:4040`                              | Xem request log ngrok        |
+| Kong Admin             | `http://localhost:8001`                              | Quan ly routes/plugins       |
+| RabbitMQ UI            | `http://localhost:15672`                             | Credentials: `guest/guest`   |
+| IAM Service            | `http://localhost:3001/health`                       |                              |
+| Analytics Service      | `http://localhost:3002/health`                       |                              |
+| Infrastructure Service | `http://localhost:3003/health`                       |                              |
+| Session Service        | `http://localhost:3004/health`                       |                              |
+| Billing Service        | `http://localhost:3007/health`                       |                              |
+| Notification Service   | `http://localhost:3008/health`                       |                              |
+| Telemetry Service      | `http://localhost:3009/health`                       |                              |
+| OCPP Gateway           | `http://localhost:3010/health`                       |                              |
+
+### Frontend - API URL theo moi truong
+
+| Moi truong        | Thiet bi that                                        | Emulator Android       |
+| ----------------- | ---------------------------------------------------- | ---------------------- |
+| Dev (khuyen dung) | `https://impeditive-incredible-jordy.ngrok-free.dev` | `http://10.0.2.2:8000` |
+| Dev (LAN)         | `http://192.168.x.x:8000`                            | `http://10.0.2.2:8000` |
+| Staging           | `http://staging.ev-charging.local:8000`              | -                      |
+| Production        | `https://api.ev-charging.vn`                         | -                      |
