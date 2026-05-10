@@ -1,18 +1,283 @@
-# Node.js
+# ==============================================================================
+# .gitignore -- EV Charging Orchestration Platform
+# Ap dung cho toan bo du an: Backend (Node.js), Frontend (Flutter), Deployment
+# KHONG duoc commit bat ki file bao mat, ca nhan, hoac sinh ra tu build
+# ==============================================================================
+
+# =============================================================================
+# 1. BAO MAT & CREDENTIALS -- TUYET DOI KHONG COMMIT
+# =============================================================================
+
+# Moi file .env thuc (chi .env.example duoc commit)
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.development
+**/.env.staging
+**/.env.production
+**/.env.test
+# Whitelist: cho phep commit template
+!**/.env.example
+
+# Chung chi & Khoa ma hoa
+*.pem
+*.key
+*.crt
+*.cer
+*.cert
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Firebase / Google Cloud credentials
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+service-account*.json
+firebase-credentials*.json
+serviceAccountKey.json
+
+# JWT / Token / Secret
+jwt_*.pem
+jwt_*.key
+*_private.pem
+*_public.pem
+*.token
+*.secret
+*-secret.json
+secrets.json
+credentials.json
+
+# AWS / Cloud credentials
+.aws/
+.gcp/
+.azure/
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# Android Signing
+android/key.properties
+**/android/key.properties
+**/android/*.keystore
+**/android/*.jks
+**/android/local.properties
+
+# iOS Signing
+*.mobileprovision
+*.p8
+ExportOptions.plist
+
+# =============================================================================
+# 2. SECRETS FOLDERS
+# =============================================================================
+
+deployment/docker/secrets/
+backend/notification-service/secrets/
+**/secrets/
+# Whitelist: cho phep README va template
+!**/secrets/README.md
+!**/secrets/*.example
+!**/secrets/*.md
+
+# =============================================================================
+# 3. BACKEND -- Node.js / NestJS (backend/*-service/)
+# =============================================================================
+
 node_modules/
 dist/
-npm-debug.log
-yarn-error.log
+build/
+.turbo/
+.nest/
 
-# IDE
-.vscode/
+# TypeScript build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# =============================================================================
+# 4. FRONTEND -- Flutter (frontend/mobile-app/)
+# =============================================================================
+
+# Flutter build & tool output
+frontend/mobile-app/build/
+frontend/mobile-app/.dart_tool/
+frontend/mobile-app/.flutter-plugins
+frontend/mobile-app/.flutter-plugins-dependencies
+frontend/mobile-app/.packages
+frontend/mobile-app/.pub-cache/
+frontend/mobile-app/.pub/
+
+# Android build cache
+frontend/mobile-app/android/.gradle/
+frontend/mobile-app/android/app/.cxx/
+
+# iOS Pods
+frontend/mobile-app/ios/Pods/
+frontend/mobile-app/ios/.symlinks/
+frontend/mobile-app/ios/Flutter/Flutter.framework
+frontend/mobile-app/ios/Flutter/Flutter.podspec
+
+# Flutter generated files
+frontend/mobile-app/lib/generated/
+frontend/mobile-app/**/*.g.dart
+frontend/mobile-app/**/*.freezed.dart
+
+# Debug symbols / obfuscation map (release build)
+frontend/mobile-app/build/debug-info/
+frontend/mobile-app/coverage/
+
+# =============================================================================
+# 5. FRONTEND -- Web Admin & Kiosk
+# =============================================================================
+
+frontend/web-admin/node_modules/
+frontend/web-admin/dist/
+frontend/web-admin/build/
+frontend/web-admin/coverage/
+
+frontend/kiosk/node_modules/
+frontend/kiosk/dist/
+frontend/kiosk/build/
+
+# =============================================================================
+# 6. DEPLOYMENT -- Docker, Ngrok, CI/CD
+# =============================================================================
+
+# Docker
+deployment/docker/.env
+deployment/docker/.env.local
+!deployment/docker/.env.example
+
+# Ngrok config (co the chua authtoken)
+.ngrok/
+ngrok.yml
+ngrok.yaml
+.ngrok2/
+
+# =============================================================================
+# 7. DATABASE
+# =============================================================================
+
+*.sql.gz
+*.dump
+database/dumps/
+database/backups/
+
+# =============================================================================
+# 8. IDE & EDITOR (ca nhan)
+# =============================================================================
+
+# VS Code (chi bo qua cai dat ca nhan, giu extensions.json va settings chung)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/*.code-workspace
+
+# IntelliJ / WebStorm / Android Studio
 .idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
 
-# Environment
-.env
+# Eclipse
+.project
+.classpath
+nbproject/
 
-# MacOS
+# Vim / Emacs
+*.swp
+*.swo
+*~
+.#*
+
+# JetBrains Rider
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# =============================================================================
+# 9. HE DIEU HANH (ca nhan)
+# =============================================================================
+
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
 
-# Secrets
-backend/notification-service/secrets/*.json
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+
+# =============================================================================
+# 10. LOGS & TEMP
+# =============================================================================
+
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+flutter_*.log
+
+*.tmp
+*.temp
+*.bak
+*.orig
+*.backup
+
+# =============================================================================
+# 11. TESTING & CI
+# =============================================================================
+
+jest-results.xml
+test-results/
+allure-results/
+allure-report/
+playwright-report/
+cypress/screenshots/
+cypress/videos/
+.nyc_output/
+
+# =============================================================================
+# 12. DOCS -- Thesis (ban nhap, file trung gian)
+# =============================================================================
+
+docs/thesis/**/*.tmp
+docs/thesis/**/*.bak
+docs/thesis/**/*.aux
+docs/thesis/**/*.out
+docs/thesis/**/*.synctex.gz
+
+# =============================================================================
+# WHITELIST CUOI -- Dam bao cac file nay LUON duoc commit
+# =============================================================================
+
+!**/.env.example
+!**/secrets/README.md
+!**/secrets/*.example
+!.vscode/extensions.json
