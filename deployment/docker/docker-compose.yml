@@ -235,8 +235,14 @@ services:
     container_name: ev-clickhouse
     restart: unless-stopped
     networks: [ev_net]
+    environment:
+      CLICKHOUSE_DB:       ${CLICKHOUSE_DATABASE:-ev_telemetry}
+      CLICKHOUSE_USER:     ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+    ports:
+      - "8123:8123"   # HTTP interface (local testing)
     ulimits:
       nofile:
         soft: 262144
@@ -416,9 +422,11 @@ services:
     <<: *svc-defaults
     environment:
       <<: *app-env
-      PORT:             3009
-      CLICKHOUSE_HOST:  clickhouse
-      CLICKHOUSE_PORT:  8123
+      PORT:                 3009
+      CLICKHOUSE_URL:       http://clickhouse:8123
+      CLICKHOUSE_DATABASE:  ${CLICKHOUSE_DATABASE:-ev_telemetry}
+      CLICKHOUSE_USER:      ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD:  ${CLICKHOUSE_PASSWORD:-}
     depends_on:
       clickhouse:
         condition: service_healthy
