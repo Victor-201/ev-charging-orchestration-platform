@@ -3,7 +3,7 @@
 # start.ps1 - Khoi dong he thong EV Charging Platform
 #
 # Usage:
-#   .\start.ps1             # Khoi dong binh thuong (khong ngrok)
+#   .\start.ps1             # Khoi dong binh thuong
 #   .\start.ps1 -Rebuild    # Force rebuild toan bo image (khong cache)
 #   .\start.ps1 -Ngrok      # Khoi dong + chay ngrok tunnel
 #   .\start.ps1 -Rebuild -Ngrok  # Rebuild va chay ngrok
@@ -15,10 +15,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$ComposeDir  = Join-Path $ScriptDir "..\..\docker"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$ComposeDir = Join-Path $ScriptDir "..\..\docker"
 $ComposeFile = Join-Path $ComposeDir "docker-compose.yml"
-$EnvFile     = Join-Path $ComposeDir ".env"
+$EnvFile = Join-Path $ComposeDir ".env"
 
 $NGROK_DOMAIN = "impeditive-incredible-jordy.ngrok-free.dev"
 
@@ -66,7 +66,8 @@ if ($Ngrok) {
     if (-not (Get-Command "ngrok" -ErrorAction SilentlyContinue)) {
         Write-Host "[WARN] Khong tim thay ngrok trong PATH. Bo qua ngrok." -ForegroundColor Yellow
         Write-Host "       Cai dat: https://ngrok.com/download" -ForegroundColor DarkGray
-    } else {
+    }
+    else {
         # Dung ngrok cu neu dang chay
         Get-Process ngrok -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
@@ -77,13 +78,15 @@ if ($Ngrok) {
         # Kiem tra tunnel co live khong
         try {
             $info = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" -TimeoutSec 5 -ErrorAction Stop
-            $url  = ($info.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -First 1).public_url
+            $url = ($info.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -First 1).public_url
             if ($url) {
                 Write-Host "[NGROK] Tunnel dang hoat dong: $url" -ForegroundColor Green
-            } else {
+            }
+            else {
                 Write-Host "[NGROK] Khoi dong nhung chua co tunnel HTTPS." -ForegroundColor Yellow
             }
-        } catch {
+        }
+        catch {
             Write-Host "[NGROK] Chua phan hoi (co the van dang khoi dong). Kiem tra: http://localhost:4040" -ForegroundColor Yellow
         }
     }
@@ -109,8 +112,8 @@ $Failed = $false
 
 foreach ($svc in $Services) {
     Write-Host -NoNewline "  Dang kiem tra $($svc.PadRight(22))..."
-    $elapsed   = 0
-    $max       = 120
+    $elapsed = 0
+    $max = 120
     $isHealthy = $false
 
     while ($elapsed -lt $max) {

@@ -20,13 +20,13 @@ Tai lieu nay huong dan toan bo bo cong cu tu dong hoa PowerShell (`.ps1`) trong 
 | ----------------------- | ------------------------------------- | ------------------------------ |
 | `start.ps1`             | Khoi chay he thong Docker Compose     | `-Rebuild`, `-Ngrok`           |
 | `stop.ps1`              | Dung he thong + dung ngrok            | `-Clean`                       |
-| `reset.ps1`             | Xoa sach + restart tu dau             | `-Force`                       |
+| `reset.ps1`             | Xoa sach + restart tu dau             | `-Force`, `-Ngrok`             |
 | `health-check.ps1`      | Kiem tra trang thai services + ngrok  | _(khong co)_                   |
 | `logs.ps1`              | Xem log container linh hoat           | `-Service`, `-All`, `-AllApps` |
 | `smoke-test.ps1`        | Test tich hop qua API Gateway         | `-Gateway <URL>`               |
 | `tests.ps1`             | Chay Unit Test 8 microservices        | `-Coverage`, `-Pattern`        |
 | `validate-rabbitmq.ps1` | Kiem tra Zero-Loss RabbitMQ DLQ       | _(khong co)_                   |
-| `clickhouse-check.ps1`  | Kiem tra nhanh ClickHouse + telemetry | `-Url`, `-Detail`              |
+| `clickhouse-check.ps1`  | Kiem tra nhanh ClickHouse + telemetry | `-Detail`                      |
 
 ---
 
@@ -71,10 +71,13 @@ Script tu dong tat process `ngrok` neu dang chay.
 ### 1.3. Reset Toan He Thong (`reset.ps1`)
 
 "Nut hat nhan" - xoa sach + build lai + chay lai tu dau. Tuong duong `stop.ps1 -Clean -> start.ps1 -Rebuild`.
+Ho tro `-Ngrok` de forward sang `start.ps1 -Rebuild -Ngrok` sau khi reset.
 
 ```powershell
-.\deployment\scripts\backend\reset.ps1          # Hoi xac nhan [y/N]
-.\deployment\scripts\backend\reset.ps1 -Force   # Khong hoi, thuc thi ngay
+.\deployment\scripts\backend\reset.ps1               # Hoi xac nhan [y/N] (khong ngrok)
+.\deployment\scripts\backend\reset.ps1 -Force        # Khong hoi, thuc thi ngay
+.\deployment\scripts\backend\reset.ps1 -Ngrok        # Reset + bat ngrok sau khi chay lai
+.\deployment\scripts\backend\reset.ps1 -Force -Ngrok # Khong hoi + bat ngrok
 ```
 
 ---
@@ -189,31 +192,31 @@ Truy van RabbitMQ Management API - dam bao khong co message bi mat, DLQ rong.
 Kiem tra nhanh toan bo stack ClickHouse: ket noi, database, table, row count, partition, TTL, container health, va trang thai ket noi tu `telemetry-service`.
 
 ```powershell
-# Kiem tra mac dinh (localhost:8123)
+# Kiem tra nhanh (mac dinh)
 .\deployment\scripts\backend\clickhouse-check.ps1
-
-# Chi dinh URL tuy chinh (vi du dung Docker internal)
-.\deployment\scripts\backend\clickhouse-check.ps1 -Url http://localhost:8123
 
 # Hien thi them schema cot cua bang telemetry_logs
 .\deployment\scripts\backend\clickhouse-check.ps1 -Detail
 ```
 
+> Yeu cau: Docker Desktop dang chay va container `ev-clickhouse` ton tai.
+> Script chay qua `docker exec clickhouse-client` (khong dung HTTP port).
+
 **Cac muc kiem tra:**
 
 | Muc           | Noi dung                                                    |
 | ------------- | ----------------------------------------------------------- |
-| [1] Ping      | `GET /ping` -> phai phan hoi `Ok`                           |
-| [2] Version   | SELECT version()                                            |
-| [3] Database  | `ev_telemetry` da duoc tao chua                             |
-| [4] Table     | `telemetry_logs` - row count, partitions, TTL               |
-| [5] Container | `ev-clickhouse` trang thai Docker health                    |
+| [1] Container | `ev-clickhouse` trang thai Docker health                    |
+| [2] Ping      | `SELECT 1` qua clickhouse-client                            |
+| [3] Version   | `SELECT version()`                                          |
+| [4] Database  | `ev_telemetry` da duoc tao chua                             |
+| [5] Table     | `telemetry_logs` - row count, partitions, TTL               |
 | [6] Service   | `http://localhost:3009/health` clickhouse connection status |
 
 **Ket qua exit code:**
 
 - `exit 0` - Tat ca OK (co the co CANH BAO)
-- `exit 1` - Co loi nghiem trong (khong ket noi duoc, container down)
+- `exit 1` - Co loi nghiem trong (container down, service loi)
 
 ---
 
