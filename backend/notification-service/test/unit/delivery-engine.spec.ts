@@ -1,17 +1,19 @@
 /**
- * Tests: DeliveryEngine — multi-channel dispatch logic
+ * Tests: DeliveryEngine - multi-channel dispatch logic
  *
- * Mock tất cả dependencies. Test:
- * - Notification được persist trước khi dispatch
- * - Realtime emitted khi enableRealtime = true
- * - Push sent khi enablePush = true và không trong quiet hours
- * - Email stub khi enableEmail = true
- * - Preference defaults áp dụng khi user chưa có preference row
+ * Mock all dependencies. Test:
+ * - Notification is persisted before dispatch
+ * - Realtime emitted when enableRealtime = true
+ * - Push sent when enablePush = true and not in quiet hours
+ * - Email stub when enableEmail = true
+ * - Preference defaults applied when user does not have a preference row
  */
 import { DeliveryEngine } from '../../src/domain/services/delivery.engine';
 import { NotificationPreference } from '../../src/domain/entities/notification.aggregate';
 
-// ─── Mock Factories ───────────────────────────────────────────────────────────
+import { Logger } from '@nestjs/common';
+
+// Mock Factories
 
 function makeDeliveryEngine(overrides?: {
   prefRow?:  any | null;    // null = no preference row (use defaults)
@@ -52,19 +54,37 @@ function makeDeliveryEngine(overrides?: {
     ),
   };
 
+  const config = {
+    get: jest.fn().mockImplementation((key: string, def: any) => {
+      if (key === 'SMTP_PORT') return 587;
+      return def;
+    }),
+  };
+
   const engine = new DeliveryEngine(
     notifRepo as any,
-    prefRepo as any,
-    gateway  as any,
-    fcm      as any,
+    prefRepo  as any,
+    gateway   as any,
+    fcm       as any,
+    config    as any,
   );
 
   return { engine, notifRepo, prefRepo, gateway, fcm };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// Tests
 
 describe('DeliveryEngine.dispatch', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
   const baseParams = {
     userId:   'user-001',
@@ -74,9 +94,9 @@ describe('DeliveryEngine.dispatch', () => {
     body:     'Lịch của bạn đã được xác nhận!',
   };
 
-  // ── Persist ─────────────────────────────────────────────────────────────────
+  // Persist
 
-  it('persist notification trước khi dispatch', async () => {
+  it('persist notification before dispatch', async () => {
     const { engine, notifRepo } = makeDeliveryEngine();
     await engine.dispatch(baseParams);
 
@@ -88,15 +108,15 @@ describe('DeliveryEngine.dispatch', () => {
     expect(saved.status).toBe('sent');
   });
 
-  it('notification có ID được generate', async () => {
+  it('notification has a generated ID', async () => {
     const { engine } = makeDeliveryEngine();
     const notif = await engine.dispatch(baseParams);
     expect(notif.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  // ── Realtime ─────────────────────────────────────────────────────────────────
+  // Realtime
 
-  it('emitToUser khi enableRealtime = true và channel = in_app', async () => {
+  it('emitToUser when enableRealtime = true and channel = in_app', async () => {
     const { engine, gateway } = makeDeliveryEngine();
     await engine.dispatch(baseParams);
     expect(gateway.emitToUser).toHaveBeenCalledTimes(1);
@@ -105,7 +125,7 @@ describe('DeliveryEngine.dispatch', () => {
     expect(payload.type).toBe('booking.confirmed');
   });
 
-  it('emitToUser KHÔNG gọi khi enableRealtime = false', async () => {
+  it('emitToUser is NOT called when enableRealtime = false', async () => {
     const { engine, gateway } = makeDeliveryEngine({
       prefRow: { userId: 'user-001', enableRealtime: false, enablePush: true, enableEmail: true,
                  enableSms: false, quietHoursStart: null, quietHoursEnd: null, updatedAt: new Date() },
@@ -114,7 +134,7 @@ describe('DeliveryEngine.dispatch', () => {
     expect(gateway.emitToUser).not.toHaveBeenCalled();
   });
 
-  it('emitBookingUpdate khi có realtimePayload.bookingUpdate', async () => {
+  it('emitBookingUpdate when realtimePayload.bookingUpdate is present', async () => {
     const { engine, gateway } = makeDeliveryEngine();
     await engine.dispatch({
       ...baseParams,
@@ -127,7 +147,7 @@ describe('DeliveryEngine.dispatch', () => {
     expect((bupdate as any).status).toBe('confirmed');
   });
 
-  it('emitQueueUpdate khi có realtimePayload.queueUpdate', async () => {
+  it('emitQueueUpdate when realtimePayload.queueUpdate is present', async () => {
     const { engine, gateway } = makeDeliveryEngine();
     await engine.dispatch({
       ...baseParams,
@@ -137,7 +157,7 @@ describe('DeliveryEngine.dispatch', () => {
     expect(gateway.emitQueueUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('emitChargingUpdate khi có realtimePayload.chargingUpdate', async () => {
+  it('emitChargingUpdate when realtimePayload.chargingUpdate is present', async () => {
     const { engine, gateway } = makeDeliveryEngine();
     await engine.dispatch({
       ...baseParams,
@@ -147,9 +167,9 @@ describe('DeliveryEngine.dispatch', () => {
     expect(gateway.emitChargingUpdate).toHaveBeenCalledTimes(1);
   });
 
-  // ── Push FCM ─────────────────────────────────────────────────────────────────
+  // Push FCM
 
-  it('sendToUser FCM khi channel = push và enablePush = true', async () => {
+  it('sendToUser FCM when channel = push and enablePush = true', async () => {
     const { engine, fcm } = makeDeliveryEngine();
     await engine.dispatch(baseParams);
     expect(fcm.sendToUser).toHaveBeenCalledTimes(1);
@@ -158,7 +178,7 @@ describe('DeliveryEngine.dispatch', () => {
     expect(call.title).toBe('Lịch sạc được xác nhận');
   });
 
-  it('KHÔNG gửi push khi enablePush = false', async () => {
+  it('does NOT send push when enablePush = false', async () => {
     const { engine, fcm } = makeDeliveryEngine({
       prefRow: { userId: 'user-001', enablePush: false, enableRealtime: true, enableEmail: true,
                  enableSms: false, quietHoursStart: null, quietHoursEnd: null, updatedAt: new Date() },
@@ -167,29 +187,29 @@ describe('DeliveryEngine.dispatch', () => {
     expect(fcm.sendToUser).not.toHaveBeenCalled();
   });
 
-  it('KHÔNG gửi push trong quiet hours (all-day quiet)', async () => {
+  it('does NOT send push during quiet hours (all-day quiet)', async () => {
     const { engine, fcm } = makeDeliveryEngine({
       prefRow: { userId: 'user-001', enablePush: true, enableRealtime: true, enableEmail: true,
                  enableSms: false, quietHoursStart: 0, quietHoursEnd: 23, updatedAt: new Date() },
     });
     await engine.dispatch(baseParams);
-    // 0-23 covers all 24 hours → canSendPushNow = false
+    // 0-23 covers all 24 hours -> canSendPushNow = false
     expect(fcm.sendToUser).not.toHaveBeenCalled();
   });
 
-  // ── Default preferences ────────────────────────────────────────────────────
+  // Default preferences
 
-  it('dùng default preferences khi user chưa có preference row', async () => {
+  it('uses default preferences when user has no preference row', async () => {
     const { engine, gateway, fcm } = makeDeliveryEngine({ prefRow: null });
     await engine.dispatch(baseParams);
-    // Default: enableRealtime=true, enablePush=true → cả hai đều fire
+    // Default: enableRealtime=true, enablePush=true -> both are fired
     expect(gateway.emitToUser).toHaveBeenCalledTimes(1);
     expect(fcm.sendToUser).toHaveBeenCalledTimes(1);
   });
 
-  // ── Return value ───────────────────────────────────────────────────────────
+  // Return value
 
-  it('trả về Notification object với đúng properties', async () => {
+  it('returns Notification object with correct properties', async () => {
     const { engine } = makeDeliveryEngine();
     const notif = await engine.dispatch(baseParams);
     expect(notif.userId).toBe('user-001');

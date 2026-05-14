@@ -1,18 +1,19 @@
 /**
- * Tests: Consumer idempotency + event → notification routing
+ * Tests: Consumer idempotency + event -> notification routing
  *
  * Test:
- * - Duplicate event bị bỏ qua
- * - Correct templates được áp dụng
+ * - Duplicate event is ignored
+ * - Correct templates are applied
  * - push + in_app routing per event type
- * - queue.updated chỉ in_app (không push)
+ * - queue.updated only in_app (no push)
  */
 import { BookingNotificationConsumer, QueueNotificationConsumer } from '../../src/infrastructure/messaging/consumers/notification.consumers';
 import { DeliveryEngine } from '../../src/domain/services/delivery.engine';
 import type { BookingCreatedEvent, QueueUpdatedEvent } from '../../src/domain/events/notification.events';
 import { NOTIFICATION_TEMPLATES } from '../../src/domain/events/notification.events';
+import { Logger } from '@nestjs/common';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// Helpers
 
 function makeBookingConsumer(alreadyProcessed = false) {
   const peRepo = {
@@ -46,7 +47,19 @@ function makeQueueConsumer() {
   return { consumer, engine };
 }
 
-// ─── Booking Consumer Tests ───────────────────────────────────────────────────
+// Global Log Suppression for this test file
+beforeAll(() => {
+  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
+
+// Booking Consumer Tests
 
 describe('BookingNotificationConsumer', () => {
 
@@ -60,13 +73,13 @@ describe('BookingNotificationConsumer', () => {
     endTime:   '2026-04-13T09:00:00Z',
   };
 
-  it('booking.created → gọi engine.dispatch', async () => {
+  it('booking.created -> calls engine.dispatch', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     expect(engine.dispatch).toHaveBeenCalledTimes(1);
   });
 
-  it('booking.created → channels = [in_app, push]', async () => {
+  it('booking.created -> channels = [in_app, push]', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     const call = engine.dispatch.mock.calls[0][0];
@@ -74,41 +87,40 @@ describe('BookingNotificationConsumer', () => {
     expect(call.channels).toContain('push');
   });
 
-  it('booking.created → title đúng theo template', async () => {
+  it('booking.created -> title is correct according to template', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     const call = engine.dispatch.mock.calls[0][0];
     expect(call.title).toBe(NOTIFICATION_TEMPLATES['booking.created'].title(bookingCreatedPayload));
-    expect(call.title).toContain('✅');
   });
 
-  it('booking.created → body chứa bookingId formatted', async () => {
+  it('booking.created -> body contains formatted bookingId', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     const call = engine.dispatch.mock.calls[0][0];
     expect(call.body).toContain('12345678');  // first 8 chars of bookingId
   });
 
-  it('booking.created → metadata chứa bookingId', async () => {
+  it('booking.created -> metadata contains bookingId', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     const call = engine.dispatch.mock.calls[0][0];
     expect(call.metadata).toEqual(expect.objectContaining({ bookingId: bookingCreatedPayload.bookingId }));
   });
 
-  it('IDEMPOTENCY: duplicate event → dispatch KHÔNG được gọi', async () => {
+  it('IDEMPOTENCY: duplicate event -> dispatch is NOT called', async () => {
     const { consumer, engine } = makeBookingConsumer(true);  // already processed
     await consumer.onBookingCreated(bookingCreatedPayload);
     expect(engine.dispatch).not.toHaveBeenCalled();
   });
 
-  it('IDEMPOTENCY: markProcessed được gọi sau dispatch', async () => {
+  it('IDEMPOTENCY: markProcessed is called after dispatch', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingCreated(bookingCreatedPayload);
     expect(engine.markProcessed).toHaveBeenCalledWith('evt-book-001', 'booking.created', expect.anything());
   });
 
-  it('eventId fallback từ bookingId khi không có eventId', async () => {
+  it('eventId fallback from bookingId when eventId is missing', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     const payloadNoId = { ...bookingCreatedPayload, eventId: undefined as any };
     await consumer.onBookingCreated(payloadNoId);
@@ -121,7 +133,7 @@ describe('BookingNotificationConsumer', () => {
     );
   });
 
-  it('booking.confirmed → có realtimePayload.bookingUpdate', async () => {
+  it('booking.confirmed -> has realtimePayload.bookingUpdate', async () => {
     const { consumer, engine } = makeBookingConsumer(false);
     await consumer.onBookingConfirmed({
       eventType: 'booking.confirmed', eventId: 'evt-conf-001',
@@ -133,7 +145,7 @@ describe('BookingNotificationConsumer', () => {
   });
 });
 
-// ─── Queue Consumer Tests ─────────────────────────────────────────────────────
+// Queue Consumer Tests
 
 describe('QueueNotificationConsumer', () => {
 
@@ -149,7 +161,7 @@ describe('QueueNotificationConsumer', () => {
     status:               'waiting',
   };
 
-  it('queue.updated → channels = [in_app] ONLY (không push)', async () => {
+  it('queue.updated -> channels = [in_app] ONLY (no push)', async () => {
     const { consumer, engine } = makeQueueConsumer();
     await consumer.onQueueUpdated(queuePayload);
     const call = engine.dispatch.mock.calls[0][0];
@@ -158,7 +170,7 @@ describe('QueueNotificationConsumer', () => {
     expect(call.channels).not.toContain('email');
   });
 
-  it('queue.updated → có realtimePayload.queueUpdate', async () => {
+  it('queue.updated -> has realtimePayload.queueUpdate', async () => {
     const { consumer, engine } = makeQueueConsumer();
     await consumer.onQueueUpdated(queuePayload);
     const call = engine.dispatch.mock.calls[0][0];
@@ -169,14 +181,14 @@ describe('QueueNotificationConsumer', () => {
     expect(qu.chargerId).toBe('ch-001');
   });
 
-  it('queue.called → body nói "Đến lượt bạn"', async () => {
+  it('queue.called -> body says "Đến lượt bạn"', async () => {
     const { consumer, engine } = makeQueueConsumer();
     await consumer.onQueueUpdated({ ...queuePayload, status: 'called', eventId: 'evt-q-002' });
     const call = engine.dispatch.mock.calls[0][0];
     expect(call.body).toContain('Đến lượt bạn');
   });
 
-  it('queue.waiting → body chứa position và estimatedWait', async () => {
+  it('queue.waiting -> body contains position and estimatedWait', async () => {
     const { consumer, engine } = makeQueueConsumer();
     await consumer.onQueueUpdated(queuePayload);
     const call = engine.dispatch.mock.calls[0][0];
@@ -185,10 +197,10 @@ describe('QueueNotificationConsumer', () => {
   });
 });
 
-// ─── Template Registry ────────────────────────────────────────────────────────
+// Template Registry
 
 describe('NOTIFICATION_TEMPLATES', () => {
-  it('tất cả event types có template', () => {
+  it('all event types have templates', () => {
     const types = [
       'booking.created', 'booking.confirmed', 'booking.cancelled',
       'payment.completed', 'payment.failed',
@@ -202,13 +214,13 @@ describe('NOTIFICATION_TEMPLATES', () => {
     }
   });
 
-  it('payment.completed body chứa amount formatted', () => {
+  it('payment.completed body contains formatted amount', () => {
     const tpl = NOTIFICATION_TEMPLATES['payment.completed'];
     const body = tpl.body({ amount: 250000, transactionId: 'tx-001', userId: 'u', eventType: 'payment.completed', eventId: 'e' });
     expect(body).toContain('250');  // at minimum the number appears
   });
 
-  it('session.completed body chứa kwhConsumed', () => {
+  it('session.completed body contains kwhConsumed', () => {
     const tpl = NOTIFICATION_TEMPLATES['session.completed'];
     const body = tpl.body({
       sessionId: 's', userId: 'u', chargerId: 'c',

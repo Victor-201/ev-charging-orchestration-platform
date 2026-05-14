@@ -2,13 +2,25 @@
  * Tests: Device registration + FCM multi-device logic
  *
  * Test DeviceManagementUseCase: register (new + upsert), unregister, list.
- * Test FcmPushService stub mode: sendToUser khi FCM không configured.
+ * Test FcmPushService stub mode: sendToUser when FCM is not configured.
  */
 import { DeviceManagementUseCase } from '../../src/application/use-cases/notification.use-cases';
 import { FcmPushService } from '../../src/infrastructure/push/fcm-push.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, Logger } from '@nestjs/common';
 
-// ─── DeviceManagementUseCase ──────────────────────────────────────────────────
+// Global Log Suppression for this test file
+beforeAll(() => {
+  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
+
+// DeviceManagementUseCase
 
 describe('DeviceManagementUseCase', () => {
 
@@ -23,7 +35,7 @@ describe('DeviceManagementUseCase', () => {
     };
   }
 
-  it('register new device: tạo bản ghi mới', async () => {
+  it('register new device: creates new record', async () => {
     const repo = makeDeviceRepo(null);  // no existing device
     const uc = new DeviceManagementUseCase(repo as any);
 
@@ -39,7 +51,7 @@ describe('DeviceManagementUseCase', () => {
     expect(saved.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('register existing token: upsert (không tạo mới)', async () => {
+  it('register existing token: upsert (does not create new)', async () => {
     const existingDevice = {
       id: 'existing-dev-id', userId: 'user-001', platform: 'android',
       pushToken: 'old-token', deviceName: null, lastActiveAt: new Date(),
@@ -56,10 +68,10 @@ describe('DeviceManagementUseCase', () => {
     });
 
     expect(repo.update).toHaveBeenCalledTimes(1);
-    expect(repo.save).not.toHaveBeenCalled();  // không tạo mới
+    expect(repo.save).not.toHaveBeenCalled();  // does not create new
   });
 
-  it('unregister: xóa device', async () => {
+  it('unregister: deletes device', async () => {
     const existingDevice = { id: 'dev-001', userId: 'user-001', pushToken: 'tok' };
     const repo = makeDeviceRepo(existingDevice);
     const uc = new DeviceManagementUseCase(repo as any);
@@ -69,14 +81,14 @@ describe('DeviceManagementUseCase', () => {
     expect(repo.delete).toHaveBeenCalledWith({ id: 'dev-001' });
   });
 
-  it('unregister: NotFoundException nếu device không tồn tại', async () => {
+  it('unregister: NotFoundException if device does not exist', async () => {
     const repo = makeDeviceRepo(null);  // not found
     const uc = new DeviceManagementUseCase(repo as any);
 
     await expect(uc.unregister('non-existent-id', 'user-001')).rejects.toThrow(NotFoundException);
   });
 
-  it('listForUser: trả về tất cả devices của user', async () => {
+  it('listForUser: returns all devices of user', async () => {
     const devices = [
       { id: 'd1', userId: 'user-001', platform: 'android', pushToken: 't1' },
       { id: 'd2', userId: 'user-001', platform: 'ios',     pushToken: 't2' },
@@ -99,7 +111,7 @@ describe('DeviceManagementUseCase', () => {
     expect(result).toHaveLength(2);
   });
 
-  it('register: deviceName null khi không truyền', async () => {
+  it('register: deviceName is null when not provided', async () => {
     const repo = makeDeviceRepo(null);
     const uc = new DeviceManagementUseCase(repo as any);
     await uc.register({ userId: 'u', platform: 'web', pushToken: 'tok-web' });
@@ -107,7 +119,7 @@ describe('DeviceManagementUseCase', () => {
     expect(saved.deviceName).toBeNull();
   });
 
-  it('register: deviceName được lưu khi truyền vào', async () => {
+  it('register: deviceName is saved when provided', async () => {
     const repo = makeDeviceRepo(null);
     const uc = new DeviceManagementUseCase(repo as any);
     await uc.register({ userId: 'u', platform: 'ios', pushToken: 'tok-ios', deviceName: 'iPhone 15' });
@@ -116,7 +128,7 @@ describe('DeviceManagementUseCase', () => {
   });
 });
 
-// ─── FcmPushService Stub Mode ─────────────────────────────────────────────────
+// FcmPushService Stub Mode
 
 describe('FcmPushService', () => {
 
@@ -125,12 +137,12 @@ describe('FcmPushService', () => {
       find:   jest.fn().mockResolvedValue(devices),
       delete: jest.fn().mockResolvedValue(undefined),
     };
-    // Inject null as firebaseApp → triggers stub mode (no real FCM calls)
+    // Inject null as firebaseApp -> triggers stub mode (no real FCM calls)
     const svc = new FcmPushService(null as any, deviceRepo as any);
     return { svc, deviceRepo };
   }
 
-  it('sendToUser: trả về 0/0 khi user không có devices', async () => {
+  it('sendToUser: returns 0/0 when user has no devices', async () => {
     const { svc } = makeFcmService([]);
     const result = await svc.sendToUser({ userId: 'user-001', title: 'T', body: 'B' });
     expect(result.sent).toBe(0);
@@ -138,7 +150,7 @@ describe('FcmPushService', () => {
     expect(result.tokens).toHaveLength(0);
   });
 
-  it('sendToUser STUB MODE: success khi FCM không configured', async () => {
+  it('sendToUser STUB MODE: success when FCM is not configured', async () => {
     const devices = [
       { pushToken: 'tok-android', userId: 'u1' },
       { pushToken: 'tok-ios',     userId: 'u1' },
@@ -161,10 +173,10 @@ describe('FcmPushService', () => {
   });
 });
 
-// ─── Multi-device Scenario ────────────────────────────────────────────────────
+// Multi-device Scenario
 
 describe('Multi-device fanout scenario', () => {
-  it('user với 3 devices: tất cả nhận push (stub mode)', async () => {
+  it('user with 3 devices: all receive push (stub mode)', async () => {
     const devices = [
       { pushToken: 'phone-token',  platform: 'android' },
       { pushToken: 'tablet-token', platform: 'android' },
@@ -175,7 +187,7 @@ describe('Multi-device fanout scenario', () => {
       find:   jest.fn().mockResolvedValue(devices),
       delete: jest.fn(),
     };
-    // Pass null as firebaseApp → stub mode (no real Firebase calls)
+    // Pass null as firebaseApp -> stub mode (no real Firebase calls)
     const svc = new FcmPushService(null as any, deviceRepo as any);
 
     const result = await svc.sendToUser({ userId: 'u', title: 'Charging Complete', body: '15kWh charged' });

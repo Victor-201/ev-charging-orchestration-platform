@@ -1,13 +1,13 @@
 /**
  * Tests: Notification Domain Aggregates
  *
- * Pure unit tests — không cần DB hay NestJS context.
+ * Pure unit tests - no DB or NestJS context needed.
  */
 import {
   Notification, Device, NotificationPreference,
 } from '../../src/domain/entities/notification.aggregate';
 
-// ─── Notification Aggregate ───────────────────────────────────────────────────
+// Notification Aggregate
 
 describe('Notification Aggregate', () => {
 
@@ -16,12 +16,12 @@ describe('Notification Aggregate', () => {
       userId:  'user-001',
       type:    'booking.confirmed',
       channel: 'push',
-      title:   'Lịch sạc được xác nhận 🔋',
+      title:   'Lịch sạc được xác nhận',
       body:    'Lịch sạc của bạn đã được xác nhận!',
     });
   }
 
-  it('tạo notification với status pending', () => {
+  it('creates notification with pending status', () => {
     const n = makeNotif();
     expect(n.status).toBe('pending');
     expect(n.readAt).toBeNull();
@@ -29,13 +29,13 @@ describe('Notification Aggregate', () => {
     expect(n.id).toBeDefined();
   });
 
-  it('markSent: pending → sent', () => {
+  it('markSent: pending -> sent', () => {
     const n = makeNotif();
     n.markSent();
     expect(n.status).toBe('sent');
   });
 
-  it('markRead: pending → read, readAt được set', () => {
+  it('markRead: pending -> read, readAt is set', () => {
     const n = makeNotif();
     n.markRead();
     expect(n.status).toBe('read');
@@ -43,7 +43,7 @@ describe('Notification Aggregate', () => {
     expect(n.isRead).toBe(true);
   });
 
-  it('markRead: idempotent — không thay đổi readAt nếu đã read', () => {
+  it('markRead: idempotent - does not change readAt if already read', () => {
     const n = makeNotif();
     n.markRead();
     const firstReadAt = n.readAt;
@@ -51,46 +51,46 @@ describe('Notification Aggregate', () => {
     expect(n.readAt).toBe(firstReadAt);
   });
 
-  it('markFailed: pending → failed', () => {
+  it('markFailed: pending -> failed', () => {
     const n = makeNotif();
     n.markFailed();
     expect(n.status).toBe('failed');
   });
 
-  it('markFailed: không thể fail sau khi đã read', () => {
+  it('markFailed: cannot fail after already read', () => {
     const n = makeNotif();
     n.markRead();
     n.markFailed();
     expect(n.status).toBe('read');  // unchanged
   });
 
-  it('throw khi không có userId', () => {
+  it('throws when missing userId', () => {
     expect(() => Notification.create({
       userId: '',  channel: 'push', type: 'booking.created',
       title: 'T', body: 'B',
     })).toThrow('userId required');
   });
 
-  it('throw khi title rỗng', () => {
+  it('throws when title is empty', () => {
     expect(() => Notification.create({
       userId: 'u-001', channel: 'push', type: 'booking.created',
       title: '   ', body: 'B',
     })).toThrow('title required');
   });
 
-  it('throw khi body rỗng', () => {
+  it('throws when body is empty', () => {
     expect(() => Notification.create({
       userId: 'u-001', channel: 'push', type: 'booking.created',
       title: 'T', body: '',
     })).toThrow('body required');
   });
 
-  it('metadata mặc định là empty object', () => {
+  it('metadata defaults to empty object', () => {
     const n = makeNotif();
     expect(n.metadata).toEqual({});
   });
 
-  it('metadata được set khi truyền vào', () => {
+  it('metadata is set when provided', () => {
     const n = Notification.create({
       userId: 'u-001', type: 'booking.created', channel: 'in_app',
       title: 'T', body: 'B', metadata: { bookingId: 'b-001' },
@@ -99,11 +99,11 @@ describe('Notification Aggregate', () => {
   });
 });
 
-// ─── Device Aggregate ─────────────────────────────────────────────────────────
+// Device Aggregate
 
 describe('Device Aggregate', () => {
 
-  it('register tạo device với đúng props', () => {
+  it('register creates device with correct props', () => {
     const d = Device.register({
       userId:    'user-001',
       platform:  'android',
@@ -118,22 +118,22 @@ describe('Device Aggregate', () => {
     expect(d.lastActiveAt).toBeInstanceOf(Date);
   });
 
-  it('register: deviceName optional (null nếu không truyền)', () => {
+  it('register: deviceName optional (null if not provided)', () => {
     const d = Device.register({ userId: 'u', platform: 'web', pushToken: 'tok-1' });
     expect(d.deviceName).toBeNull();
   });
 
-  it('throw khi pushToken rỗng', () => {
+  it('throws when pushToken is empty', () => {
     expect(() => Device.register({ userId: 'u', platform: 'ios', pushToken: '' }))
       .toThrow('pushToken (FCM token) required');
   });
 
-  it('throw khi userId rỗng', () => {
+  it('throws when userId is empty', () => {
     expect(() => Device.register({ userId: '', platform: 'ios', pushToken: 'tok' }))
       .toThrow('userId required');
   });
 
-  it('updateToken: cập nhật token và lastActiveAt', async () => {
+  it('updateToken: updates token and lastActiveAt', async () => {
     const d = Device.register({ userId: 'u', platform: 'android', pushToken: 'old-token' });
     const before = d.lastActiveAt;
 
@@ -144,17 +144,17 @@ describe('Device Aggregate', () => {
     expect(d.lastActiveAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
   });
 
-  it('updateToken: throw khi newToken rỗng', () => {
+  it('updateToken: throws when newToken is empty', () => {
     const d = Device.register({ userId: 'u', platform: 'android', pushToken: 'tok' });
     expect(() => d.updateToken('')).toThrow('new pushToken required');
   });
 });
 
-// ─── NotificationPreference Aggregate ────────────────────────────────────────
+// NotificationPreference Aggregate
 
 describe('NotificationPreference Aggregate', () => {
 
-  it('createDefault: tất cả enabled (trừ sms)', () => {
+  it('createDefault: all enabled (except sms)', () => {
     const pref = NotificationPreference.createDefault('user-001');
     expect(pref.enablePush).toBe(true);
     expect(pref.enableRealtime).toBe(true);
@@ -164,46 +164,46 @@ describe('NotificationPreference Aggregate', () => {
     expect(pref.quietHoursEnd).toBeNull();
   });
 
-  it('canSendPushNow: true khi không có quiet hours', () => {
+  it('canSendPushNow: true when no quiet hours', () => {
     const pref = NotificationPreference.createDefault('user-001');
     expect(pref.canSendPushNow()).toBe(true);
   });
 
-  it('canSendPushNow: false khi enablePush = false', () => {
+  it('canSendPushNow: false when enablePush = false', () => {
     const pref = NotificationPreference.createDefault('user-001');
     pref.updatePreferences({ enablePush: false });
     expect(pref.canSendPushNow()).toBe(false);
   });
 
-  it('canSendPushNow: false trong quiet hours (UTC)', () => {
+  it('canSendPushNow: false during quiet hours (UTC)', () => {
     const pref = NotificationPreference.reconstitute({
       userId: 'u', enablePush: true, enableRealtime: true,
       enableEmail: true, enableSms: false,
       quietHoursStart: 0, quietHoursEnd: 23,  // all day quiet
       updatedAt: new Date(),
     });
-    // 0-23 covers all hours → always blocked
+    // 0-23 covers all hours -> always blocked
     expect(pref.canSendPushNow()).toBe(false);
   });
 
-  it('canSendPushNow: true ngoài quiet hours range', () => {
+  it('canSendPushNow: true outside quiet hours range', () => {
     const pref = NotificationPreference.reconstitute({
       userId: 'u', enablePush: true, enableRealtime: true,
       enableEmail: true, enableSms: false,
-      quietHoursStart: 2, quietHoursEnd: 2,  // start == end → no quiet
+      quietHoursStart: 2, quietHoursEnd: 2,  // start == end -> no quiet
       updatedAt: new Date(),
     });
-    // start <= end: quiet if hour in [2,2) → empty range → can send
+    // start <= end: quiet if hour in [2,2) -> empty range -> can send
     expect(pref.canSendPushNow()).toBe(true);
   });
 
-  it('updatePreferences: update enableSms', () => {
+  it('updatePreferences: updates enableSms', () => {
     const pref = NotificationPreference.createDefault('user-001');
     pref.updatePreferences({ enableSms: true });
     expect(pref.enableSms).toBe(true);
   });
 
-  it('throw khi userId rỗng', () => {
+  it('throws when userId is empty', () => {
     expect(() => NotificationPreference.createDefault('')).toThrow('userId required');
   });
 });
