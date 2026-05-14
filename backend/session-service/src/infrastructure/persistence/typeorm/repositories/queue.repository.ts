@@ -24,7 +24,7 @@ export class QueueRepository implements IQueueRepository {
       userId:    entry.userId,
       chargerId: entry.chargerId,
       vehicleId: null,
-      priority:  Math.max(1, Math.min(999, Math.round((10 - entry.userPriority) * 99.8 + 1))), // Map 1-10 priority → 1-999 DB
+      priority:  Math.max(1, Math.min(999, Math.round((10 - entry.userPriority) * 99.8 + 1))), // Map 1-10 priority -> 1-999 DB
       status:    'waiting',
       joinedAt:  entry.requestedAt,
       expiresAt: null,

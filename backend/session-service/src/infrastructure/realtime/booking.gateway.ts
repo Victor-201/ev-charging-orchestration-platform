@@ -33,7 +33,7 @@ export class BookingGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   /**
-   * Called after a booking state change — pushed to the specific user.
+   * Called after a booking state change - pushed to the specific user.
    */
   emitBookingUpdate(
     userId: string,
@@ -43,7 +43,7 @@ export class BookingGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   /**
-   * Called when charger slot status changes — broadcast to all watching.
+   * Called when charger slot status changes - broadcast to all watching.
    */
   emitSlotUpdate(chargerId: string, status: string): void {
     this.server.to(`charger:${chargerId}`).emit('slot_updated', { chargerId, status });

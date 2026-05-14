@@ -9,7 +9,7 @@ import { DomainException } from '../../src/domain/exceptions/domain.exception';
 const future = (offsetMinutes: number): Date =>
   new Date(Date.now() + offsetMinutes * 60_000);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 const makeBooking = () =>
   Booking.create({
@@ -27,7 +27,7 @@ const makeConfirmedBooking = () => {
   return b;
 };
 
-// ─── BookingTimeRange ─────────────────────────────────────────────────────────
+// BookingTimeRange
 
 describe('BookingTimeRange (Value Object)', () => {
   it('creates valid range', () => {
@@ -67,12 +67,12 @@ describe('BookingTimeRange (Value Object)', () => {
   });
 });
 
-// ─── Booking Aggregate ────────────────────────────────────────────────────────
+// Booking Aggregate
 
-describe('Booking Aggregate — Auto-confirm FSM', () => {
+describe('Booking Aggregate - Auto-confirm FSM', () => {
   /**
-   * Luồng mới: PENDING_PAYMENT → CONFIRMED → COMPLETED
-   * (không còn confirm() thủ công — confirmWithPayment() do event trigger)
+   * New flow: PENDING_PAYMENT → CONFIRMED → COMPLETED
+   * (No manual confirm() - confirmWithPayment() triggered by event)
    */
 
   it('creates in PENDING_PAYMENT with depositAmount set', () => {

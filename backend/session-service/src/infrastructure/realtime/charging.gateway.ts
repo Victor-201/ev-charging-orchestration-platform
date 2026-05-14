@@ -16,9 +16,9 @@ import { Repository } from 'typeorm';
 import { OutboxOrmEntity } from '../persistence/typeorm/entities/session.orm-entities';
 
 /**
- * ChargingGateway — Socket.IO realtime gateway.
+ * ChargingGateway - Socket.IO realtime gateway.
  *
- * Clients tham gia room theo sessionId:
+ * Clients join room by sessionId:
  *   socket.emit('join', { sessionId })
  *
  * Events emitted:
@@ -29,7 +29,7 @@ import { OutboxOrmEntity } from '../persistence/typeorm/entities/session.orm-ent
  *   - charging_error        (session.error)
  *   - charger_status        (charger.status.changed)
  *
- * Outbox polling mỗi 2s để pick up events mới (low-latency realtime).
+ * Outbox polling every 2s to pick up new events (low-latency realtime).
  */
 @WebSocketGateway({
   cors: { origin: '*' },
@@ -45,7 +45,7 @@ export class ChargingGateway
 
   private readonly logger = new Logger(ChargingGateway.name);
 
-  // Mapping eventType → socket event name
+  // Mapping eventType -> socket event name
   private readonly EVENT_MAP: Record<string, string> = {
     'session.started':        'charging_started',
     'session.activated':      'charging_started',
@@ -73,7 +73,7 @@ export class ChargingGateway
     this.logger.debug(`Client disconnected: ${client.id}`);
   }
 
-  /** Client join room theo sessionId để nhận realtime updates */
+  /** Client joins room by sessionId to receive realtime updates */
   @SubscribeMessage('join')
   handleJoin(
     @MessageBody() data: { sessionId: string },
@@ -85,7 +85,7 @@ export class ChargingGateway
     client.emit('joined', { sessionId: data.sessionId });
   }
 
-  /** Client join theo chargerId để nhận charger status updates */
+  /** Client joins by chargerId to receive charger status updates */
   @SubscribeMessage('subscribe_charger')
   handleSubscribeCharger(
     @MessageBody() data: { chargerId: string },
@@ -97,8 +97,8 @@ export class ChargingGateway
   }
 
   /**
-   * Broadcast sự kiện tới room.
-   * Gọi từ OutboxPublisher sau khi publish lên AMQP.
+   * Broadcast event to room.
+   * Called from OutboxPublisher after publishing to AMQP.
    */
   broadcastToSession(sessionId: string, event: string, payload: object): void {
     this.server.to(`session:${sessionId}`).emit(event, payload);
@@ -109,8 +109,8 @@ export class ChargingGateway
   }
 
   /**
-   * Poll outbox mỗi 2 giây → emit realtime events cho connected clients.
-   * Tách biệt với AMQP publish (outbox.publisher.ts) để realtime low-latency.
+   * Poll outbox every 2 seconds -> emit realtime events to connected clients.
+   * Separated from AMQP publish (outbox.publisher.ts) for realtime low-latency.
    */
   @Cron('*/2 * * * * *')
   async pollAndBroadcast(): Promise<void> {

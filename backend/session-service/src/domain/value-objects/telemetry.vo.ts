@@ -1,7 +1,7 @@
 /**
- * Value Object: Telemetry reading từ charger hardware
+ * Value Object: Telemetry reading from charger hardware
  *
- * Immutable. Validates sensor ranges tại thời điểm khởi tạo.
+ * Immutable. Validates sensor ranges at initialization.
  */
 export class TelemetryReading {
   readonly powerKw:      number | null;
@@ -24,13 +24,13 @@ export class TelemetryReading {
     recordedAt?:   Date;
   }) {
     if (props.socPercent !== undefined && (props.socPercent < 0 || props.socPercent > 100)) {
-      throw new Error(`SOC phải trong khoảng 0-100, nhận được: ${props.socPercent}`);
+      throw new Error(`SOC must be between 0-100, received: ${props.socPercent}`);
     }
     if (props.powerKw !== undefined && props.powerKw < 0) {
-      throw new Error(`powerKw không được âm: ${props.powerKw}`);
+      throw new Error(`powerKw cannot be negative: ${props.powerKw}`);
     }
     if (props.meterWh !== undefined && props.meterWh < 0) {
-      throw new Error(`meterWh không được âm: ${props.meterWh}`);
+      throw new Error(`meterWh cannot be negative: ${props.meterWh}`);
     }
 
     this.powerKw      = props.powerKw      ?? null;

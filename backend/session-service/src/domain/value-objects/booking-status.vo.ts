@@ -1,10 +1,10 @@
 export enum BookingStatus {
-  PENDING_PAYMENT = 'pending_payment', // Chờ thanh toán deposit (5 phút)
-  CONFIRMED       = 'confirmed',       // Thanh toán OK, QR token đã sinh
-  COMPLETED       = 'completed',       // Session sạc đã bắt đầu (QR đã quét)
-  CANCELLED       = 'cancelled',       // User tự hủy → hoàn 100% deposit
-  EXPIRED         = 'expired',         // Hết 5 phút không thanh toán → auto hủy
-  NO_SHOW         = 'no_show',         // Hết 10 phút grace period → phạt 20% deposit
+  PENDING_PAYMENT = 'pending_payment', // Pending deposit payment (5 mins)
+  CONFIRMED       = 'confirmed',       // Payment OK, QR token generated
+  COMPLETED       = 'completed',       // Charging session started (QR scanned)
+  CANCELLED       = 'cancelled',       // User cancelled -> 100% deposit refund
+  EXPIRED         = 'expired',         // 5 mins without payment -> auto cancel
+  NO_SHOW         = 'no_show',         // 10 mins grace period ended -> 20% deposit penalty
 }
 
 export const ACTIVE_STATUSES: BookingStatus[] = [
@@ -19,5 +19,5 @@ export const TERMINAL_STATUSES: BookingStatus[] = [
   BookingStatus.NO_SHOW,
 ];
 
-/** Legacy alias — dùng trong các query DB cũ */
+/** Legacy alias - used in old DB queries */
 export const BOOKABLE_STATUSES = ACTIVE_STATUSES;

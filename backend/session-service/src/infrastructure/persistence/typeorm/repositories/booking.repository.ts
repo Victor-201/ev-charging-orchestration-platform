@@ -75,7 +75,7 @@ export class BookingRepository implements IBookingRepository {
   }
 
   /**
-   * Lấy tất cả booking active trong một ngày cụ thể cho charger — dùng tính availability
+   * Get all active bookings on a specific date for a charger - used for calculating availability
    */
   async findByChargerAndDate(chargerId: string, date: Date): Promise<Booking[]> {
     const startOfDay = new Date(date);
@@ -117,7 +117,7 @@ export class BookingRepository implements IBookingRepository {
     return count > 0;
   }
 
-  /** Booking PENDING_PAYMENT quá 5 phút → auto expire */
+  /** Booking PENDING_PAYMENT older than 5 minutes -> auto expire */
   async findPendingPaymentBefore(cutoff: Date): Promise<Booking[]> {
     const entities = await this.repo
       .createQueryBuilder('b')
@@ -159,7 +159,7 @@ export class BookingRepository implements IBookingRepository {
     return entity ? this.toDomain(entity) : null;
   }
 
-  // ─── Mappers ─────────────────────────────────────────────────────────────────
+  // Mappers
 
   private toOrm(b: Booking): BookingOrmEntity {
     const e = new BookingOrmEntity();

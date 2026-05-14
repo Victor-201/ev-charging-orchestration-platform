@@ -3,8 +3,8 @@ import {
   CreateDateColumn, UpdateDateColumn, Index,
 } from 'typeorm';
 
-// â”€â”€â”€ bookings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// GIST EXCLUDE set via SQL migration â€” TypeORM @Exclusion is unsupported for
+// bookings
+// GIST EXCLUDE set via SQL migration - TypeORM @Exclusion is unsupported for
 // partial-where exclusions, so we rely on DB-level constraint + double-check
 // in use-case hasOverlap().
 
@@ -43,21 +43,21 @@ export class BookingOrmEntity {
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expiresAt: Date | null;
 
-  // ─── Deposit & QR ──────────────────────────────────────────────────────────
+  // Deposit & QR
 
-  /** Token QR một lần — sinh sau khi payment thành công */
+  /** One-time QR token - generated after successful payment */
   @Column({ name: 'qr_token', type: 'varchar', length: 40, nullable: true, unique: true })
   qrToken: string | null;
 
-  /** Số tiền cọ (VND) */
+  /** Deposit amount (VND) */
   @Column({ name: 'deposit_amount', type: 'numeric', precision: 12, scale: 0, nullable: true })
   depositAmount: number | null;
 
-  /** Transaction ID của giao dịch cọ */
+  /** Deposit transaction ID */
   @Column({ name: 'deposit_transaction_id', type: 'uuid', nullable: true })
   depositTransactionId: string | null;
 
-  /** Phí phạt no-show (VND) */
+  /** No-show penalty fee (VND) */
   @Column({ name: 'penalty_amount', type: 'numeric', precision: 12, scale: 0, nullable: true })
   penaltyAmount: number | null;
 
@@ -71,7 +71,7 @@ export class BookingOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ booking_status_history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// booking_status_history
 
 @Entity('booking_status_history')
 @Index('idx_bsh_booking', ['bookingId'])
@@ -95,7 +95,7 @@ export class BookingStatusHistoryOrmEntity {
   reason: string | null;
 }
 
-// â”€â”€â”€ charger_read_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// charger_read_models
 
 @Entity('charger_read_models')
 export class ChargerReadModelOrmEntity {
@@ -125,7 +125,7 @@ export class ChargerReadModelOrmEntity {
   syncedAt: Date;
 }
 
-// â”€â”€â”€ vehicle_read_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// vehicle_read_models
 
 @Entity('vehicle_read_models')
 export class VehicleReadModelOrmEntity {
@@ -151,7 +151,7 @@ export class VehicleReadModelOrmEntity {
   syncedAt: Date;
 }
 
-// â”€â”€â”€ pricing_snapshots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// pricing_snapshots
 
 @Entity('pricing_snapshots')
 @Index('idx_psnap_charger', ['chargerId'])
@@ -178,7 +178,7 @@ export class PricingSnapshotOrmEntity {
   capturedAt: Date;
 }
 
-// â”€â”€â”€ queue_entries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// queue_entries
 
 @Entity('queue_entries')
 @Index('idx_queue_charger', ['chargerId', 'priority', 'joinedAt'], { where: `status = 'waiting'` })
@@ -219,7 +219,7 @@ export class QueueOrmEntity {
   expiresAt: Date | null;
 }
 
-// â”€â”€â”€ scheduling_slots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// scheduling_slots
 
 @Entity('scheduling_slots')
 @Index('idx_slot_charger', ['chargerId', 'suggestedStart'])
@@ -259,7 +259,7 @@ export class SchedulingSlotOrmEntity {
   bookingId: string | null;
 }
 
-// â”€â”€â”€ processed_events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
@@ -273,7 +273,7 @@ export class ProcessedEventOrmEntity {
   processedAt: Date;
 }
 
-// â”€â”€â”€ event_outbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// event_outbox
 
 @Entity('event_outbox')
 @Index('idx_outbox_pending', ['status', 'createdAt'], { where: `status = 'pending'` })
@@ -314,24 +314,23 @@ export class OutboxOrmEntity {
   processedAt: Date | null;
 }
 
-// ─── user_debt_read_models ────────────────────────────────────────────────────
-// Read-model được sync từ User Service qua event.
-// Dùng để ArrearsGuard check hasOutstandingDebt mà không cần remote call.
-// Cập nhật bởi:
-//   - WalletArrearsCreatedConsumer   → hasOutstandingDebt = true
-//   - WalletArrearsClearedConsumer   → hasOutstandingDebt = false
-// ─────────────────────────────────────────────────────────────────────────────
+// user_debt_read_models
+// Read-model synced from User Service via event.
+// Used by ArrearsGuard to check hasOutstandingDebt without remote call.
+// Updated by:
+//   - WalletArrearsCreatedConsumer   -> hasOutstandingDebt = true
+//   - WalletArrearsClearedConsumer   -> hasOutstandingDebt = false
 
 @Entity('user_debt_read_models')
 export class UserDebtReadModelOrmEntity {
   @PrimaryColumn({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  /** Cờ nợ xấu — true = block mọi tính năng booking */
+  /** Bad debt flag - true = block all booking features */
   @Column({ name: 'has_outstanding_debt', default: false })
   hasOutstandingDebt: boolean;
 
-  /** Tổng số tiền đang nợ (VND) */
+  /** Total outstanding debt amount (VND) */
   @Column({ name: 'arrears_amount', type: 'numeric', precision: 12, scale: 0, default: 0 })
   arrearsAmount: number;
 

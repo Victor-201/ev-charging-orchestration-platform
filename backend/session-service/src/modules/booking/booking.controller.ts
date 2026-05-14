@@ -27,22 +27,22 @@ import { BOOKING_REPOSITORY } from './booking.tokens';
 import type { IBookingRepository } from '../../domain/repositories/booking.repository.interface';
 
 /**
- * BookingController â€” Tá»± Ä‘á»™ng hÃ³a hoÃ n toÃ n, khÃ´ng cáº§n nhÃ¢n viÃªn thÆ°á»ng trá»±c
+ * BookingController - Fully automated, no permanent staff required
  *
- * Luá»“ng:
- *   POST /bookings         â†’ Táº¡o booking (PENDING_PAYMENT) + emit deposit request
- *   GET  /bookings/availability â†’ Xem lá»‹ch trá»‘ng theo ngÃ y / trá»¥
- *   GET  /bookings/:id     â†’ Chi tiáº¿t booking (kÃ¨m QR token náº¿u Ä‘Ã£ confirm)
- *   GET  /bookings/me      â†’ Lá»‹ch Ä‘áº·t cá»§a user hiá»‡n táº¡i
- *   DELETE /bookings/:id   â†’ Há»§y booking â†’ tá»± Ä‘á»™ng hoÃ n tiá»n cá»c vá» vÃ­
+ * Flow:
+ *   POST /bookings         -> Create booking (PENDING_PAYMENT) + emit deposit request
+ *   GET  /bookings/availability -> View availability by day / charger
+ *   GET  /bookings/:id     -> Booking details (with QR token if confirmed)
+ *   GET  /bookings/me      -> Current user's bookings
+ *   DELETE /bookings/:id   -> Cancel booking -> auto refund deposit to wallet
  *
- *   POST /queue            â†’ ÄÄƒng kÃ½ hÃ ng Ä‘á»£i (khi trá»¥ full)
- *   DELETE /queue/:chargerId â†’ Rá»i hÃ ng Ä‘á»£i
- *   GET  /queue/:chargerId/position â†’ Vá»‹ trÃ­ trong hÃ ng Ä‘á»£i
+ *   POST /queue            -> Join queue (when charger is full)
+ *   DELETE /queue/:chargerId -> Leave queue
+ *   GET  /queue/:chargerId/position -> Queue position
  *
- * NOTE: confirm/complete endpoints Ä‘Ã£ bá»‹ XÃ“A.
- *   Confirm: tá»± Ä‘á»™ng sau khi payment.completed event nháº­n Ä‘Æ°á»£c.
- *   Complete: tá»± Ä‘á»™ng sau khi session.started event nháº­n Ä‘Æ°á»£c.
+ * NOTE: confirm/complete endpoints have been REMOVED.
+ *   Confirm: automatic after payment.completed event is received.
+ *   Complete: automatic after session.started event is received.
  */
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard, ArrearsGuard)
@@ -58,11 +58,11 @@ export class BookingController {
     private readonly bookingRepo:          IBookingRepository,
   ) {}
 
-  // â”€â”€â”€ GET /api/v1/bookings/availability â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // GET /api/v1/bookings/availability
   /**
-   * Xem lá»‹ch trá»‘ng/báº­n theo ngÃ y cho má»™t trá»¥ sáº¡c.
-   * Tráº£ vá» máº£ng slot 30 phÃºt, má»—i slot cÃ³ isBooked: true/false.
-   * @SkipArrearsCheck: user Ä‘ang ná»£ váº«n cÃ³ thá»ƒ XEM lá»‹ch (chá»‰ cháº·n Ä‘áº·t má»›i).
+   * View availability by day for a charger.
+   * Returns an array of 30-minute slots, each with isBooked: true/false.
+   * @SkipArrearsCheck: user in debt can still VIEW availability (only blocks new bookings).
    */
   @Get('availability')
   @SkipArrearsCheck()
@@ -80,10 +80,10 @@ export class BookingController {
     );
   }
 
-  // â”€â”€â”€ GET /api/v1/bookings/me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // GET /api/v1/bookings/me
   /**
-   * Lá»‹ch Ä‘áº·t cá»§a user hiá»‡n táº¡i â€” phÃ¢n trang.
-   * @SkipArrearsCheck: user Ä‘ang ná»£ váº«n cÃ³ thá»ƒ XEM lá»‹ch Ä‘áº·t cÅ©.
+   * Current user's bookings - paginated.
+   * @SkipArrearsCheck: user in debt can still VIEW old bookings.
    */
   @Get('me')
   @SkipArrearsCheck()
@@ -99,12 +99,12 @@ export class BookingController {
     };
   }
 
-  // â”€â”€â”€ POST /api/v1/bookings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // POST /api/v1/bookings
   /**
-   * Táº¡o booking má»›i.
-   * userId láº¥y tá»« JWT token (khÃ´ng cho client tá»± set).
-   * Sau khi táº¡o: há»‡ thá»‘ng tá»± Ä‘á»™ng trá»« tiá»n cá»c tá»« vÃ­.
-   * Náº¿u thanh toÃ¡n thÃ nh cÃ´ng: booking tá»± Ä‘á»™ng CONFIRMED + QR Ä‘Æ°á»£c sinh.
+   * Create a new booking.
+   * userId is extracted from JWT token (client cannot set it).
+   * After creation: system automatically deducts deposit from wallet.
+   * If payment is successful: booking is auto CONFIRMED + QR generated.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -119,16 +119,16 @@ export class BookingController {
       connectorType: dto.connectorType,
       startTime:     new Date(dto.startTime),
       endTime:       new Date(dto.endTime),
-      // depositAmount Ä‘Ã£ bá»‹ xÃ³a khá»i DTO â€” backend tá»± tÃ­nh tá»« station-service
+      // depositAmount is removed from DTO - backend calculates it from station-service
     });
     return this.toDto(booking);
   }
 
-  // â”€â”€â”€ GET /api/v1/bookings/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // GET /api/v1/bookings/:id
   /**
-   * Chi tiáº¿t booking â€” user thÆ°á»ng chá»‰ xem booking cá»§a mÃ¬nh.
-   * Response kÃ¨m qrToken (null náº¿u chÆ°a confirm).
-   * @SkipArrearsCheck: user Ä‘ang ná»£ váº«n cÃ³ thá»ƒ xem chi tiáº¿t booking cÅ©.
+   * Booking details - normal user can only view their own bookings.
+   * Response includes qrToken (null if not confirmed).
+   * @SkipArrearsCheck: user in debt can still view old booking details.
    */
   @Get(':id')
   @SkipArrearsCheck()
@@ -137,19 +137,19 @@ export class BookingController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<BookingResponseDto> {
     const booking = await this.bookingRepo.findById(id);
-    if (!booking) throw new NotFoundException(`Booking ${id} khÃ´ng tá»“n táº¡i`);
+    if (!booking) throw new NotFoundException(`Booking ${id} does not exist`);
 
     const isPrivileged = user.roles?.some((r) => ['admin', 'staff'].includes(r));
     if (!isPrivileged && booking.userId !== user.id) {
-      throw new NotFoundException(`Booking ${id} khÃ´ng tá»“n táº¡i`);
+      throw new NotFoundException(`Booking ${id} does not exist`);
     }
     return this.toDto(booking);
   }
 
-  // â”€â”€â”€ DELETE /api/v1/bookings/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // DELETE /api/v1/bookings/:id
   /**
-   * User tá»± há»§y booking.
-   * Tiá»n cá»c sáº½ Ä‘Æ°á»£c hoÃ n 100% vÃ o vÃ­ tá»± Ä‘á»™ng sau khi event Ä‘Æ°á»£c xá»­ lÃ½.
+   * User cancels their own booking.
+   * Deposit will be automatically refunded 100% to wallet after event processing.
    */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -165,12 +165,12 @@ export class BookingController {
     });
   }
 
-  // â”€â”€â”€ Queue endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Queue endpoints
 
   /**
    * POST /api/v1/bookings/queue
-   * ÄÄƒng kÃ½ vÃ o hÃ ng Ä‘á»£i khi trá»¥ Ä‘ang full.
-   * Khi cÃ³ slot trá»‘ng, há»‡ thá»‘ng sáº½ Push Notification cho user.
+   * Join queue when charger is full.
+   * When a slot is available, system will Push Notification to user.
    */
   @Post('queue')
   @HttpCode(HttpStatus.CREATED)
@@ -189,7 +189,7 @@ export class BookingController {
 
   /**
    * DELETE /api/v1/bookings/queue/:chargerId
-   * Rá»i hÃ ng Ä‘á»£i.
+   * Leave queue.
    */
   @Delete('queue/:chargerId')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -202,7 +202,7 @@ export class BookingController {
 
   /**
    * GET /api/v1/bookings/queue/:chargerId/position
-   * Xem vá»‹ trÃ­ trong hÃ ng Ä‘á»£i.
+   * View queue position.
    */
   @Get('queue/:chargerId/position')
   async getQueuePos(
@@ -212,7 +212,7 @@ export class BookingController {
     return this.getQueuePosition.execute(user.id, chargerId);
   }
 
-  // â”€â”€â”€ Mapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Mapper
 
   private toDto(b: Booking): BookingResponseDto {
     return {

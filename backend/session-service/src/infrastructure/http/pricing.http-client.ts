@@ -20,8 +20,8 @@ export interface PricingQuote {
 /**
  * PricingHttpClient
  *
- * HTTP client dùng để lấy giá từ station-service.
- * Booking-service gọi để tính depositAmount động trước khi tạo booking.
+ * HTTP client used to fetch prices from station-service.
+ * Booking-service calls this to dynamically calculate depositAmount before creating a booking.
  *
  * Base URL từ env: STATION_SERVICE_URL (default: http://station-service:3003)
  */
@@ -65,12 +65,12 @@ export class PricingHttpClient {
       this.logger.error(
         `Pricing HTTP error (charger=${opts.chargerId}): ${err.message}. Using fallback.`,
       );
-      // Fallback: nếu station-service không available, dùng giá mặc định
+      // Fallback: if station-service is unavailable, use default prices
       return this.fallbackPricing(opts);
     }
   }
 
-  /** Fallback khi station-service không available */
+  /** Fallback when station-service is unavailable */
   private fallbackPricing(opts: {
     chargerId:     string;
     stationId:     string;

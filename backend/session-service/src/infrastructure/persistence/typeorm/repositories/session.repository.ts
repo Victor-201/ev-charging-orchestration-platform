@@ -10,9 +10,9 @@ import { ISessionRepository } from '../../../../domain/repositories/session.repo
 import { SessionOrmEntity } from '../entities/session.orm-entities';
 
 /**
- * SessionRepository — Anti-corruption layer.
- * Converts between ORM entities và domain aggregate.
- * Không expose ORM entity ra ngoài infrastructure.
+ * SessionRepository - Anti-corruption layer.
+ * Converts between ORM entities and domain aggregate.
+ * Do not expose ORM entity outside infrastructure.
  */
 @Injectable()
 export class SessionRepository implements ISessionRepository {
@@ -72,7 +72,7 @@ export class SessionRepository implements ISessionRepository {
     return e ? this.toDomain(e) : null;
   }
 
-  // ─── Mapping helpers ────────────────────────────────────────────────────────
+  // Mapping helpers
 
   private toOrm(s: ChargingSession): SessionOrmEntity {
     const e              = new SessionOrmEntity();

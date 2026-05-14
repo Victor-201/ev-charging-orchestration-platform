@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { PriorityQueueService } from '../../src/domain/services/priority-queue.service';
 import { QueueEntry } from '../../src/domain/repositories/queue.repository.interface';
 import { ConfigService } from '@nestjs/config';

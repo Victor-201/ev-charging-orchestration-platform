@@ -2,7 +2,7 @@ import {
   Entity, Column, PrimaryColumn, CreateDateColumn, Index,
 } from 'typeorm';
 
-// â”€â”€â”€ charging_sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// charging_sessions
 
 @Entity('charging_sessions')
 @Index('idx_session_user_status',    ['userId', 'status'])
@@ -51,8 +51,8 @@ export class SessionOrmEntity {
   createdAt: Date;
 }
 
-// â”€â”€â”€ session_telemetry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Time-series table. High write throughput. Separate Ä‘á»ƒ khÃ´ng bloat session rows.
+// session_telemetry
+// Time-series table. High write throughput. Separate to prevent session rows bloat.
 
 @Entity('session_telemetry')
 @Index('idx_telemetry_session', ['sessionId', 'recordedAt'])
@@ -88,7 +88,7 @@ export class TelemetryOrmEntity {
   errorCode: string | null;
 }
 
-// â”€â”€â”€ charger_state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// charger_state
 // Real-time charger operational state (1 row per charger, upserted on change).
 // Read by Socket.IO gateway for realtime status.
 
@@ -117,7 +117,7 @@ export class ChargerStateOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ processed_events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
@@ -131,7 +131,7 @@ export class ProcessedEventOrmEntity {
   processedAt: Date;
 }
 
-// â”€â”€â”€ event_outbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// event_outbox
 
 @Entity('event_outbox')
 @Index('idx_outbox_pending', ['status', 'createdAt'], { where: `status = 'pending'` })
@@ -165,21 +165,20 @@ export class OutboxOrmEntity {
   publishedAt: Date | null;
 }
 
-// ─── user_debt_read_models ────────────────────────────────────────────────────
-// Read-model sync từ Payment Service (wallet.arrears events).
-// Dùng bởi ChargingArrearsGuard để block user nợ quét QR bắt đầu sạc.
-// ─────────────────────────────────────────────────────────────────────────────
+// user_debt_read_models
+// Read-model sync from Payment Service (wallet.arrears events).
+// Used by ChargingArrearsGuard to block user from starting charging if in debt.
 
 @Entity('user_debt_read_models')
 export class UserDebtReadModelOrmEntity {
   @PrimaryColumn({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  /** true = block user khởi động phiên sạc */
+  /** true = block user from starting charging session */
   @Column({ name: 'has_outstanding_debt', default: false })
   hasOutstandingDebt: boolean;
 
-  /** Số tiền đang nợ (VND) */
+  /** Debt amount (VND) */
   @Column({ name: 'arrears_amount', type: 'numeric', precision: 12, scale: 0, default: 0 })
   arrearsAmount: number;
 
@@ -187,12 +186,11 @@ export class UserDebtReadModelOrmEntity {
   syncedAt: Date;
 }
 
-// ─── booking_read_models ──────────────────────────────────────────────────────
-// Read-model sync từ Booking Service (booking.confirmed event).
-// Dùng bởi StartSessionUseCase để validate QR time window:
-//   - Không cho phép quét QR sớm hơn 15 phút trước startTime
-//   - Không cho phép quét QR muộn hơn 5 phút sau endTime
-// ─────────────────────────────────────────────────────────────────────────────
+// booking_read_models
+// Read-model sync from Booking Service (booking.confirmed event).
+// Used by StartSessionUseCase to validate QR time window:
+//   - Do not allow QR scanning earlier than 15 minutes before startTime
+//   - Do not allow QR scanning later than 5 minutes after endTime
 
 @Entity('booking_read_models')
 @Index('idx_brm_charger', ['chargerId'])
@@ -212,7 +210,7 @@ export class BookingReadModelOrmEntity {
   @Column({ name: 'end_time', type: 'timestamptz' })
   endTime: Date;
 
-  /** QR token sinh ra sau khi thanh toán thành công */
+  /** QR token generated after successful payment */
   @Column({ name: 'qr_token', type: 'varchar', length: 40, nullable: true })
   qrToken: string | null;
 

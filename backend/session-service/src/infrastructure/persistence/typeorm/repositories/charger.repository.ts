@@ -39,7 +39,7 @@ export class ChargerRepository implements IChargerRepository {
   }
 
   /**
-   * Row-level lock — serialises concurrent booking requests for same charger.
+   * Row-level lock - serialises concurrent booking requests for same charger.
    * Uses charger_read_models table (source of truth in booking-service).
    */
   async lockForUpdate(chargerId: string, manager: EntityManager): Promise<void> {
@@ -82,8 +82,8 @@ export class ChargerRepository implements IChargerRepository {
       id:            e.chargerId,
       stationId:     e.stationId,
       connectorType: e.connectorType,
-      // charger_read_model lưu 1 connector type chính.
-      // Đủ để validate connector match trong CreateBookingUseCase.
+      // charger_read_model stores 1 primary connector type.
+      // Sufficient to validate connector match in CreateBookingUseCase.
       connectors:    [{ connectorType: e.connectorType, maxPowerKw: e.maxPowerKw ?? 0 }],
       maxPowerKw:    e.maxPowerKw ?? 0,
       status:        e.isActive ? 'available' : 'offline',

@@ -1,3 +1,15 @@
+/**
+ * Session Service - Booking and Charging Session Orchestration
+ *
+ * Responsibility:
+ * - Handling charging point reservations (Bookings)
+ * - Managing active charging sessions and states
+ * - Queue management for busy stations
+ * - Coordinating with Billing for session completion
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Events), Redis (Distributed Locking)
+ */
 import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
@@ -42,6 +54,9 @@ import { OutboxOrmEntity as OutboxEntity } from './infrastructure/messaging/outb
           SchedulingSlotOrmEntity, ProcessedEventOrmEntity,
           OutboxOrmEntity,
         ],
+        migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
+        migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    20,

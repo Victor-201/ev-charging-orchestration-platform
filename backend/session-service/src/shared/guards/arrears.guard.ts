@@ -13,23 +13,23 @@ import { UserDebtReadModelOrmEntity } from '../../infrastructure/persistence/typ
 export const SKIP_ARREARS_CHECK = 'skipArrearsCheck';
 
 /**
- * @SkipArrearsCheck() — Decorator bỏ qua kiểm tra nợ xấu cho handler cụ thể.
- * Dùng cho các endpoint GET (chỉ đọc) không cần block.
+ * @SkipArrearsCheck() - Decorator to skip arrears check for specific handler.
+ * Used for GET endpoints (read-only) that don't need blocking.
  */
 export const SkipArrearsCheck = () => SetMetadata(SKIP_ARREARS_CHECK, true);
 
 /**
- * ArrearsGuard — Chặn nợ xấu
+ * ArrearsGuard - Block bad debt
  *
- * Áp dụng lên POST /bookings và POST /queue để ngăn user đang nợ tiền
- * đặt thêm chỗ mới hoặc vào hàng đợi.
+ * Applied to POST /bookings and POST /queue to prevent users in debt
+ * from booking new slots or entering queue.
  *
- * Nguồn dữ liệu: bảng `user_debt_read_models` trong booking-service DB.
- * Bảng này được cập nhật ngay lập tức khi nhận:
- *   - `wallet.arrears.created` → hasOutstandingDebt = true
- *   - `wallet.arrears.cleared` → hasOutstandingDebt = false
+ * Data source: `user_debt_read_models` table in session-service DB.
+ * This table is updated immediately upon receiving:
+ *   - `wallet.arrears.created` -> hasOutstandingDebt = true
+ *   - `wallet.arrears.cleared` -> hasOutstandingDebt = false
  *
- * Không gọi remote — check local DB → độ trễ cực thấp (< 1ms).
+ * No remote calls - check local DB -> ultra-low latency (< 1ms).
  */
 @Injectable()
 export class ArrearsGuard implements CanActivate {
@@ -40,7 +40,7 @@ export class ArrearsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Bỏ qua endpoint được đánh dấu @SkipArrearsCheck()
+    // Skip endpoints marked with @SkipArrearsCheck()
     const skip = this.reflector.getAllAndOverride<boolean>(SKIP_ARREARS_CHECK, [
       context.getHandler(),
       context.getClass(),
@@ -50,15 +50,15 @@ export class ArrearsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user    = request.user;
 
-    // Chưa authenticate → để JwtAuthGuard xử lý trước
+    // Not authenticated -> let JwtAuthGuard handle it first
     if (!user?.id) return true;
 
     const debt = await this.debtRepo.findOneBy({ userId: user.id });
     if (debt?.hasOutstandingDebt) {
       const formatted = Number(debt.arrearsAmount).toLocaleString('vi-VN');
       throw new ForbiddenException(
-        `Tài khoản đang có khoản nợ ${formatted} VND. ` +
-        `Vui lòng nạp tiền vào Ví để thanh toán nợ trước khi đặt chỗ sạc hoặc vào hàng đợi.`,
+        `Your account has an outstanding debt of ${formatted} VND. ` +
+        `Please top up your Wallet to settle the debt before booking or queuing.`,
       );
     }
 

@@ -23,7 +23,7 @@ import { EVENT_BUS } from '../../src/infrastructure/messaging/event-bus.interfac
 import { ConfigService } from '@nestjs/config';
 import { PricingHttpClient } from '../../src/infrastructure/http/pricing.http-client';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
+// Mocks
 
 const mockBookingRepo = {
   save:                jest.fn(),
@@ -65,7 +65,7 @@ const mockDataSource = {
   transaction: jest.fn().mockImplementation((cb: (m: any) => any) => cb({})),
 };
 
-// ─── Helper factories ─────────────────────────────────────────────────────────
+// Helper factories
 
 const FUTURE_START = new Date(Date.now() + 60 * 60 * 1000);      // +1h
 const FUTURE_END   = new Date(Date.now() + 2 * 60 * 60 * 1000);  // +2h
@@ -92,7 +92,7 @@ function makeBooking(status = BookingStatus.PENDING_PAYMENT): Booking {
   });
 }
 
-// ─── Domain: BookingTimeRange ─────────────────────────────────────────────────
+// Domain: BookingTimeRange
 
 describe('BookingTimeRange', () => {
   it('should create valid time range', () => {
@@ -127,9 +127,9 @@ describe('BookingTimeRange', () => {
   });
 });
 
-// ─── Domain: Booking Aggregate FSM (Auto-confirm) ────────────────────────────
+// Domain: Booking Aggregate FSM (Auto-confirm)
 
-describe('Booking Aggregate FSM — Auto-confirm model', () => {
+describe('Booking Aggregate FSM - Auto-confirm model', () => {
   /**
    * New FSM: PENDING_PAYMENT → CONFIRMED → COMPLETED
    * - confirmWithPayment(txnId, qrToken) replaces manual confirm()
@@ -216,7 +216,7 @@ describe('Booking Aggregate FSM — Auto-confirm model', () => {
   });
 });
 
-// ─── CreateBookingUseCase ─────────────────────────────────────────────────────
+// CreateBookingUseCase
 
 describe('CreateBookingUseCase', () => {
   let useCase: CreateBookingUseCase;
@@ -230,7 +230,7 @@ describe('CreateBookingUseCase', () => {
         { provide: CHARGER_REPOSITORY,    useValue: mockChargerRepo },
         { provide: EVENT_BUS,             useValue: mockEventBus },
         { provide: DataSource,            useValue: mockDataSource },
-        // PricingHttpClient dùng string token (không phải class token)
+        // PricingHttpClient uses string token (not class token)
         { provide: PricingHttpClient,     useValue: mockPricingClient },
         { provide: 'PricingHttpClient',   useValue: mockPricingClient },
       ],
@@ -287,7 +287,7 @@ describe('CreateBookingUseCase', () => {
   });
 });
 
-// ─── CancelBookingUseCase ─────────────────────────────────────────────────────
+// CancelBookingUseCase
 
 describe('CancelBookingUseCase', () => {
   let useCase: CancelBookingUseCase;
@@ -337,7 +337,7 @@ describe('CancelBookingUseCase', () => {
   });
 });
 
-// ─── SchedulingEngine ─────────────────────────────────────────────────────────
+// SchedulingEngine
 
 describe('SchedulingEngine', () => {
   let engine: SchedulingEngine;
@@ -395,7 +395,7 @@ describe('SchedulingEngine', () => {
   });
 });
 
-// ─── PriorityQueueService ─────────────────────────────────────────────────────
+// PriorityQueueService
 
 describe('PriorityQueueService', () => {
   let service: PriorityQueueService;

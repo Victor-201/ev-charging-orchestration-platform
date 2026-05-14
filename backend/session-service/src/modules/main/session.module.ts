@@ -28,7 +28,7 @@ import { OutboxOrmEntity } from '../../infrastructure/persistence/typeorm/entiti
   controllers: [SessionController],
   providers: [
     StartSessionUseCase, StopSessionUseCase, RecordTelemetryUseCase, GetSessionUseCase,
-    // Saga consumers (billing outcome → booking state machine)
+    // Saga consumers (billing outcome -> booking state machine)
     BillingDeductedConsumer, BillingDeductionFailedConsumer,
     // Legacy consumers preserved
     BookingConfirmedConsumer, PaymentCompletedConsumer,

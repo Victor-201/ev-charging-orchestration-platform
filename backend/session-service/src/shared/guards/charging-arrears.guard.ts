@@ -13,19 +13,19 @@ import { UserDebtReadModelOrmEntity } from '../../infrastructure/persistence/typ
 export const SKIP_CHARGING_ARREARS = 'skipChargingArrearsCheck';
 
 /**
- * @SkipChargingArrearsCheck() — Bỏ qua kiểm tra nợ xấu cho handler cụ thể.
- * Dùng cho GET endpoints (đọc lịch sử) hoặc admin/stop (nhân viên can thiệp sự cố).
+ * @SkipChargingArrearsCheck() - Skip arrears check for specific handler.
+ * Used for GET endpoints (read history) or admin/stop (staff intervention).
  */
 export const SkipChargingArrearsCheck = () => SetMetadata(SKIP_CHARGING_ARREARS, true);
 
 /**
- * ChargingArrearsGuard — Chặn nợ xấu tại điểm sạc
+ * ChargingArrearsGuard - Block bad debt at charging station
  *
- * Bảo vệ POST /charging/start:
- * - User có hasOutstandingDebt = true → 403 Forbidden với hướng dẫn nạp tiền.
- * - Admin/Staff (admin/stop, telemetry) → bypass hoàn toàn qua @SkipChargingArrearsCheck().
+ * Protects POST /charging/start:
+ * - User hasOutstandingDebt = true -> 403 Forbidden with top-up instructions.
+ * - Admin/Staff (admin/stop, telemetry) -> bypass completely via @SkipChargingArrearsCheck().
  *
- * Không gọi remote service — check local DB (< 1ms latency).
+ * No remote service calls - check local DB (< 1ms latency).
  */
 @Injectable()
 export class ChargingArrearsGuard implements CanActivate {
@@ -46,15 +46,15 @@ export class ChargingArrearsGuard implements CanActivate {
     const user    = request.user;
     if (!user?.id) return true;
 
-    // Admin/Staff được phép can thiệp kể cả khi đang nợ (vd: kết thúc session bị kẹt)
+    // Admin/Staff can intervene even with debt (e.g., ending stuck session)
     if (user.roles?.some((r: string) => ['admin', 'staff'].includes(r))) return true;
 
     const debt = await this.debtRepo.findOneBy({ userId: user.id });
     if (debt?.hasOutstandingDebt) {
       const formatted = Number(debt.arrearsAmount).toLocaleString('vi-VN');
       throw new ForbiddenException(
-        `Tài khoản đang có khoản nợ ${formatted} VND. ` +
-        `Vui lòng nạp tiền vào Ví EV để thanh toán nợ trước khi tiếp tục sạc xe.`,
+        `Your account has an outstanding debt of ${formatted} VND. ` +
+        `Please top up your EV Wallet to settle the debt before continuing to charge.`,
       );
     }
 

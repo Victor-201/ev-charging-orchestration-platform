@@ -72,7 +72,7 @@ import {
       BookingOrmEntity, BookingStatusHistoryOrmEntity,
       ChargerReadModelOrmEntity, PricingSnapshotOrmEntity,
       OutboxOrmEntity, ProcessedEventOrmEntity, QueueOrmEntity,
-      UserDebtReadModelOrmEntity,  // ─ ArrearsGuard read-model
+      UserDebtReadModelOrmEntity,  // ArrearsGuard read-model
     ]),
   ],
   controllers: [BookingController],
@@ -89,33 +89,33 @@ import {
     // Domain services
     SchedulingEngine,
     PriorityQueueService,
-    // Use cases — Booking lifecycle (tự động hóa)
+    // Use cases - Booking lifecycle (automated)
     CreateBookingUseCase,
     GetAvailabilityUseCase,
     AutoConfirmBookingUseCase,   // triggered by payment.completed
     CancelBookingUseCase,
     AutoCompleteBookingUseCase,  // triggered by session.started
     // HTTP clients
-    PricingHttpClient,           // gọi station-service lấy giá sạc
+    PricingHttpClient,           // call station-service for charging price
     // Jobs
-    AutoExpireBookingsJob,       // expire PENDING_PAYMENT sau 5 phút
-    NoShowDetectionJob,          // phạt no-show sau 10 phút
+    AutoExpireBookingsJob,       // expire PENDING_PAYMENT after 5 minutes
+    NoShowDetectionJob,          // no-show penalty after 10 minutes
     GetQueuePositionUseCase,
     // Queue use cases
     JoinQueueUseCase,
     LeaveQueueUseCase,
     ProcessQueueUseCase,
     // RabbitMQ consumers
-    BillingDeductedConsumer, BillingDeductionFailedConsumer,    // payment thành công → auto confirm
-    SessionStartedConsumer,      // session bắt đầu → auto complete
-    ChargerStatusConsumer,       // charger available → serve queue
-    // ─── Arrears Sync Consumers (Khóa Nợ Xấu) ───────────────────────────────
-    BookingArrearsCreatedConsumer,  // wallet.arrears.created → block user
-    BookingArrearsClearedConsumer,  // wallet.arrears.cleared → unblock user
-    // ─── Guards ──────────────────────────────────────────────────────────
+    BillingDeductedConsumer, BillingDeductionFailedConsumer,    // successful payment -> auto confirm
+    SessionStartedConsumer,      // session started -> auto complete
+    ChargerStatusConsumer,       // charger available -> serve queue
+    // Arrears Sync Consumers (Lock Bad Debt)
+    BookingArrearsCreatedConsumer,  // wallet.arrears.created -> block user
+    BookingArrearsClearedConsumer,  // wallet.arrears.cleared -> unblock user
+    // Guards
     JwtAuthGuard,
     RolesGuard,
-    ArrearsGuard,               // chặn user nợ tạo booking mới
+    ArrearsGuard,               // block users in debt from creating new bookings
   ],
   exports: [
     CreateBookingUseCase,
