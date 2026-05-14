@@ -5,7 +5,7 @@ import * as admin from 'firebase-admin';
 import { FIREBASE_ADMIN } from './firebase.module';
 import { DeviceOrmEntity } from '../persistence/typeorm/entities/notification.orm-entities';
 
-// ─── Public interfaces (used by DeliveryEngine) ──────────────────────────────
+// Public interfaces (used by DeliveryEngine)
 
 export interface FcmMessage {
   token:     string;
@@ -21,18 +21,18 @@ export interface FcmResult {
   error?:  string;
 }
 
-// ─── FcmPushService ───────────────────────────────────────────────────────────
+// FcmPushService
 
 /**
- * FcmPushService — FCM HTTP v1 push notification delivery via firebase-admin SDK.
+ * FcmPushService - FCM HTTP v1 push notification delivery via firebase-admin SDK.
  *
  * Design:
- * - Nhận firebase-admin.app qua DI token FIREBASE_ADMIN
- * - Nếu app = null → stub mode (log warning, không send)
- * - Gửi từng message độc lập (FCM HTTP v1 không có batch endpoint)
- * - Tự dọn stale tokens (UNREGISTERED / NOT_FOUND)
+ * - Receive firebase-admin.app via DI token FIREBASE_ADMIN
+ * - If app = null -> stub mode (log warning, do not send)
+ * - Send each message independently (FCM HTTP v1 has no batch endpoint)
+ * - Automatically clean up stale tokens (UNREGISTERED / NOT_FOUND)
  *
- * Concurrency: tối đa CONCURRENCY = 50 concurrent sends (bounded)
+ * Concurrency: maximum CONCURRENCY = 50 concurrent sends (bounded)
  */
 @Injectable()
 export class FcmPushService {
@@ -55,15 +55,15 @@ export class FcmPushService {
     } else {
       this.messaging = null;
       this.stubMode  = true;
-      this.logger.warn('FcmPushService running in STUB mode — Push notifications disabled');
+      this.logger.warn('FcmPushService running in STUB mode - Push notifications disabled');
     }
   }
 
-  // ─── Public API ─────────────────────────────────────────────────────────────
+  // Public API
 
   /**
-   * Gửi push notification đến TẤT CẢ devices đã đăng ký của user.
-   * Tokens invalid sẽ bị xóa khỏi DB tự động.
+   * Send push notification to ALL registered devices of the user.
+   * Invalid tokens will be automatically removed from DB.
    */
   async sendToUser(params: {
     userId: string;
@@ -92,7 +92,7 @@ export class FcmPushService {
     const failures  = results.filter((r) => !r.success);
     const successes = results.filter((r) => r.success);
 
-    // Dọn stale tokens
+    // Clean up stale tokens
     const staleTokens = failures
       .filter((r) => this.isStaleTokenError(r.error))
       .map((r) => r.token);
@@ -102,7 +102,7 @@ export class FcmPushService {
     }
 
     this.logger.log(
-      `Push → user=${params.userId}: ${successes.length}/${devices.length} delivered`
+      `Push -> user=${params.userId}: ${successes.length}/${devices.length} delivered`
       + (failures.length > 0 ? `, ${failures.length} failed` : ''),
     );
 
@@ -114,7 +114,7 @@ export class FcmPushService {
   }
 
   /**
-   * Gửi push trực tiếp đến một FCM token (để test / internal use).
+   * Send push directly to a specific FCM token (for testing / internal use).
    */
   async sendToToken(params: {
     token:  string;
@@ -130,7 +130,7 @@ export class FcmPushService {
     });
   }
 
-  // ─── Private: Concurrency Control ───────────────────────────────────────────
+  // Private: Concurrency Control
 
   private async sendAll(messages: FcmMessage[]): Promise<FcmResult[]> {
     if (this.stubMode) {
@@ -149,7 +149,7 @@ export class FcmPushService {
     return results;
   }
 
-  // ─── Private: Single Send ────────────────────────────────────────────────────
+  // Private: Single Send
 
   private async sendSingle(message: FcmMessage): Promise<FcmResult> {
     if (this.stubMode || !this.messaging) {
@@ -189,7 +189,7 @@ export class FcmPushService {
     }
   }
 
-  // ─── Private: Stale Token Cleanup ────────────────────────────────────────────
+  // Private: Stale Token Cleanup
 
   private isStaleTokenError(error?: string): boolean {
     if (!error) return false;

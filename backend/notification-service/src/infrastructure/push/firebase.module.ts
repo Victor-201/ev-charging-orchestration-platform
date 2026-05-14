@@ -3,24 +3,24 @@ import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 
 /**
- * FIREBASE_ADMIN token — inject firebase-admin.app.App vào các service.
+ * FIREBASE_ADMIN token - inject firebase-admin.app.App into services.
  */
 export const FIREBASE_ADMIN = 'FIREBASE_ADMIN';
 
 /**
- * FirebaseModule — Global singleton khởi tạo Firebase Admin SDK.
+ * FirebaseModule - Global singleton initializing Firebase Admin SDK.
  *
- * Cách hoạt động:
- *   1. Đọc FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY từ env
- *   2. Khởi tạo Firebase App một lần duy nhất (singleton via getApps() guard)
- *   3. Expose firebase-admin.app qua token FIREBASE_ADMIN
+ * Workflow:
+ *   1. Read FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY from env
+ *   2. Initialize Firebase App exactly once (singleton via getApps() guard)
+ *   3. Expose firebase-admin.app via FIREBASE_ADMIN token
  *
- * Nếu thiếu env → không throw, log warning, app vẫn chạy (stub mode)
+ * If env vars are missing -> do not throw, log warning, app continues running (stub mode)
  *
  * Env vars required:
- *   FCM_PROJECT_ID    — Firebase project id (e.g. "ev-charging-app-76c33")
- *   FCM_CLIENT_EMAIL  — Service account client_email
- *   FCM_PRIVATE_KEY   — Service account private_key (ký tự \n được replace đúng)
+ *   FCM_PROJECT_ID    - Firebase project id (e.g. "ev-charging-app-76c33")
+ *   FCM_CLIENT_EMAIL  - Service account client_email
+ *   FCM_PRIVATE_KEY   - Service account private_key (\n characters are properly replaced)
  */
 @Global()
 @Module({
@@ -37,17 +37,17 @@ export const FIREBASE_ADMIN = 'FIREBASE_ADMIN';
         if (!projectId || !email || !rawKey) {
           logger.warn(
             'FCM env vars (FCM_PROJECT_ID / FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY) '
-            + 'not set — Firebase Admin SDK running in STUB mode (no push sent)',
+            + 'not set - Firebase Admin SDK running in STUB mode (no push sent)',
           );
           return null;
         }
 
-        // Normalize private key: Docker env có thể truyền \n dưới dạng literal string
+        // Normalize private key: Docker env might pass \n as a literal string
         const privateKey = rawKey.replace(/\\n/g, '\n');
 
-        // Singleton guard — tránh "FirebaseApp already exists"
+        // Singleton guard - avoid "FirebaseApp already exists"
         if (admin.apps.length > 0) {
-          logger.log(`Firebase Admin SDK already initialized — reusing app "${admin.apps[0]?.name}"`);
+          logger.log(`Firebase Admin SDK already initialized - reusing app "${admin.apps[0]?.name}"`);
           return admin.apps[0]!;
         }
 
