@@ -1,11 +1,11 @@
 /**
- * Integration test – ClickHouse + telemetry-ingestion-service
+ * Integration test - ClickHouse + telemetry-ingestion-service
  *
- * Yêu cầu: ClickHouse đang chạy tại CLICKHOUSE_TEST_URL (mặc định http://localhost:8123)
- * Chạy với Docker:  npm run test:integration
- * Chạy local:       CLICKHOUSE_TEST_URL=http://localhost:8123 npm run test:integration
+ * Requirement: ClickHouse is running at CLICKHOUSE_TEST_URL (default http://localhost:8123)
+ * Run with Docker: npm run test:integration
+ * Run local:       CLICKHOUSE_TEST_URL=http://localhost:8123 npm run test:integration
  *
- * Tự động SKIP (không FAIL) khi ClickHouse không available – CI-friendly.
+ * Auto SKIP (not FAIL) when ClickHouse is unavailable - CI-friendly.
  */
 
 import { createClient, ClickHouseClient } from '@clickhouse/client';
@@ -14,18 +14,18 @@ const CLICKHOUSE_URL = process.env.CLICKHOUSE_TEST_URL ?? 'http://localhost:8123
 const TEST_DB        = 'ev_telemetry_test';
 const TEST_TABLE     = `${TEST_DB}.telemetry_logs_test`;
 
-// ─── Connectivity check BEFORE describing tests ───────────────────────────────
+// Connectivity check BEFORE describing tests
 // We run a synchronous-style check using a module-level promise resolved in globalSetup-like
 // pattern. Jest allows async module-level state via beforeAll.
 
 let client: ClickHouseClient;
 let chAvailable = false; // Set in the first beforeAll of outer describe
 
-// ─── Suite ───────────────────────────────────────────────────────────────────
+// Suite
 
-describe('ClickHouse Integration – ev_telemetry_test', () => {
+describe('ClickHouse Integration - ev_telemetry_test', () => {
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
+  // Lifecycle
 
   beforeAll(async () => {
     client = createClient({ url: CLICKHOUSE_URL, database: 'default' });
@@ -38,7 +38,7 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
 
     if (!chAvailable) {
       console.warn(
-        `\n  ⚠  ClickHouse not reachable at ${CLICKHOUSE_URL}\n` +
+        `\n  [WARNING] ClickHouse not reachable at ${CLICKHOUSE_URL}\n` +
         `     All integration tests will be SKIPPED (not failed).\n` +
         `     Start ClickHouse with: docker compose -f deployment/docker/docker-compose.yml up -d clickhouse\n`,
       );
@@ -83,17 +83,17 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
     await client.exec({ query: `TRUNCATE TABLE ${TEST_TABLE}` }).catch(() => {});
   });
 
-  // ── Helper: skip if ClickHouse not available ─────────────────────────────────
+  // Helper: skip if ClickHouse not available
 
   function skip(): boolean {
     if (!chAvailable) {
-      console.log('    → skipped (ClickHouse not available)');
+      console.log('    -> skipped (ClickHouse not available)');
       return true;
     }
     return false;
   }
 
-  // ── Helper: insert rows and wait for MergeTree visibility ────────────────────
+  // Helper: insert rows and wait for MergeTree visibility
 
   async function insertRows(rows: object[]) {
     await client.insert({ table: TEST_TABLE, values: rows, format: 'JSONEachRow' });
@@ -109,11 +109,9 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
     return parseInt(rows[0]?.cnt ?? '0', 10);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
   // TESTS
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Connection ────────────────────────────────────────────────────────────────
+  // Connection
 
   it('pings ClickHouse successfully', async () => {
     if (skip()) return;
@@ -132,7 +130,7 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
     expect(rows[0].name).toBe('telemetry_logs_test');
   });
 
-  // ── Insert ────────────────────────────────────────────────────────────────────
+  // Insert
 
   it('inserts single row and reads it back', async () => {
     if (skip()) return;
@@ -196,7 +194,7 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
     expect(rows[0].power_kw).toBeNull();
   });
 
-  // ── Queries ───────────────────────────────────────────────────────────────────
+  // Queries
 
   it('computes total kWh for a session correctly', async () => {
     if (skip()) return;
@@ -241,7 +239,7 @@ describe('ClickHouse Integration – ev_telemetry_test', () => {
     expect(parseInt(rows[0].cnt, 10)).toBe(0);
   });
 
-  // ── Schema ────────────────────────────────────────────────────────────────────
+  // Schema
 
   it('table has correct column types', async () => {
     if (skip()) return;

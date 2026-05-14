@@ -5,14 +5,14 @@ import { createClient, ClickHouseClient } from '@clickhouse/client';
 /**
  * ClickHouseTelemetryService
  *
- * Ghi dữ liệu telemetry (V/A/kW) vào ClickHouse thay vì PostgreSQL.
- * ClickHouse tối ưu cho Time-Series data với khả năng insert hàng triệu
- * records/giây mà không làm sập hệ thống.
+ * Writes telemetry data (V/A/kW) to ClickHouse instead of PostgreSQL.
+ * ClickHouse is optimized for time-series data, capable of inserting millions
+ * of records per second without system degradation.
  *
- * Bảng: telemetry_logs (partition by toYYYYMMDD(recorded_at))
+ * Table: telemetry_logs (partitioned by toYYYYMMDD(recorded_at))
  *
- * Fallback: Nếu ClickHouse không available, ghi log và tiếp tục
- * (không được block luồng chính ghi RabbitMQ).
+ * Fallback: If ClickHouse is unavailable, logs are captured and processing continues
+ * (must not block the primary RabbitMQ event stream).
  */
 @Injectable()
 export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy {
@@ -38,15 +38,15 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     try {
       this.client = createClient({ url, database, username, password });
 
-      // Kiểm tra kết nối
+      // Verify connection
       await this.client.ping();
       this.connected = true;
       this.logger.log(`ClickHouse connected: ${url} database=${database}`);
 
-      // Tạo bảng nếu chưa có
+      // Create table if it doesn't exist
       await this.ensureTable();
 
-      // Bắt đầu timer flush định kỳ
+      // Start periodic flush timer
       this.flushTimer = setInterval(() => this.flushBatch(), this.FLUSH_INTERVAL_MS);
     } catch (err: any) {
       this.connected = false;
@@ -57,7 +57,7 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     }
   }
 
-  // ─── Schema ─────────────────────────────────────────────────────────────────
+  // Schema
 
   private async ensureTable(): Promise<void> {
     if (!this.client) return;
@@ -95,14 +95,14 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     this.logger.log('ClickHouse table telemetry_logs ensured');
   }
 
-  // ─── Ingest ─────────────────────────────────────────────────────────────────
+  // Ingest
 
-  /**
-   * Thêm một bản ghi vào buffer.
-   * Khi buffer đầy (100 records) → flush ngay lập tức.
+   /**
+   * Adds a record to the buffer.
+   * When buffer reaches MAX_BATCH (100) -> flush immediately.
    */
   async ingest(row: TelemetryRow): Promise<void> {
-    if (!this.client) return; // ClickHouse không available – silent fallback
+    if (!this.client) return; // ClickHouse unavailable - silent fallback
 
     this.BATCH_BUFFER.push(row);
 
@@ -111,7 +111,7 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     }
   }
 
-  /** Flush toàn bộ buffer vào ClickHouse (batch insert) */
+  /** Flush the entire buffer to ClickHouse (batch insert) */
   async flushBatch(): Promise<void> {
     if (!this.client || this.BATCH_BUFFER.length === 0) return;
 
@@ -139,15 +139,15 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
       this.logger.debug(`ClickHouse batch inserted: ${batch.length} records`);
     } catch (err: any) {
       this.logger.error(`ClickHouse batch insert failed: ${err?.message ?? err}`);
-      // Không re-throw — không được block luồng chính
+      // Do not re-throw - must not block the main execution flow
     }
   }
 
-  // ─── Queries ────────────────────────────────────────────────────────────────
+  // Queries
 
-  /**
-   * Query biểu đồ V/A/kW theo session (dành cho Dashboard/Analytics).
-   * Trả về các điểm đo cách nhau theo `intervalSeconds`.
+   /**
+   * Query V/A/kW time-series data for a session (for Dashboard/Analytics).
+   * Returns data points sampled at `intervalSeconds`.
    */
   async getSessionTimeSeries(
     sessionId: string,
@@ -186,8 +186,8 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     }
   }
 
-  /**
-   * Tổng kWh tiêu thụ của một session (dùng để đối soát billing).
+   /**
+   * Total energy consumption (kWh) for a session (used for billing reconciliation).
    */
   async getSessionEnergyKwh(sessionId: string): Promise<number> {
     if (!this.client) return 0;
@@ -209,8 +209,8 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     }
   }
 
-  /**
-   * Lấy bản ghi telemetry mới nhất của một charger.
+   /**
+   * Fetch the latest telemetry record for a charger.
    */
   async getLatestReading(chargerId: string): Promise<TelemetryRow | null> {
     if (!this.client) return null;
@@ -254,9 +254,9 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     }
   }
 
-  // ─── Status ─────────────────────────────────────────────────────────────────
+  // Status
 
-  /** Trả về trạng thái kết nối hiện tại (dùng cho /health endpoint). */
+  /** Returns current connection status (for /health endpoint). */
   getConnectionStatus(): { connected: boolean; database: string; bufferedRows: number } {
     return {
       connected:   this.connected,
@@ -265,7 +265,7 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
     };
   }
 
-  // ─── Lifecycle ───────────────────────────────────────────────────────────────
+  // Lifecycle
 
   async onModuleDestroy(): Promise<void> {
     if (this.flushTimer) clearInterval(this.flushTimer);
@@ -275,7 +275,7 @@ export class ClickHouseTelemetryService implements OnModuleInit, OnModuleDestroy
   }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// Types
 
 export interface TelemetryRow {
   eventId:            string;
