@@ -1,0 +1,89 @@
+name: mobile_app
+description: EVoltSync - EV Charging Orchestration Platform Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_bloc: ^8.1.6
+  hydrated_bloc: ^9.1.5
+  equatable: ^2.0.5
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Network
+  dio: ^5.9.2
+
+  # Secure storage
+  flutter_secure_storage: ^9.2.4
+
+  # DI
+  get_it: ^7.7.0
+  injectable: ^2.6.0
+
+  # Maps
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  flutter_map_marker_cluster: ^1.4.0
+
+  # Fonts
+  google_fonts: ^6.3.3
+
+  # Firebase / Notifications
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.2.10
+
+  # QR
+  mobile_scanner: ^5.2.3
+  qr_flutter: ^4.1.0
+
+  # Location
+  geolocator: ^12.0.0
+
+  # Image
+  cached_network_image: ^3.4.1
+
+  # Functional programming
+  dartz: ^0.10.1
+
+  # URL Launcher
+  url_launcher: ^6.3.1
+
+  # Shimmer loading effect
+  shimmer: ^3.0.0
+
+  # Data / Serialization
+  intl: ^0.20.2
+  shared_preferences: ^2.5.5
+  path_provider: ^2.1.5
+
+  # Utils
+  provider: ^6.1.2
+  flutter_dotenv: ^6.0.1
+  flutter_compass: ^0.8.1
+  flutter_svg: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  injectable_generator: ^2.10.0
+  build_runner: ^2.15.0
+  mocktail: ^1.0.5
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
