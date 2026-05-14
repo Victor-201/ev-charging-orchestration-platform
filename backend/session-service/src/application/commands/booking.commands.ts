@@ -6,7 +6,7 @@ export class CreateBookingCommand {
     public readonly connectorType: string,
     public readonly startTime:     Date,
     public readonly endTime:       Date,
-    // depositAmount không còn trong command — UseCase tự fetch pricing
+    // depositAmount is no longer in command - UseCase fetches pricing
   ) {}
 }
 

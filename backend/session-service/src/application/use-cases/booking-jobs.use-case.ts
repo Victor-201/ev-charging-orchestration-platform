@@ -8,13 +8,13 @@ import {
 import { IEventBus, EVENT_BUS } from '../../infrastructure/messaging/event-bus.interface';
 import { Booking } from '../../domain/aggregates/booking.aggregate';
 
-// ─── Auto Expire Bookings Job ─────────────────────────────────────────────────
+// Auto Expire Bookings Job
 
 /**
- * Chạy mỗi 1 phút:
- * - Tìm tất cả booking PENDING_PAYMENT quá 5 phút → expire
- * - Không có tiền cọc để refund (chưa thanh toán)
- * - Trigger process queue cho các charger bị giải phóng
+ * Runs every 1 minute:
+ * - Find all PENDING_PAYMENT bookings older than 5 minutes -> expire
+ * - No deposit to refund (unpaid)
+ * - Trigger process queue for freed chargers
  */
 @Injectable()
 export class AutoExpireBookingsJob {
@@ -26,7 +26,7 @@ export class AutoExpireBookingsJob {
     private readonly dataSource: DataSource,
   ) {}
 
-  @Cron('* * * * *') // mỗi 1 phút
+  @Cron('* * * * *') // every 1 minute
   async run(): Promise<void> {
     const holdMs = Booking.PAYMENT_HOLD_MINUTES * 60_000;
     const cutoff = new Date(Date.now() - holdMs);
@@ -49,14 +49,14 @@ export class AutoExpireBookingsJob {
   }
 }
 
-// ─── No-Show Detection Job ────────────────────────────────────────────────────
+// No-Show Detection Job
 
 /**
- * Chạy mỗi 1 phút:
- * - Tìm CONFIRMED bookings có startTime đã qua > 10 phút mà không có active session
- * → mark as NO_SHOW
- * → Emit BookingNoShowEvent với penaltyAmount + refundAmount
- * → Payment Service nhận event → trừ phạt 20%, hoàn 80% còn lại vào ví
+ * Runs every 1 minute:
+ * - Find CONFIRMED bookings with startTime past > 10 minutes without active session
+ * -> mark as NO_SHOW
+ * -> Emit BookingNoShowEvent with penaltyAmount + refundAmount
+ * -> Payment Service receives event -> deduct 20% penalty, refund remaining 80% to wallet
  */
 @Injectable()
 export class NoShowDetectionJob {
@@ -68,7 +68,7 @@ export class NoShowDetectionJob {
     private readonly dataSource: DataSource,
   ) {}
 
-  @Cron('* * * * *') // mỗi 1 phút
+  @Cron('* * * * *') // every 1 minute
   async run(): Promise<void> {
     const graceMs = Booking.NO_SHOW_GRACE_MINUTES * 60_000;
     const cutoff  = new Date(Date.now() - graceMs);
@@ -95,7 +95,7 @@ export class NoShowDetectionJob {
   }
 }
 
-// ─── Get Queue Position Use Case ──────────────────────────────────────────────
+// Get Queue Position Use Case
 
 @Injectable()
 export class GetQueuePositionUseCase {

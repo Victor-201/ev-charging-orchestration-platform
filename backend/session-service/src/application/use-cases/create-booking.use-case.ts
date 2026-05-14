@@ -17,30 +17,30 @@ import { IEventBus, EVENT_BUS } from '../../infrastructure/messaging/event-bus.i
 import { PricingHttpClient } from '../../infrastructure/http/pricing.http-client';
 
 /**
- * CreateBookingUseCase — Chuẩn tự động hóa VinFast
+ * CreateBookingUseCase - VinFast automation standard
  *
  * Flow:
  * 1. Validate connector type match charger (check charger read-model)
- * 2. Fetch pricing từ station-service → tính depositAmount động
+ * 2. Fetch pricing from station-service -> calculate dynamic depositAmount
  * 3. BEGIN TRANSACTION
  * 4. SELECT charger FOR UPDATE (row-level lock)
- * 5. Check overlap trong active bookings
- * 6. Tạo Booking aggregate với depositAmount (auto-calculated)
+ * 5. Check overlap in active bookings
+ * 6. Create Booking aggregate with depositAmount (auto-calculated)
  * 7. Emit BookingCreatedEvent + BookingDepositRequestedEvent (outbox)
  * 8. COMMIT
  *
- * Payment Service sẽ lắng nghe BookingDepositRequestedEvent và tự động
- * trừ tiền cọc từ ví → nếu thành công emit PaymentCompleted → Booking Service
- * tự động confirm booking và sinh QR Token.
+ * Payment Service will listen to BookingDepositRequestedEvent and automatically
+ * deduct deposit from wallet -> if successful emit PaymentCompleted -> Booking Service
+ * automatically confirms booking and generates QR Token.
  *
- * Nếu ví không đủ → Payment Service emit PaymentFailedEvent → Notification
- * ngay lập tức (không chờ 5 phút expire).
+ * If wallet balance insufficient -> Payment Service emits PaymentFailedEvent -> Notification
+ * immediately (no waiting for 5 mins to expire).
  */
 @Injectable()
 export class CreateBookingUseCase {
   private readonly logger = new Logger(CreateBookingUseCase.name);
 
-  /** Tiền cọc tối thiểu tuyệt đối = 50,000 VND */
+  /** Absolute minimum deposit = 50,000 VND */
   static readonly MIN_DEPOSIT_VND = 50_000;
 
   constructor(
@@ -60,10 +60,10 @@ export class CreateBookingUseCase {
       new Date(cmd.endTime),
     );
 
-    // ── STEP 1: Validate connector type khớp với charger ──────────────────
+    // STEP 1: Validate connector type matches charger
     const charger = await this.chargerRepo.findById(cmd.chargerId);
     if (!charger) {
-      throw new BadRequestException(`Charger ${cmd.chargerId} không tồn tại`);
+      throw new BadRequestException(`Charger ${cmd.chargerId} does not exist`);
     }
 
     const hasConnector = charger.connectors.some(
@@ -72,12 +72,12 @@ export class CreateBookingUseCase {
     if (!hasConnector) {
       const available = charger.connectors.map((c) => c.connectorType).join(', ');
       throw new BadRequestException(
-        `Charger ${cmd.chargerId} không có connector ${cmd.connectorType}. ` +
-        `Có sẵn: ${available || 'Không có'}`,
+        `Charger ${cmd.chargerId} does not have connector ${cmd.connectorType}. ` +
+        `Available: ${available || 'None'}`,
       );
     }
 
-    // ── STEP 2: Fetch pricing → tính depositAmount ─────────────────────────
+    // STEP 2: Fetch pricing -> calculate depositAmount
     const pricing = await this.pricingClient.getPricing({
       stationId:     cmd.stationId,
       chargerId:     cmd.chargerId,
@@ -94,7 +94,7 @@ export class CreateBookingUseCase {
       `isPeak=${pricing.isPeakHour}`,
     );
 
-    // ── STEP 3–7: Transaction ──────────────────────────────────────────────
+    // STEP 3-7: Transaction
     return this.dataSource.transaction(async (manager: EntityManager) => {
       // Row-level lock
       await this.chargerRepo.lockForUpdate(cmd.chargerId, manager);
@@ -111,7 +111,7 @@ export class CreateBookingUseCase {
         throw new BookingConflictException(cmd.chargerId);
       }
 
-      // Create aggregate — với connector type và pricing snapshot
+      // Create aggregate - with connector type and pricing snapshot
       const booking = Booking.create({
         userId:        cmd.userId,
         chargerId:     cmd.chargerId,
@@ -128,7 +128,7 @@ export class CreateBookingUseCase {
 
       this.logger.log(
         `Booking created: ${booking.id} charger=${cmd.chargerId} ` +
-        `connector=${cmd.connectorType} deposit=${depositAmount}VND — awaiting payment`,
+        `connector=${cmd.connectorType} deposit=${depositAmount}VND - awaiting payment`,
       );
       return booking;
     });
@@ -138,9 +138,9 @@ export class CreateBookingUseCase {
 /**
  * GetAvailabilityUseCase
  *
- * Trả về danh sách các time-slot 30 phút trong một ngày cho một charger.
- * Slot nào đã có booking active thì isBooked = true.
- * Mỗi slot còn kèm theo pricePerKwhVnd để user thấy giá ngay.
+ * Returns list of 30-minute time slots in a day for a charger.
+ * If a slot has an active booking, isBooked = true.
+ * Each slot also includes pricePerKwhVnd for immediate display to user.
  */
 @Injectable()
 export class GetAvailabilityUseCase {
@@ -178,7 +178,7 @@ export class GetAvailabilityUseCase {
           b.timeRange.endTime   > slotStart,
       );
 
-      // Tính giá cho slot (chỉ khi chưa book) — dựa trên giờ
+      // Calculate slot price (only if not booked) - based on time
       let pricePerKwhVnd: number | undefined;
       let isPeakHour: boolean | undefined;
 
@@ -191,7 +191,7 @@ export class GetAvailabilityUseCase {
           pricePerKwhVnd = pricing.pricePerKwhVnd;
           isPeakHour     = pricing.isPeakHour;
         } catch {
-          // Nếu lỗi pricing, không block availability
+          // If pricing error, do not block availability
         }
       }
 

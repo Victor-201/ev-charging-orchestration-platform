@@ -16,12 +16,12 @@ import { SessionCompletedEvent } from '../../domain/events/charging.events';
 /**
  * IdleFeeDetectionJob
  *
- * Chạy mỗi 1 phút.
- * Tìm các session có status = 'stopped' (sạc xong) nhưng chưa rút súng.
- * Sau khi hết 15 phút ân hạn → tính 2,000 VND/phút thêm vào idle_fee_vnd.
+ * Runs every 1 minute.
+ * Find sessions with status = 'stopped' (charging done) but unplugged.
+ * After 15 minutes grace period -> charge 2,000 VND/minute added to idle_fee_vnd.
  *
- * Khi Billing được trigger (session.completed), tổng phí = energyFee + idleFee
- * sẽ được dùng để đối soát với deposit.
+ * When Billing is triggered (session.completed), total fee = energyFee + idleFee
+ * will be used for deposit reconciliation.
  */
 @Injectable()
 export class IdleFeeDetectionJob {
@@ -37,7 +37,7 @@ export class IdleFeeDetectionJob {
   async run(): Promise<void> {
     const graceEndTime = new Date(Date.now() - IDLE_GRACE_MINUTES * 60_000);
 
-    // Tìm session đã stop nhưng chưa billed, và đã qua 15 phút ân hạn
+    // Find stopped but unbilled sessions past 15 min grace period
     const idleSessions = await this.sessionRepo
       .createQueryBuilder('s')
       .where("s.status = 'stopped'")
@@ -55,7 +55,7 @@ export class IdleFeeDetectionJob {
       );
       if (idleMinutes <= 0) continue;
 
-      // Phí theo phút thực tế (2,000 VND/phút)
+      // Actual fee per minute (2,000 VND/min)
       const idleFeeIncrement = IDLE_FEE_PER_MINUTE_VND;
       const newIdleFee = ((session as any).idleFeeVnd ?? 0) + idleFeeIncrement;
 
@@ -75,18 +75,18 @@ export class IdleFeeDetectionJob {
 /**
  * IdleFeeCompletedJob
  *
- * Khi user rút súng sạc (session.billed hoặc OCPP signal):
- * Emit SessionCompletedEvent với đầy đủ energyFeeVnd + idleFeeVnd
- * để Payment Service thực hiện billing reconciliation.
+ * When user unplugs (session.billed or OCPP signal):
+ * Emit SessionCompletedEvent with full energyFeeVnd + idleFeeVnd
+ * for Payment Service to perform billing reconciliation.
  *
- * Lưu ý: event này thực tế được emit tại StopSessionUseCase.
- * Job này chỉ handle trường hợp session bị kẹt (fallback).
+ * Note: this event is actually emitted in StopSessionUseCase.
+ * This job only handles stuck sessions (fallback).
  */
 @Injectable()
 export class StoppedSessionBillingJob {
   private readonly logger = new Logger(StoppedSessionBillingJob.name);
 
-  static readonly BILLING_TIMEOUT_MINUTES = 60; // emit billing sau 60 phút nếu chưa được bill
+  static readonly BILLING_TIMEOUT_MINUTES = 60; // emit billing after 60 mins if unbilled
 
   constructor(
     @InjectRepository(SessionOrmEntity)
@@ -96,7 +96,7 @@ export class StoppedSessionBillingJob {
     private readonly dataSource: DataSource,
   ) {}
 
-  @Cron('*/5 * * * *') // mỗi 5 phút
+  @Cron('*/5 * * * *') // every 5 minutes
   async run(): Promise<void> {
     const cutoff = new Date(
       Date.now() - StoppedSessionBillingJob.BILLING_TIMEOUT_MINUTES * 60_000,
@@ -110,7 +110,7 @@ export class StoppedSessionBillingJob {
 
     if (stuckSessions.length === 0) return;
 
-    this.logger.warn(`Stuck stopped sessions: ${stuckSessions.length} — force billing`);
+    this.logger.warn(`Stuck stopped sessions: ${stuckSessions.length} - force billing`);
 
     for (const s of stuckSessions) {
       const durationMs = (s.endTime!.getTime() - s.startTime.getTime());

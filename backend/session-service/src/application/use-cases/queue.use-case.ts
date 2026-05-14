@@ -65,7 +65,7 @@ export class LeaveQueueUseCase {
 }
 
 /**
- * ProcessQueueUseCase — triggered when a charger slot becomes available
+ * ProcessQueueUseCase - triggered when a charger slot becomes available
  * (via booking.cancelled or booking.completed event consumer)
  */
 @Injectable()
@@ -89,7 +89,7 @@ export class ProcessQueueUseCase {
     }
 
     try {
-      // Lấy charger info để có stationId (cần cho PricingHttpClient)
+      // Get charger info for stationId (needed for PricingHttpClient)
       const charger = await this.chargerRepo.findById(chargerId);
       if (!charger) {
         this.logger.warn(`Charger ${chargerId} not found in read-model`);

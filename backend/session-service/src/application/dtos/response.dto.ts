@@ -8,9 +8,9 @@ export class BookingResponseDto {
   endTime: Date;
   status: BookingStatus;
   durationMinutes: number;
-  /** QR Token một lần — chỉ có sau khi payment thành công (status = confirmed) */
+  /** One-time QR Token - only available after successful payment (status = confirmed) */
   qrToken: string | null;
-  /** Số tiền cọc (VND) */
+  /** Deposit amount (VND) */
   depositAmount: number | null;
   createdAt: Date;
 }

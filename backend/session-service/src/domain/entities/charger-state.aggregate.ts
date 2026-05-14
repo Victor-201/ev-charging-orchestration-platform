@@ -2,14 +2,14 @@
  * ChargerState Aggregate Root
  *
  * Tracks real-time state of a charger per charging-service's perspective.
- * Do NOT duplicate station-service charger metadata — only operational state.
+ * Do NOT duplicate station-service charger metadata - only operational state.
  *
  * States:
- *  available   → charger sẵn sàng nhận session
- *  occupied    → đang có session active
- *  faulted     → lỗi phần cứng / OCPP error
- *  offline     → mất kết nối
- *  reserved    → booking confirmed, chờ user đến
+ *  available   -> charger ready to receive session
+ *  occupied    -> currently has active session
+ *  faulted     -> hardware fault / OCPP error
+ *  offline     -> disconnected
+ *  reserved    -> booking confirmed, waiting for user
  */
 export type ChargerAvailability =
   | 'available'
@@ -71,7 +71,7 @@ export class ChargerState {
     return new ChargerState(props);
   }
 
-  /** Booking confirmed → reserve charger */
+  /** Booking confirmed -> reserve charger */
   reserve(): void {
     if (!['available'].includes(this._availability)) {
       throw new ChargerStateException(
@@ -82,11 +82,11 @@ export class ChargerState {
     this._updatedAt    = new Date();
   }
 
-  /** Session started → mark occupied */
+  /** Session started -> mark occupied */
   occupy(sessionId: string): void {
     if (!['available', 'reserved'].includes(this._availability)) {
       throw new ChargerStateException(
-        `Cannot occupy charger ${this.chargerId} — currently '${this._availability}'`,
+        `Cannot occupy charger ${this.chargerId} - currently '${this._availability}'`,
       );
     }
     this._availability    = 'occupied';
@@ -95,7 +95,7 @@ export class ChargerState {
     this._updatedAt       = new Date();
   }
 
-  /** Session ended → return to available */
+  /** Session ended -> return to available */
   release(): void {
     this._availability    = 'available';
     this._activeSessionId = null;
@@ -110,16 +110,16 @@ export class ChargerState {
     this._updatedAt    = new Date();
   }
 
-  /** Mất kết nối */
+  /** Disconnected */
   goOffline(): void {
     this._availability = 'offline';
     this._updatedAt    = new Date();
   }
 
-  /** Kết nối lại */
+  /** Reconnected */
   goOnline(): void {
     if (this._activeSessionId) {
-      this._availability = 'occupied'; // vẫn còn session
+      this._availability = 'occupied'; // still has session
     } else {
       this._availability = 'available';
     }

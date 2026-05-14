@@ -35,7 +35,7 @@ import {
   BookingReadModelOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/session.orm-entities';
 
-// ─── Outbox helper ────────────────────────────────────────────────────────────
+
 
 function buildOutboxEntry(
   mgr: EntityManager,
@@ -53,31 +53,31 @@ function buildOutboxEntry(
   });
 }
 
-// ─── StartSessionUseCase ──────────────────────────────────────────────────────
+
 
 /**
- * Bắt đầu charging session.
+ * Starts a charging session.
  *
  * Guards:
- * - Không cho phép session khi charger đang occupied
- * - Booking đã tồn tại session → conflict
- * - Booking: validate QR time window (startTime ± 15 phút)
- * - Walk-in: ChargingArrearsGuard đã block nợ xấu trước khi vào đây
+ * - Prevents session if charger is occupied
+ * - If booking already has an associated session -> conflict
+ * - Booking: validates QR time window (startTime ± 15 mins)
+ * - Walk-in: ChargingArrearsGuard blocks bad debt before reaching this point
  *
  * Flow:
- * 1. Nếu có bookingId → validate QR time window từ booking_read_models
- * 2. Tạo ChargingSession aggregate (status=pending)
- * 3. Activate ngay (pending → active)
+ * 1. If bookingId exists -> validate QR time window from booking_read_models
+ * 2. Create ChargingSession aggregate (status=pending)
+ * 3. Activate immediately (pending -> active)
  * 4. Persist + outbox event (session.started)
- * 5. Update charger state → occupied
+ * 5. Update charger state -> occupied
  */
 @Injectable()
 export class StartSessionUseCase {
   private readonly logger = new Logger(StartSessionUseCase.name);
 
-  /** Cho phép vào sớm trước giờ booking: 15 phút */
+  /** Allowed early entry before booking time: 15 minutes */
   private static readonly EARLY_ENTRY_MS = 15 * 60_000;
-  /** Cho phép vào muộn sau giờ kết thúc: 5 phút */
+  /** Allowed late buffer after booking end: 5 minutes */
   private static readonly LATE_BUFFER_MS = 5 * 60_000;
 
   constructor(
@@ -88,12 +88,12 @@ export class StartSessionUseCase {
   ) {}
 
   async execute(cmd: {
-    userId: string;        // luôn lấy từ JWT, không tin tưởng body
+    userId: string;        // Always taken from JWT, never trust body
     chargerId: string;
-    bookingId?: string;   // có khi user quét QR booking trước
+    bookingId?: string;   // User might scan QR for a pre-existing booking
     startMeterWh?: number;
   }): Promise<ChargingSession> {
-    // ─── Guard 0: Validate QR time window (nếu có booking) ──────────────────
+    // Guard 0: Validate QR time window (if booking exists)
     let bookingDepositAmount = 0;
     let bookingDepositTransactionId: string | null = null;
 
@@ -102,19 +102,19 @@ export class StartSessionUseCase {
 
       if (!bookingRm) {
         throw new ConflictException(
-          `Booking ${cmd.bookingId} không tồn tại hoặc chưa được xác nhận. ` +
-          `Vui lòng đợi xác nhận thanh toán.`,
+          `Booking ${cmd.bookingId} does not exist or is not confirmed. ` +
+          `Please wait for payment confirmation.`,
         );
       }
 
-      // Kiểm tra ownership
+      // Ownership check
       if (bookingRm.userId !== cmd.userId) {
         throw new ConflictException(
-          `Booking ${cmd.bookingId} không thuộc về tài khoản hiện tại.`,
+          `Booking ${cmd.bookingId} does not belong to the current account.`,
         );
       }
 
-      // Kiểm tra time window
+      // Time window check
       const now = Date.now();
       const earliest = bookingRm.startTime.getTime() - StartSessionUseCase.EARLY_ENTRY_MS;
       const latest   = bookingRm.endTime.getTime()   + StartSessionUseCase.LATE_BUFFER_MS;
@@ -122,22 +122,22 @@ export class StartSessionUseCase {
       if (now < earliest) {
         const minutesUntil = Math.ceil((earliest - now) / 60_000);
         throw new ConflictException(
-          `Chưa đến giờ sạc. Bạn có thể bắt đầu sớm nhất sau ${minutesUntil} phút ` +
-          `(từ ${new Date(earliest).toLocaleTimeString('vi-VN')}).`,
+          `It is not yet time for your charging session. You can start in ${minutesUntil} minutes ` +
+          `(from ${new Date(earliest).toISOString().split('T')[1].substring(0, 5)}).`,
         );
       }
 
       if (now > latest) {
         throw new ConflictException(
-          `Booking ${cmd.bookingId} đã hết giờ. ` +
-          `Slot đã kết thúc lúc ${bookingRm.endTime.toLocaleTimeString('vi-VN')}.`,
+          `Booking ${cmd.bookingId} has expired. ` +
+          `The slot ended at ${bookingRm.endTime.toISOString().split('T')[1].substring(0, 5)}.`,
         );
       }
 
-      // Kiểm tra charger khớp
+      // Matching charger check
       if (bookingRm.chargerId !== cmd.chargerId) {
         throw new ConflictException(
-          `Booking này dành cho trụ khác (${bookingRm.chargerId}), không phải trụ ${cmd.chargerId}.`,
+          `This booking is for another charger (${bookingRm.chargerId}), not ${cmd.chargerId}.`,
         );
       }
 
@@ -151,29 +151,29 @@ export class StartSessionUseCase {
     }
 
     return this.ds.transaction(async (mgr: EntityManager) => {
-      // ─── Guard 1: nếu có booking, kiểm tra chưa có session ────────────────
+      // Guard 1: If booking exists, check for existing sessions
       if (cmd.bookingId) {
         const existing = await mgr.findOneBy(SessionOrmEntity, {
           bookingId: cmd.bookingId,
         });
         if (existing && existing.status !== 'interrupted' && existing.status !== 'error') {
           throw new ConflictException(
-            `Booking ${cmd.bookingId} đã có session ${existing.id}`,
+            `Booking ${cmd.bookingId} already has session ${existing.id}`,
           );
         }
       }
 
-      // ─── Guard 2: charger đang occupied không? ───
+      // Guard 2: Is the charger occupied?
       const activeSession = await mgr.findOne(SessionOrmEntity, {
         where: { chargerId: cmd.chargerId, status: 'active' },
       });
       if (activeSession) {
         throw new ConflictException(
-          `Charger ${cmd.chargerId} đang occupied bởi session ${activeSession.id}`,
+          `Charger ${cmd.chargerId} is occupied by session ${activeSession.id}`,
         );
       }
 
-      // ─── Domain: tạo session ──────────────────────────────────────────────
+      // Domain: Create session
       const session = ChargingSession.create({
         userId:       cmd.userId,
         chargerId:    cmd.chargerId,
@@ -181,9 +181,9 @@ export class StartSessionUseCase {
         startMeterWh: cmd.startMeterWh ?? 0,
         initiatedBy:  'user',
       });
-      session.activate(); // pending → active
+      session.activate(); // pending -> active
 
-      // Persist session — lưu depositAmount từ booking để billing sau này
+      // Persist session - save depositAmount from booking for future billing
       await mgr.save(SessionOrmEntity, {
         id:                    session.id,
         userId:                session.userId,
@@ -200,7 +200,7 @@ export class StartSessionUseCase {
         depositTransactionId:  bookingDepositTransactionId,
       });
 
-      // Update charger state → occupied
+      // Update charger state -> occupied
       await mgr.upsert(
         ChargerStateOrmEntity,
         {
@@ -233,16 +233,16 @@ export class StartSessionUseCase {
   }
 }
 
-// ─── StopSessionUseCase ───────────────────────────────────────────────────────
+
 
 /**
- * Kết thúc session (completed hoặc interrupted).
+ * Ends a session (completed or interrupted).
  *
  * Flow:
  * 1. Load session, assert active
- * 2. Domain: complete(endMeterWh) hoặc interrupt(reason)
+ * 2. Domain: complete(endMeterWh) or interrupt(reason)
  * 3. Persist + outbox event (session.completed / session.interrupted)
- * 4. Release charger state → available
+ * 4. Release charger state -> available
  */
 @Injectable()
 export class StopSessionUseCase {
@@ -256,14 +256,14 @@ export class StopSessionUseCase {
   async execute(cmd: {
     sessionId: string;
     endMeterWh: number;
-    reason?: string;   // nếu có reason → interrupted; không có → completed
-    energyFeeVnd?: number;   // tiền điện thực tế (VND)
-    depositAmount?: number;  // tiền cọc từ booking
+    reason?: string;   // If reason exists -> interrupted; otherwise -> completed
+    energyFeeVnd?: number;   // Actual energy fee (VND)
+    depositAmount?: number;  // Deposit amount from booking
     depositTransactionId?: string;
   }): Promise<ChargingSession> {
     return this.ds.transaction(async (mgr: EntityManager) => {
       const entity = await mgr.findOneBy(SessionOrmEntity, { id: cmd.sessionId });
-      if (!entity) throw new NotFoundException(`Session ${cmd.sessionId} không tồn tại`);
+      if (!entity) throw new NotFoundException(`Session ${cmd.sessionId} does not exist`);
 
       const session = this.entityToDomain(entity);
 
@@ -318,7 +318,7 @@ export class StopSessionUseCase {
       await mgr.save(OutboxOrmEntity, eventPayload);
 
       this.logger.log(
-        `Session ${cmd.sessionId} → ${session.status} kWh=${session.kwhConsumed ?? 'N/A'}`,
+        `Session ${cmd.sessionId} -> ${session.status} kWh=${session.kwhConsumed ?? 'N/A'}`,
       );
       return session;
     });
@@ -343,13 +343,13 @@ export class StopSessionUseCase {
   }
 }
 
-// ─── RecordTelemetryUseCase ───────────────────────────────────────────────────
+
 
 /**
- * Lưu telemetry reading. Batch-friendly: Fire-and-forget.
+ * Saves telemetry reading. Batch-friendly: Fire-and-forget.
  *
- * Validate via TelemetryReading value object.
- * Emit session.telemetry event vào outbox để realtime gateway consume.
+ * Validates via TelemetryReading value object.
+ * Emits session.telemetry event into outbox for the realtime gateway to consume.
  */
 @Injectable()
 export class RecordTelemetryUseCase {
@@ -388,10 +388,10 @@ export class RecordTelemetryUseCase {
     });
     await this.telemetryRepo.save(entry);
 
-    // Lấy chargerId để build event (cần cho realtime routing)
+    // Get chargerId to build event (needed for realtime routing)
     const session = await this.sessionRepo.findOneBy({ id: sessionId });
 
-    // Emit telemetry event (realtime gateway sẽ pick up qua outbox publisher)
+    // Emit telemetry event (realtime gateway picks this up via outbox publisher)
     const event = new SessionTelemetryEvent(
       sessionId,
       session?.chargerId ?? 'unknown',
@@ -416,7 +416,7 @@ export class RecordTelemetryUseCase {
   }
 }
 
-// ─── GetSessionUseCase ────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetSessionUseCase {
@@ -438,12 +438,12 @@ export class GetSessionUseCase {
   }
 }
 
-// ─── BookingConfirmedConsumer ─────────────────────────────────────────────────
+
 
 /**
- * Lắng nghe booking.confirmed:
- *  → cập nhật charger state → reserved
- *  → Idempotent
+ * Listens for booking.confirmed:
+ *  -> Updates charger state -> reserved
+ *  -> Idempotent
  */
 @Injectable()
 export class BookingConfirmedConsumer {
@@ -478,7 +478,7 @@ export class BookingConfirmedConsumer {
 
     await this.peRepo.save({ eventId, eventType: 'booking.confirmed' });
 
-    // Reserve charger (available → reserved)
+    // Reserve charger (available -> reserved)
     await this.chargerStateRepo.upsert(
       {
         chargerId:       payload.chargerId,
@@ -491,20 +491,20 @@ export class BookingConfirmedConsumer {
     );
 
     this.logger.log(
-      `Booking confirmed: charger ${payload.chargerId} → reserved for booking ${payload.bookingId}`,
+      `Booking confirmed: charger ${payload.chargerId} -> reserved for booking ${payload.bookingId}`,
     );
   }
 }
 
-// ─── PaymentCompletedConsumer ─────────────────────────────────────────────────
+
 
 /**
- * Lắng nghe payment.completed:
- *  → Ghi nhận thanh toán thành công (logging/analytics hook)
- *  → Idempotent
+ * Listens for payment.completed:
+ *  -> Records successful payment (logging/analytics hook)
+ *  -> Idempotent
  *
- * Lưu ý: Session đã được start riêng qua /charging/start.
- * Consumer này chỉ trigger nếu cần auto-start session sau payment (flow khác).
+ * Note: Session is usually started separately via /charging/start.
+ * This consumer only triggers if auto-start after payment is required (alternative flow).
  */
 @Injectable()
 export class PaymentCompletedConsumer {
@@ -552,7 +552,7 @@ export class PaymentCompletedConsumer {
       return;
     }
 
-    // STOPPED → BILLED transition
+    // STOPPED -> BILLED transition
     if (session.status !== 'stopped') {
       this.logger.debug(`Session ${session.id} is ${session.status}, skipping bill transition`);
       return;
@@ -564,7 +564,7 @@ export class PaymentCompletedConsumer {
       status: session.status,
     });
 
-    this.logger.log(`Session ${session.id} → BILLED (payment ${payload.transactionId})`);
+    this.logger.log(`Session ${session.id} -> BILLED (payment ${payload.transactionId})`);
   }
 }
 

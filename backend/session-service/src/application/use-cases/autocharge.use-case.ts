@@ -13,7 +13,7 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities/session.orm-entities';
 import { EntityManager } from 'typeorm';
 
-// ─── Outbox helper (local copy) ───────────────────────────────────────────────
+// Outbox helper (local copy)
 function buildOutboxEntry(
   mgr: EntityManager,
   event: { eventType: string; [key: string]: any },
@@ -31,16 +31,16 @@ function buildOutboxEntry(
 }
 
 /**
- * AutoChargeUseCase — ISO 15118 / Plug & Charge
+ * AutoChargeUseCase - ISO 15118 / Plug & Charge
  *
- * Triggered khi OCPP Gateway nhận StartTransaction với idTag = MAC address xe.
- * Hệ thống tự:
- *   1. Tra cứu vehicle theo mac_address → lấy userId
- *   2. Kiểm tra autocharge_enabled + nợ xấu
- *   3. Tạo session active (không có bookingId)
- *   4. Publish session.started event → Payment Service tự trừ ví walk-in
+ * Triggered when OCPP Gateway receives StartTransaction with idTag = vehicle MAC address.
+ * System automatically:
+ *   1. Look up vehicle by mac_address -> get userId
+ *   2. Check autocharge_enabled + outstanding debt
+ *   3. Create active session (no bookingId)
+ *   4. Publish session.started event -> Payment Service deducts walk-in wallet
  *
- * Routing: charger.transaction.started (từ ocpp-gateway-service)
+ * Routing: charger.transaction.started (from ocpp-gateway-service)
  */
 @Injectable()
 export class AutoChargeUseCase {
@@ -68,7 +68,7 @@ export class AutoChargeUseCase {
   async handle(payload: {
     chargerId:     string;
     transactionId: number;
-    idTag:         string;   // MAC address của xe
+    idTag:         string;   // vehicle MAC address
     connectorId:   number;
     meterStart:    number;
     timestamp:     string;
@@ -77,7 +77,7 @@ export class AutoChargeUseCase {
     const eventId = `autocharge-txn-${payload.transactionId}`;
     if (await this.peRepo.existsBy({ eventId })) return;
 
-    // Tra cứu vehicle theo MAC address
+    // Look up vehicle by MAC address
     const vehicleResult = await this.ds.query<Array<{
       vehicle_id:         string;
       owner_id:           string;
@@ -104,7 +104,7 @@ export class AutoChargeUseCase {
       return;
     }
 
-    // Kiểm tra nợ xấu
+    // Check for outstanding debt
     const arrearsResult = await this.ds.query<Array<{ has_outstanding_debt: boolean }>>(
       `SELECT has_outstanding_debt FROM users_cache WHERE user_id = $1`,
       [userId],
@@ -115,7 +115,7 @@ export class AutoChargeUseCase {
     }
 
     await this.ds.transaction(async (mgr) => {
-      // Guard: charger không đang occupied
+      // Guard: charger is not occupied
       const activeSession = await mgr.findOne(SessionOrmEntity, {
         where: { chargerId: payload.chargerId, status: 'active' },
       });
@@ -143,7 +143,7 @@ export class AutoChargeUseCase {
         depositTransactionId: null,
       });
 
-      // Update charger state → occupied
+      // Update charger state -> occupied
       await mgr.upsert(
         ChargerStateOrmEntity,
         {

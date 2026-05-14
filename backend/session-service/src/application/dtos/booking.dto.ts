@@ -4,7 +4,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-/** Các loại connector hỗ trợ — chuẩn VinFast VN */
+/** Supported connector types - VinFast VN standard */
 export const CONNECTOR_TYPES = ['CCS', 'CCS2', 'CHAdeMO', 'Type2', 'GB/T', 'Other'] as const;
 export type ConnectorType = typeof CONNECTOR_TYPES[number];
 
@@ -16,9 +16,9 @@ export class CreateBookingDto {
   stationId: string;
 
   /**
-   * Loại connector cần sạc — REQUIRED.
-   * VinFast dùng CCS2 (DC) và Type2 (AC).
-   * Xe Trung Quốc thường dùng GB/T.
+   * Required connector type.
+   * VinFast uses CCS2 (DC) and Type2 (AC).
+   * Chinese vehicles usually use GB/T.
    */
   @IsString()
   @IsIn(CONNECTOR_TYPES)
@@ -30,7 +30,7 @@ export class CreateBookingDto {
   @IsDateString()
   endTime: string;
 
-  // depositAmount: đã bị XÓA — backend tự tính từ pricing_rules
+  // depositAmount: REMOVED - backend calculates from pricing_rules
 }
 
 export class CancelBookingDto {
@@ -59,7 +59,7 @@ export class AvailabilityQueryDto {
   chargerId: string;
 
   /**
-   * Ngày cần xem lịch — format: YYYY-MM-DD
+   * Date to check schedule - format: YYYY-MM-DD
    */
   @IsDateString()
   date: string;

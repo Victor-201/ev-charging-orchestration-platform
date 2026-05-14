@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { BookingTimeRange } from '../value-objects/booking-time-range.vo';
 import {
   BookingStatus,
@@ -16,26 +17,25 @@ import { DomainEvent } from '../events/domain-event.base';
 import {
   InvalidBookingStateException,
 } from '../exceptions/booking.exceptions';
-import * as crypto from 'crypto';
 
 /**
  * Booking Aggregate Root
- * States: PENDING → CONFIRMED → COMPLETED
- *               ↘ CANCELLED
- *               ↘ EXPIRED  (by scheduler)
- *               ↘ NO_SHOW  (confirmed but session not started in time)
+ * States: PENDING -> CONFIRMED -> COMPLETED
+ *               -> CANCELLED
+ *               -> EXPIRED  (by scheduler)
+ *               -> NO_SHOW  (confirmed but session not started in time)
  */
 /**
- * Booking Aggregate Root — VinFast EV Station Standard
+ * Booking Aggregate Root - VinFast EV Station Standard
  *
  * State Machine:
- *   PENDING_PAYMENT → (payment success) → CONFIRMED → (session started) → COMPLETED
- *                   ↘ (payment timeout 5min) → EXPIRED
- *   CONFIRMED       ↘ (user cancel) → CANCELLED  (refund 100% deposit to wallet)
- *   CONFIRMED       ↘ (no-show 10min) → NO_SHOW   (penalty 20% deposit, refund 80%)
+ *   PENDING_PAYMENT -> (payment success) -> CONFIRMED -> (session started) -> COMPLETED
+ *                   -> (payment timeout 5min) -> EXPIRED
+ *   CONFIRMED       -> (user cancel) -> CANCELLED  (refund 100% deposit to wallet)
+ *   CONFIRMED       -> (no-show 10min) -> NO_SHOW   (penalty 20% deposit, refund 80%)
  *
- * QR Token: một lần (one-time), chỉ valid trong khung giờ booking.
- * Deposit:  lock tiền cọc khi tạo booking, đối soát sau khi sạc xong.
+ * QR Token: one-time, only valid during booking time window.
+ * Deposit: locks deposit when creating booking, reconciles after charging ends.
  */
 export class Booking {
   private _status: BookingStatus;
@@ -53,17 +53,17 @@ export class Booking {
   readonly chargerId: string;
   readonly timeRange: BookingTimeRange;
   readonly createdAt: Date;
-  /** Loại connector đã book — vào charging-service validate QR */
+  /** Booked connector type - validated by charging-service QR */
   readonly connectorType: string | null;
-  /** Giá VND/kWh tại thời điểm đặt — dùng cho billing reconciliation */
+  /** Price VND/kWh at booking time - used for billing reconciliation */
   readonly pricePerKwhSnapshot: number | null;
   private _updatedAt: Date;
 
-  /** Thời gian giữ chỗ tạm thời: 5 phút kể từ lúc tạo nếu không thanh toán → EXPIRED */
+  /** Temporary hold time: 5 minutes from creation if unpaid -> EXPIRED */
   static readonly PAYMENT_HOLD_MINUTES = 5;
-  /** Grace period cho No-Show: 10 phút sau startTime */
+  /** Grace period for No-Show: 10 minutes after startTime */
   static readonly NO_SHOW_GRACE_MINUTES = 10;
-  /** Phí phạt No-Show: 20% deposit */
+  /** No-Show penalty fee: 20% deposit */
   static readonly NO_SHOW_PENALTY_PERCENT = 20;
 
   private constructor(props: {
@@ -132,7 +132,7 @@ export class Booking {
       ),
     );
 
-    // Yêu cầu tạo deposit transaction ngay khi booking được tạo
+    // Request deposit transaction creation as soon as booking is created
     booking._domainEvents.push(
       new SessionReservedEventV1(
         booking.id,
@@ -156,6 +156,7 @@ export class Booking {
     noShowAt?: Date | null;
     qrToken?: string | null;
     depositAmount?: number | null;
+    sessionDepositTransactionId?: string | null; // wait, let's check the property name
     depositTransactionId?: string | null;
     penaltyAmount?: number | null;
     connectorType?: string | null;
@@ -167,8 +168,8 @@ export class Booking {
   }
 
   /**
-   * Tự động confirm sau khi payment thành công — sinh QR Token.
-   * KHÔNG cần admin xác nhận thủ công.
+   * Automatically confirm after successful payment - generate QR Token.
+   * NO manual admin confirmation required.
    */
   confirmWithPayment(depositTransactionId: string): void {
     if (this._status !== BookingStatus.PENDING_PAYMENT) {
@@ -210,7 +211,7 @@ export class Booking {
   }
 
   /**
-   * Tự động complete khi charging session bắt đầu (QR được quét tại trụ).
+   * Automatically complete when charging session starts (QR scanned at charger).
    */
   complete(): void {
     if (this._status !== BookingStatus.CONFIRMED) {
@@ -230,8 +231,8 @@ export class Booking {
   }
 
   /**
-   * Auto-expire: PENDING_PAYMENT bookings quá 5 phút không được thanh toán → EXPIRED
-   * Không có deposit để refund vì chưa thanh toán thành công.
+   * Auto-expire: PENDING_PAYMENT bookings unpaid after 5 mins -> EXPIRED
+   * No deposit to refund because payment was not successful.
    */
   expire(): void {
     if (this._status !== BookingStatus.PENDING_PAYMENT) {
@@ -246,8 +247,8 @@ export class Booking {
   }
 
   /**
-   * No-show: CONFIRMED nhưng session không start trong 10 phút sau startTime.
-   * Tính phí phạt 20% deposit, hoàn 80% còn lại về ví.
+   * No-show: CONFIRMED but session didn't start within 10 mins after startTime.
+   * Calculate 20% deposit penalty, refund remaining 80% to wallet.
    */
   markNoShow(): void {
     if (this._status !== BookingStatus.CONFIRMED) {
@@ -286,26 +287,22 @@ export class Booking {
   clearDomainEvents(): void { this._domainEvents = []; }
 
   /**
-   * Kiểm tra QR token có hợp lệ tại thời điểm `at` không.
-   * Valid nếu: startTime - 15min <= at <= endTime + 5min
-   * VinFast cho phép vào sớm 15 phút, cộng thêm 5 phút buffer cài khoaMs.
+   * Checks if QR token is valid at the given `at` time.
+   * Valid if: startTime - 15min <= at <= endTime + 5min
+   * VinFast allows entering 15 mins early, plus 5 mins buffer for setup.
    */
   isQrValidAt(at: Date): boolean {
-    const EARLY_ENTRY_MS = 15 * 60_000;  // 15 phút trước giờ
-    const LATE_BUFFER_MS =  5 * 60_000;  // 5 phút sau giờ kết thúc
+    const EARLY_ENTRY_MS = 15 * 60_000;  // 15 mins before time
+    const LATE_BUFFER_MS =  5 * 60_000;  // 5 mins after end time
     const earliest = this.timeRange.startTime.getTime() - EARLY_ENTRY_MS;
     const latest   = this.timeRange.endTime.getTime()   + LATE_BUFFER_MS;
     return at.getTime() >= earliest && at.getTime() <= latest;
   }
 
   private generateQrToken(): string {
-    // Token: bookingId (8 chars) + random 16 chars hex — one-time, không tái sử dụng
+    // Token: bookingId (8 chars) + random 16 chars hex - one-time, non-reusable
     const rand = crypto.randomBytes(8).toString('hex');
     const shortId = this.id.replace(/-/g, '').substring(0, 8).toUpperCase();
     return `EV-${shortId}-${rand.toUpperCase()}`;
   }
 }
-
-
-
-

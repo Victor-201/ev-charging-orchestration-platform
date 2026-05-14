@@ -1,13 +1,14 @@
+import * as crypto from 'crypto';
 /**
  * ChargingSession Aggregate Root
  *
- * FSM (theo scope): INIT → ACTIVE → STOPPED → BILLED
- *                         ↘ ERROR | INTERRUPTED
+ * FSM (by scope): INIT -> ACTIVE -> STOPPED -> BILLED
+ *                      -> ERROR | INTERRUPTED
  *
  * Invariants:
- * - Chỉ một session active per charger tại một thời điểm
- * - endMeterWh phải >= startMeterWh
- * - Không thể thao tác session đã terminal
+ * - Only one active session per charger at a time
+ * - endMeterWh must be >= startMeterWh
+ * - Cannot modify terminal sessions
  * - idempotencyKey: prevent duplicate start commands
  */
 export type SessionStatus =
@@ -26,9 +27,9 @@ const TERMINAL_SESSION_STATUSES: SessionStatus[] = [
   'interrupted',
 ];
 
-/** Thời gian ân hạn sau khi sạc xong trước khi tính phí chiếm dụng: 15 phút */
+/** Grace period after charging ends before calculating idle fee: 15 minutes */
 export const IDLE_GRACE_MINUTES = 15;
-/** Phí chiếm dụng: 2,000 VND/phút sau 15 phút ân hạn */
+/** Idle fee: 2,000 VND/minute after 15 mins grace period */
 export const IDLE_FEE_PER_MINUTE_VND = 2_000;
 
 export class ChargingSessionException extends Error {
@@ -62,11 +63,11 @@ export class ChargingSession {
   private _errorReason: string | null;
   private _billedAt: Date | null;
   private _updatedAt: Date;
-  /** Phí điện thực tế (VND) — được set khi stop() */
+  /** Actual energy fee (VND) - set when stop() */
   private _energyFeeVnd: number | null;
-  /** Phí chiếm dụng (VND) — cộng dồn sau khi idle detect job thêm vào */
+  /** Idle fee (VND) - accumulated after idle detect job adds it */
   private _idleFeeVnd: number;
-  /** Thời điểm sạc kết thúc (khi stop) — bắt đầu đếm idle */
+  /** End of charging time (when stop) - starts counting idle */
   private _stoppedAt: Date | null;
 
   private constructor(props: {
@@ -106,7 +107,7 @@ export class ChargingSession {
     this._updatedAt      = props.updatedAt;
   }
 
-  /** Factory: tạo session mới — status = INIT */
+  /** Factory: create new session - status = INIT */
   static create(props: {
     userId: string;
     chargerId: string;
@@ -155,7 +156,7 @@ export class ChargingSession {
     return new ChargingSession(props);
   }
 
-  /** INIT → ACTIVE: hardware confirms charging started */
+  /** INIT -> ACTIVE: hardware confirms charging started */
   activate(): void {
     if (this._status !== 'init') {
       throw new InvalidSessionStateException(this._status, 'activate');
@@ -166,9 +167,9 @@ export class ChargingSession {
   }
 
   /**
-   * ACTIVE → STOPPED: sạc kết thúc, chờ billing
-   * @param endMeterWh  mốc đượng đo cuối (Wh)
-   * @param energyFeeVnd tiền điện thực tế (VND) — do charging service tính dựa vào giá biểu
+   * ACTIVE -> STOPPED: charging ended, waiting for billing
+   * @param endMeterWh  final meter value (Wh)
+   * @param energyFeeVnd actual energy fee (VND) - calculated by charging service based on pricing
    */
   stop(endMeterWh: number, energyFeeVnd = 0): void {
     if (this._status !== 'active') {
@@ -188,18 +189,16 @@ export class ChargingSession {
   }
 
   /**
-   * Thêm phí chiếm dụng (idle fee) — được gọi bởi IdleFeeDetectionJob
-   * mỗi phút sau khi hết 15 phút ân hạn.
+   * Add idle fee - called by IdleFeeDetectionJob
+   * every minute after 15 mins grace period.
    */
   addIdleFee(additionalFeeVnd: number): void {
-    if (this._status !== 'stopped') return; // chỉ tính khi đã stop
+    if (this._status !== 'stopped') return; // only calculate when stopped
     this._idleFeeVnd += additionalFeeVnd;
     this._updatedAt   = new Date();
   }
 
-  /**
-   * STOPPED → BILLED: payment processed
-   */
+  /** STOPPED -> BILLED: payment processed */
   bill(): void {
     if (this._status !== 'stopped') {
       throw new InvalidSessionStateException(this._status, 'bill');
@@ -209,9 +208,7 @@ export class ChargingSession {
     this._updatedAt = new Date();
   }
 
-  /**
-   * Legacy compat: ACTIVE → completed (maps to stopped for state machine)
-   */
+  /** Legacy compat: ACTIVE -> completed (maps to stopped for state machine) */
   complete(endMeterWh: number): void {
     this.stop(endMeterWh);
   }
@@ -256,7 +253,7 @@ export class ChargingSession {
   get energyFeeVnd(): number | null { return this._energyFeeVnd; }
   get idleFeeVnd():   number        { return this._idleFeeVnd; }
   get stoppedAt():    Date | null   { return this._stoppedAt; }
-  /** Tổng phí = tiền điện + phí chiếm dụng */
+  /** Total fee = energy fee + idle fee */
   get totalFeeVnd():  number        { return (this._energyFeeVnd ?? 0) + this._idleFeeVnd; }
 }
 

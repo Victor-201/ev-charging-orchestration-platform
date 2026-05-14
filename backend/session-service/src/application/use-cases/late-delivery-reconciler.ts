@@ -28,28 +28,28 @@ function buildOutboxEntry(
 }
 
 /**
- * LateDeliveryReconciler — Task 5.2 Offline Resilience
+ * LateDeliveryReconciler - Task 5.2 Offline Resilience
  *
- * Vấn đề: Trụ sạc ở hầm chung cư thường mất 4G.
- * Khi có mạng lại, trụ gửi dồn hàng loạt MeterValues với
- * `hardwareTimestamp` có thể cũ hơn vài phút hoặc vài giờ.
+ * Problem: Chargers in apartment basements often lose 4G.
+ * When network returns, charger sends batched MeterValues with
+ * `hardwareTimestamp` that might be minutes or hours old.
  *
- * Giải pháp:
- * 1. Consumer nhận `telemetry.late_delivery` (do OCPP Gateway phát hiện
- *    khi timestamp của batch < timestamp server - LATE_THRESHOLD)
- * 2. Tìm session theo chargerId + thời gian
- * 3. Cập nhật lại `end_meter_wh` dựa trên dữ liệu phần cứng chính xác
- * 4. Nếu session đã BILLED và có chênh lệch → publish điều chỉnh hóa đơn
+ * Solution:
+ * 1. Consumer receives `telemetry.late_delivery` (detected by OCPP Gateway
+ *    when batch timestamp < server timestamp - LATE_THRESHOLD)
+ * 2. Find session by chargerId + time
+ * 3. Update `end_meter_wh` based on accurate hardware data
+ * 4. If session is BILLED and there's a discrepancy -> publish invoice adjustment
  *
- * Quy tắc quan trọng:
- * - Luôn dùng `hardware_timestamp` làm gốc thời gian, không dùng `received_at`
- * - Chỉ patch invoice nếu delta > 0.1 kWh (tránh nhiễu)
+ * Important rules:
+ * - Always use `hardware_timestamp` as time source, not `received_at`
+ * - Only patch invoice if delta > 0.1 kWh (avoid noise)
  */
 @Injectable()
 export class LateDeliveryReconciler {
   private readonly logger = new Logger(LateDeliveryReconciler.name);
 
-  /** Ngưỡng chênh lệch kWh tối thiểu để tạo điều chỉnh hóa đơn */
+  /** Minimum kWh delta threshold to create invoice adjustment */
   private readonly MIN_DELTA_KWH = 0.1;
 
   constructor(
@@ -63,9 +63,9 @@ export class LateDeliveryReconciler {
   ) {}
 
   /**
-   * Tiêu thụ sự kiện telemetry bình thường nhưng có hardwareTimestamp cũ.
-   * OCPP Gateway luôn đính kèm hardwareTimestamp vào mọi telemetry event.
-   * Nếu hardwareTimestamp cũ hơn received_at > 5 phút → cần reconcile.
+   * Consume regular telemetry event but with old hardwareTimestamp.
+   * OCPP Gateway always attaches hardwareTimestamp to all telemetry events.
+   * If hardwareTimestamp is older than received_at > 5 minutes -> need to reconcile.
    */
   @RabbitSubscribe({
     exchange:     'ev.telemetry',
@@ -84,14 +84,14 @@ export class LateDeliveryReconciler {
     hardwareTimestamp?: string;
     publishedAt:        string;
   }): Promise<void> {
-    // Nếu không có hardware timestamp → không cần reconcile
+    // If no hardware timestamp -> no need to reconcile
     if (!payload.hardwareTimestamp || !payload.meterWh) return;
 
     const hwTime      = new Date(payload.hardwareTimestamp).getTime();
     const receivedAt  = new Date(payload.publishedAt).getTime();
     const delayMs     = receivedAt - hwTime;
 
-    // Chỉ reconcile nếu bị delay > 5 phút
+    // Only reconcile if delayed > 5 minutes
     const LATE_THRESHOLD_MS = 5 * 60_000;
     if (delayMs < LATE_THRESHOLD_MS) return;
 
@@ -105,7 +105,7 @@ export class LateDeliveryReconciler {
     if (await this.peRepo.existsBy({ eventId })) return;
 
     await this.ds.transaction(async (mgr) => {
-      // Tìm session đang active hoặc đã stopped tại thời điểm hardware timestamp
+      // Find active or stopped session at the hardware timestamp
       const session = await mgr
         .createQueryBuilder(SessionOrmEntity, 's')
         .where('s.charger_id = :chargerId', { chargerId: payload.chargerId })
@@ -122,14 +122,14 @@ export class LateDeliveryReconciler {
         return;
       }
 
-      // Cập nhật end_meter_wh nếu giá trị mới lớn hơn (tránh ghi đè lùi)
+      // Update end_meter_wh if new value is larger (prevent rollback)
       const currentEndMeter = session.endMeterWh ? Number(session.endMeterWh) : null;
       if (currentEndMeter !== null && payload.meterWh! <= currentEndMeter) {
-        // Dữ liệu cũ không cập nhật gì thêm
+        // Old data, no update needed
         return;
       }
 
-      // Tính chênh lệch kWh nếu session đã billed
+      // Calculate kWh difference if session is billed
       if (session.status === 'billed' && currentEndMeter !== null) {
         const oldKwh  = (currentEndMeter - Number(session.startMeterWh)) / 1000;
         const newKwh  = (payload.meterWh! - Number(session.startMeterWh)) / 1000;
@@ -156,7 +156,7 @@ export class LateDeliveryReconciler {
         }
       }
 
-      // Cập nhật end_meter_wh với giá trị chính xác hơn từ phần cứng
+      // Update end_meter_wh with more accurate hardware value
       await mgr.query(
         `UPDATE charging_sessions SET end_meter_wh = $1 WHERE id = $2`,
         [payload.meterWh, session.id],

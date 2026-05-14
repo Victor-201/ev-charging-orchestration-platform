@@ -7,7 +7,7 @@ import {
   SESSION_REPOSITORY,
 } from '../../domain/repositories/session.repository.interface';
 
-// ─── Event bus interface (lightweight) ───────────────────────────────────────
+// Event bus interface (lightweight)
 
 export interface IEventBus {
   publish(event: { eventType: string; payload: object }): Promise<void>;
@@ -17,12 +17,12 @@ export interface IEventBus {
 export const EVENT_BUS = Symbol('EVENT_BUS');
 
 
-// ─── Reconciliation Job ───────────────────────────────────────────────────────
+// Reconciliation Job
 
 /**
- * Chạy mỗi giờ:
- * - Tìm sessions STOPPED > 30 phút chưa BILLED → publish payment request
- * - Flag sessions với discrepancy (endMeter - startMeter vs billed amount)
+ * Runs every hour:
+ * - Find STOPPED sessions > 30 minutes not BILLED -> publish payment request
+ * - Flag sessions with discrepancy (endMeter - startMeter vs billed amount)
  */
 @Injectable()
 export class ReconciliationJob {
@@ -46,7 +46,7 @@ export class ReconciliationJob {
       return;
     }
 
-    this.logger.warn(`Found ${stuckSessions.length} stuck STOPPED sessions → triggering payment`);
+    this.logger.warn(`Found ${stuckSessions.length} stuck STOPPED sessions -> triggering payment`);
 
     for (const session of stuckSessions) {
       try {
@@ -70,7 +70,7 @@ export class ReconciliationJob {
   }
 }
 
-// ─── Fault Detection Use Case ─────────────────────────────────────────────────
+// Fault Detection Use Case
 
 export interface TelemetryReading {
   chargerId: string;
@@ -83,8 +83,8 @@ export interface TelemetryReading {
 }
 
 /**
- * Nhận telemetry events, phát hiện lỗi hardware theo patterns:
- * - errorCode liên tục
+ * Receive telemetry events, detect hardware faults using patterns:
+ * - Consecutive errorCodes
  * - Power drop > threshold
  */
 @Injectable()
@@ -130,7 +130,7 @@ export class FaultDetectionService {
       const prev = window[window.length - 2];
       if (prev.powerKw > 0 && reading.powerKw < prev.powerKw * (1 - this.POWER_DROP_THRESHOLD)) {
         this.logger.warn(
-          `Power drop detected on charger ${chargerId}: ${prev.powerKw}kW → ${reading.powerKw}kW`,
+          `Power drop detected on charger ${chargerId}: ${prev.powerKw}kW -> ${reading.powerKw}kW`,
         );
         await this.publishFault(chargerId, reading.sessionId, 'POWER_DROP');
       }

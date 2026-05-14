@@ -2,22 +2,22 @@ import { IsString, IsOptional, IsNumber, IsUUID, IsEnum, Min } from 'class-valid
 import { Type } from 'class-transformer';
 
 export class StartSessionDto {
-  /** ID trụ sạc người dùng chọn trên màn hình kiosk. */
+  /** Charger ID selected by user on kiosk screen. */
   @IsUUID()
   chargerId: string;
 
   /**
-   * Luồng có đặt lịch trước:
-   * bookingId lấy từ mã QR (app tạo khi booking, kiosk quét và gửi lên).
-   * Nếu không có → walk-in.
+   * Pre-booked flow:
+   * bookingId is retrieved from QR code (app generates when booking, kiosk scans and sends).
+   * If none -> walk-in.
    */
   @IsOptional()
   @IsUUID()
   bookingId?: string;
 
   /**
-   * Token xác minh QR (JWT ngắn hạn chứa bookingId + userId).
-   * Bắt buộc khi có bookingId, hệ thống sẽ verify trước khi start session.
+   * QR verification token (short-lived JWT containing bookingId + userId).
+   * Required when bookingId is present, system verifies before starting session.
    */
   @IsOptional()
   @IsString()
@@ -29,8 +29,8 @@ export class StartSessionDto {
   @Type(() => Number)
   startMeterWh?: number;
 
-  // userId KHÔNG được phép gửi từ client — luôn lấy từ JWT (CurrentUser).
-  // initiatedBy luôn là 'user' vì user tự thao tác tại kiosk.
+  // userId is NOT allowed to be sent from client - always get from JWT (CurrentUser).
+  // initiatedBy is always 'user' because user operates at kiosk.
 }
 
 export class StopSessionDto {

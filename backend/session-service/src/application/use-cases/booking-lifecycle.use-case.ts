@@ -15,19 +15,19 @@ import {
 import { IEventBus, EVENT_BUS } from '../../infrastructure/messaging/event-bus.interface';
 import { Booking } from '../../domain/aggregates/booking.aggregate';
 
-// ─── Auto-Confirm Use Case (triggered by payment.completed event) ──────────────
+// Auto-Confirm Use Case (triggered by payment.completed event)
 
 /**
  * AutoConfirmBookingUseCase
  *
- * Được gọi khi nhận PaymentCompletedEvent từ Payment Service.
- * Tự động:
- * 1. Tìm booking theo depositTransactionId
- * 2. Gọi booking.confirmWithPayment() → sinh QR Token
- * 3. Emit BookingConfirmedEvent (Notification Service gửi QR cho user)
- * 4. Charging Service nhận event → đổi charger state → reserved
+ * Called upon receiving PaymentCompletedEvent from Payment Service.
+ * Automatically:
+ * 1. Find booking by depositTransactionId
+ * 2. Call booking.confirmWithPayment() -> generate QR Token
+ * 3. Emit BookingConfirmedEvent (Notification Service sends QR to user)
+ * 4. Charging Service receives event -> change charger state -> reserved
  *
- * KHÔNG có endpoint HTTP confirm thủ công — 100% tự động.
+ * NO manual HTTP confirm endpoint - 100% automated.
  */
 @Injectable()
 export class AutoConfirmBookingUseCase {
@@ -69,7 +69,7 @@ export class AutoConfirmBookingUseCase {
   }
 }
 
-// ─── Cancel Booking Use Case ──────────────────────────────────────────────────
+// Cancel Booking Use Case
 
 @Injectable()
 export class CancelBookingUseCase {
@@ -102,13 +102,13 @@ export class CancelBookingUseCase {
   }
 }
 
-// ─── Complete Booking Use Case (auto từ session.started event) ────────────────
+// Complete Booking Use Case (auto from session.started event)
 
 /**
  * AutoCompleteBookingUseCase
  *
- * Được trigger khi Charging Service emit SessionStartedEvent.
- * Tự động complete booking khi user quét QR tại trụ và sạc bắt đầu.
+ * Triggered when Charging Service emits SessionStartedEvent.
+ * Automatically complete booking when user scans QR at charger and charging starts.
  */
 @Injectable()
 export class AutoCompleteBookingUseCase {
