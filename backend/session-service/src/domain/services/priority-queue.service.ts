@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { QueueEntry } from '../repositories/queue.repository.interface';
 
 /**
- * PriorityQueueService — in-memory Min-Heap
+ * PriorityQueueService - in-memory Min-Heap
  * Score = lower is higher priority
  * Rebuilt from DB on startup; DB is source of truth for durability.
  */
@@ -17,7 +17,7 @@ export class PriorityQueueService {
    * score formula (lower = more priority):
    *   base 100
    *   - userPriority * 10     (premium subscriber gets big boost)
-   *   - waitMinutes (capped 60)  (anti-starvation: wait longer → lower score)
+   *   - waitMinutes (capped 60)  (anti-starvation: wait longer -> lower score)
    *   - urgencyScore * 5      (low battery = urgent)
    */
   private calcScore(entry: QueueEntry): number {
@@ -26,7 +26,7 @@ export class PriorityQueueService {
     return (
       100 -
       entry.userPriority * 10 -
-      waitMinutes * 2 -              // anti-starvation: 2x weight, no cap → 70min wait score=-50 beats priority=9 score=10
+      waitMinutes * 2 -              // anti-starvation: 2x weight, no cap -> 70min wait score=-50 beats priority=9 score=10
       entry.urgencyScore * 5
     );
   }
@@ -60,7 +60,7 @@ export class PriorityQueueService {
     return entry;
   }
 
-  /** Re-score all entries — called every QUEUE_REBALANCE_MS to fight starvation */
+  /** Re-score all entries - called every QUEUE_REBALANCE_MS to fight starvation */
   rebalance(): void {
     for (let i = 0; i < this.heap.length; i++) {
       this.heap[i].score = this.calcScore(this.heap[i]);

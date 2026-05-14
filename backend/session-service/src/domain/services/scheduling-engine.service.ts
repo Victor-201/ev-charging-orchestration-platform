@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 export interface ChargerCandidate {
   chargerId: string;
   stationId: string;
-  currentLoad: number;      // 0.0 – 1.0
+  currentLoad: number;      // 0.0 - 1.0
   availableSlots: number;
   distanceKm: number;
   isPeakHour?: boolean;
@@ -18,7 +18,7 @@ export interface ScheduleResult {
 }
 
 /**
- * SchedulingEngine — Domain Service
+ * SchedulingEngine - Domain Service
  * score = w1*(1/load) + w2*slots + w3*(1/distance) + w4*peakPenalty
  * Higher score = better candidate
  */
