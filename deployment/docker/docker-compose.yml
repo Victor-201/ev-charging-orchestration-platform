@@ -48,6 +48,7 @@ x-app-environment: &app-env
   REDIS_PASSWORD: ${REDIS_PASSWORD}
   REDIS_DB:       0
   RABBITMQ_URL:   amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+  TYPEORM_MIGRATIONS_RUN: "true"
 
 x-pg-defaults: &pg-defaults
   image: postgres:16-alpine
@@ -94,8 +95,8 @@ services:
       POSTGRES_DB:       ev_iam_db
     volumes:
       - pg_iam:/var/lib/postgresql/data
-      - ../../database/schema/iam_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/iam_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5441:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_iam_db"]
       <<: *pg-health
@@ -110,8 +111,8 @@ services:
       POSTGRES_DB:       ev_infrastructure_db
     volumes:
       - pg_infra:/var/lib/postgresql/data
-      - ../../database/schema/ev_infra_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/ev_infra_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5442:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_infrastructure_db"]
       <<: *pg-health
@@ -126,8 +127,8 @@ services:
       POSTGRES_DB:       ev_session_db
     volumes:
       - pg_session:/var/lib/postgresql/data
-      - ../../database/schema/session_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/session_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5443:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_session_db"]
       <<: *pg-health
@@ -142,8 +143,8 @@ services:
       POSTGRES_DB:       ev_billing_db
     volumes:
       - pg_billing:/var/lib/postgresql/data
-      - ../../database/schema/billing_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/billing_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5444:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_billing_db"]
       <<: *pg-health
@@ -158,8 +159,8 @@ services:
       POSTGRES_DB:       ev_analytics_db
     volumes:
       - pg_analytics:/var/lib/postgresql/data
-      - ../../database/schema/analytics_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/analytics_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5445:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_analytics_db"]
       <<: *pg-health
@@ -174,8 +175,8 @@ services:
       POSTGRES_DB:       ev_notification_db
     volumes:
       - pg_notify:/var/lib/postgresql/data
-      - ../../database/schema/notification_db.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ../../database/seeds/notification_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5446:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ev_notification_db"]
       <<: *pg-health
@@ -404,6 +405,16 @@ services:
       JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public.pem
       JWT_ISSUER:          ev-iam-service
       JWT_AUDIENCE:        ev-platform
+      # ── SMTP ─────────────────────────────────────────────────
+      SMTP_HOST:              smtp.gmail.com
+      SMTP_PORT:              587
+      SMTP_USER:              ${SMTP_USER}
+      SMTP_PASS:              ${SMTP_PASS}
+      SMTP_FROM:              '"EVoltSync" <default.name201@gmail.com>'
+      TEST_EMAIL_OVERRIDE:    ${TEST_EMAIL_OVERRIDE:-}
+      # ── Deep Link ─────────────────────────────────────────────
+      DEEP_LINK_SCHEME:       ev://app
+      DEEP_LINK_BASE_URL:     http://localhost:8000
     depends_on:
       postgres-notification:
         condition: service_healthy
