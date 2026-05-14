@@ -6,7 +6,7 @@ import { OutboxOrmEntity } from './outbox.orm-entity';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 /**
- * OutboxPublisher — polling 5s, publishes pending events to RabbitMQ.
+ * OutboxPublisher - polling 5s, publishes pending events to RabbitMQ.
  * Retry up to MAX_RETRIES times before marking 'failed'.
  */
 @Injectable()

@@ -11,11 +11,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 /**
- * TelemetryConsumer — Event-based telemetry ingestion
+ * TelemetryConsumer - Event-based telemetry ingestion
  *
- * Lắng nghe events từ telemetry ingestion service / OCPP bridge.
- * Lưu vào DB và pass sang FaultDetectionService.
- * Không lưu trực tiếp từ HTTP endpoint — event-driven pattern.
+ * Listens for events from telemetry ingestion service / OCPP bridge.
+ * Saves to DB and passes to FaultDetectionService.
+ * Does not save directly from HTTP endpoint - event-driven pattern.
  */
 @Injectable()
 export class TelemetryConsumer {

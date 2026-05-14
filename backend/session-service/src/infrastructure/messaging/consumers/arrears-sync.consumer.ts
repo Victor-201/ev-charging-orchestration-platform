@@ -7,12 +7,12 @@ import {
   UserDebtReadModelOrmEntity,
 } from '../../persistence/typeorm/entities/booking.orm-entities';
 
-// ─── WalletArrearsCreatedConsumer ─────────────────────────────────────────────
+// WalletArrearsCreatedConsumer
 
 /**
- * Lắng nghe wallet.arrears.created từ Payment Service.
- * Cập nhật local read-model user_debt_read_models trong booking-service DB.
- * Cho phép ArrearsGuard check local mà không cần gọi remote service.
+ * Listens for wallet.arrears.created from Payment Service.
+ * Updates local read-model user_debt_read_models in booking-service DB.
+ * Allows ArrearsGuard to check locally without calling remote service.
  */
 @Injectable()
 export class BookingArrearsCreatedConsumer {
@@ -60,17 +60,17 @@ export class BookingArrearsCreatedConsumer {
     }
 
     this.logger.warn(
-      `[ARREARS LOCK] Booking-service ghi nhận nợ user=${payload.userId} ` +
-      `amount=${payload.arrearsAmount}VND — booking bị chặn`,
+      `[ARREARS LOCK] Booking-service recorded debt user=${payload.userId} ` +
+      `amount=${payload.arrearsAmount}VND - booking blocked`,
     );
   }
 }
 
-// ─── WalletArrearsClearedConsumer ─────────────────────────────────────────────
+// WalletArrearsClearedConsumer
 
 /**
- * Lắng nghe wallet.arrears.cleared từ Payment Service.
- * Reset cờ nợ → user được phép đặt booking trở lại.
+ * Listens for wallet.arrears.cleared from Payment Service.
+ * Resets debt flag -> user is allowed to book again.
  */
 @Injectable()
 export class BookingArrearsClearedConsumer {
@@ -104,7 +104,7 @@ export class BookingArrearsClearedConsumer {
     );
 
     this.logger.log(
-      `[ARREARS CLEARED] Booking-service mở khóa user=${payload.userId} — booking được phép đặt lại`,
+      `[ARREARS CLEARED] Booking-service unlocked user=${payload.userId} - booking allowed again`,
     );
   }
 }

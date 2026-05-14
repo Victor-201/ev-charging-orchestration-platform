@@ -9,13 +9,13 @@ import {
 /**
  * BookingConfirmedSyncConsumer
  *
- * Lắng nghe booking.confirmed từ Booking Service.
- * Sync vào booking_read_models trong charging DB để:
- *   1. Validate QR time window (startTime ± 15 phút)
- *   2. Lấy depositAmount + depositTransactionId cho billing reconciliation
+ * Listens for booking.confirmed from Booking Service.
+ * Syncs into booking_read_models in charging DB to:
+ *   1. Validate QR time window (startTime ± 15 minutes)
+ *   2. Get depositAmount + depositTransactionId for billing reconciliation
  *   3. Validate connector type match
  *
- * Event payload (từ BookingConfirmedEvent):
+ * Event payload (from BookingConfirmedEvent):
  *   bookingId, userId, chargerId, qrToken,
  *   depositAmount, startTime, endTime
  */
@@ -71,8 +71,8 @@ export class BookingConfirmedSyncConsumer {
 /**
  * BookingCancelledSyncConsumer
  *
- * Xóa booking_read_model khi booking bị hủy/hết hạn.
- * Đảm bảo QR bị vô hiệu ngay lập tức.
+ * Deletes booking_read_model when booking is cancelled/expired.
+ * Ensures QR is invalidated immediately.
  */
 @Injectable()
 export class BookingCancelledSyncConsumer {

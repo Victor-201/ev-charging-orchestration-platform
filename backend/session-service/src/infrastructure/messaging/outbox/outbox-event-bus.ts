@@ -7,7 +7,7 @@ import { DomainEvent } from '../../../domain/events/domain-event.base';
 import { IEventBus } from '../event-bus.interface';
 
 /**
- * OutboxEventBus — writes domain events to event_outbox table inside same transaction.
+ * OutboxEventBus - writes domain events to event_outbox table inside same transaction.
  * Follows station-service pattern: retry_count, error_message, processedAt fields.
  */
 @Injectable()
