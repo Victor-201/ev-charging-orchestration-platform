@@ -17,20 +17,18 @@ import {
 import { PeakHourDetector } from '../../domain/services/peak-hour-detector';
 import { AggregationEngine } from '../../domain/services/aggregation.engine';
 
-// Re-export cho AppModule
+// Re-export for AppModule
 export {
   EventLogOrmEntity, DailyStationMetricsOrmEntity, DailyUserMetricsOrmEntity,
   KpiSnapshotOrmEntity, UserBehaviorStatsOrmEntity, RevenueStatsOrmEntity,
   HourlyUsageStatsOrmEntity, BookingStatsOrmEntity,
 };
 
-// ─── GetStationUsageUseCase ───────────────────────────────────────────────────
-
 /**
  * GET /analytics/usage?stationId=&days=
  *
- * Trả về daily station metrics cho N ngày gần nhất.
- * Nếu không có stationId → top 10 stations theo total_sessions.
+ * Returns daily station metrics for the last N days.
+ * If no stationId is provided → returns top 10 stations by total_sessions.
  */
 @Injectable()
 export class GetStationUsageUseCase {
@@ -49,7 +47,7 @@ export class GetStationUsageUseCase {
     const days = params.days ?? 30;
 
     if (params.stationId) {
-      // Per-station: N ngày gần nhất
+      // Per-station: last N days
       const rows = await this.repo.find({
         where:  { stationId: params.stationId },
         order:  { metricDate: 'DESC' },
@@ -92,8 +90,6 @@ export class GetStationUsageUseCase {
   }
 }
 
-// ─── GetRevenueUseCase ────────────────────────────────────────────────────────
-
 /**
  * GET /analytics/revenue?range=monthly|daily&stationId=&month=
  */
@@ -116,7 +112,7 @@ export class GetRevenueUseCase {
     const range = params.range ?? 'monthly';
 
     if (range === 'monthly') {
-      // Monthly revenue từ revenue_stats
+      // Monthly revenue from revenue_stats
       const where = params.stationId
         ? `WHERE station_id = '${params.stationId}'`
         : `WHERE station_id IS NULL`;
@@ -140,7 +136,7 @@ export class GetRevenueUseCase {
       return { range: 'monthly', stationId: params.stationId ?? 'platform', totalRevenue, monthly: rows };
     }
 
-    // Daily revenue từ daily_station_metrics
+    // Daily revenue from daily_station_metrics
     const days = params.days ?? 30;
     const stationFilter = params.stationId
       ? `AND station_id = '${params.stationId}'`
@@ -165,8 +161,6 @@ export class GetRevenueUseCase {
     return { range: 'daily', stationId: params.stationId ?? 'platform', period: `${days}d`, totalRevenue, daily: rows };
   }
 }
-
-// ─── GetPeakHoursUseCase ──────────────────────────────────────────────────────
 
 /**
  * GET /analytics/peak-hours?stationId=&lookbackDays=&forecast=true
@@ -200,8 +194,6 @@ export class GetPeakHoursUseCase {
     return result;
   }
 }
-
-// ─── GetSystemMetricsUseCase ──────────────────────────────────────────────────
 
 /**
  * GET /analytics/system
@@ -295,8 +287,6 @@ export class GetSystemMetricsUseCase {
   }
 }
 
-// ─── GetUserBehaviorUseCase ───────────────────────────────────────────────────
-
 /**
  * GET /analytics/users/:userId
  */
@@ -327,11 +317,9 @@ export class GetUserBehaviorUseCase {
   }
 }
 
-// ─── KpiCaptureJob ────────────────────────────────────────────────────────────
-
 /**
- * Cron: mỗi giờ chụp KPI snapshot từ event_log.
- * Không cần external call — hoàn toàn từ analytics DB.
+ * Cron: hourly KPI snapshot from event_log.
+ * No external calls required — uses analytics DB only.
  */
 @Injectable()
 export class KpiCaptureJob {
@@ -378,8 +366,6 @@ export class KpiCaptureJob {
     }
   }
 }
-
-// ─── DashboardUseCase ─────────────────────────────────────────────────────────
 
 /**
  * GET /analytics/dashboard
@@ -459,13 +445,11 @@ export class DashboardUseCase {
   }
 }
 
-// ─── MaterializedViewRefreshJob ───────────────────────────────────────────────
-
 /**
- * Cron: refresh materialized views mỗi 15 phút.
+ * Cron: refresh materialized views every 15 minutes.
  *
- * Materialized views được tạo trong migration cho hiệu suất query analytics.
- * PostgreSQL REFRESH MATERIALIZED VIEW CONCURRENTLY không block reads.
+ * Materialized views are created in migrations for analytics query performance.
+ * PostgreSQL REFRESH MATERIALIZED VIEW CONCURRENTLY does not block reads.
  *
  * Views refreshed:
  *  - mv_daily_station_summary  — pre-aggregated per station per day

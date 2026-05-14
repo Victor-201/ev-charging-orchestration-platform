@@ -6,11 +6,11 @@ import { TimeBucket } from '../../domain/value-objects/analytics.vo';
 /**
  * AggregationEngine — Incremental Analytics Aggregator
  *
- * Nguyên tắc thiết kế:
- * - KHÔNG full-recompute — chỉ incremental upsert
- * - Atomic: mỗi operation trong DB transaction
- * - Idempotent: safe to call nhiều lần cùng event
- * - Tách biệt: không violate BCNF (mỗi table có candidate key rõ ràng)
+ * Design Principles:
+ * - Incremental Upsert: Avoid full recomputations; only update delta.
+ * - Atomic: Operations wrapped in database transactions.
+ * - Idempotent: Safe to execute multiple times for the same event.
+ * - Normalized: Adheres to BCNF standards with clear candidate keys.
  *
  * Pipeline:
  *   Event → AggregationEngine → upsert [daily/hourly/user] tables
@@ -21,12 +21,12 @@ export class AggregationEngine {
 
   constructor(private readonly ds: DataSource) {}
 
-  // ─── SESSION COMPLETED: core charging analytics ───────────────────────────
+  // SESSION COMPLETED: core charging analytics
 
   /**
-   * Cập nhật metrics khi session.completed:
-   *  - daily_station_metrics: +sessions, +kwh, +avg_duration (incremental avg)
-   *  - hourly_usage_stats: +sessions theo giờ (cho peak detection)
+   * Updates metrics upon session.completed:
+   *  - daily_station_metrics: +sessions, +kwh, +avg_duration (incremental average)
+   *  - hourly_usage_stats: +hourly sessions (for peak detection)
    *  - daily_user_metrics: +sessions, +kwh
    */
   async onSessionCompleted(params: {
@@ -43,7 +43,7 @@ export class AggregationEngine {
       const hourly  = TimeBucket.of(params.occurredAt, 'hourly');
       const monthly = TimeBucket.of(params.occurredAt, 'monthly');
 
-      // ── 1. daily_station_metrics (per station per day) ──────────────────
+      // 1. daily_station_metrics (per station per day)
       if (params.stationId) {
         await mgr.query(`
           INSERT INTO daily_station_metrics
@@ -59,7 +59,7 @@ export class AggregationEngine {
         `, [uuidv4(), params.stationId, daily.dateStr, params.kwhConsumed, params.durationMinutes]);
       }
 
-      // ── 2. hourly_usage_stats (peak hour detection table) ───────────────
+      // 2. hourly_usage_stats (peak hour detection table)
       if (params.stationId) {
         const hourOfDay = hourly.hourOfDay;
         await mgr.query(`
@@ -77,7 +77,7 @@ export class AggregationEngine {
         ]);
       }
 
-      // ── 3. daily_user_metrics ────────────────────────────────────────────
+      // 3. daily_user_metrics
       await mgr.query(`
         INSERT INTO daily_user_metrics
           (id, user_id, metric_date, sessions_count, kwh_consumed, amount_spent_vnd)
@@ -87,7 +87,7 @@ export class AggregationEngine {
           kwh_consumed   = daily_user_metrics.kwh_consumed + EXCLUDED.kwh_consumed
       `, [uuidv4(), params.userId, daily.dateStr, params.kwhConsumed]);
 
-      // ── 4. user_behavior_stats tổng hợp (all-time per user) ─────────────
+      // 4. user_behavior_stats (all-time per user)
       await mgr.query(`
         INSERT INTO user_behavior_stats
           (id, user_id, total_sessions, total_kwh, total_duration_min, last_session_at)
@@ -108,10 +108,10 @@ export class AggregationEngine {
     });
   }
 
-  // ─── PAYMENT COMPLETED: revenue analytics ─────────────────────────────────
+  // PAYMENT COMPLETED: revenue analytics
 
   /**
-   * Cập nhật revenue:
+   * Updates revenue metrics:
    *  - daily_station_metrics.total_revenue_vnd
    *  - daily_user_metrics.amount_spent_vnd
    *  - revenue_stats (monthly aggregation)
@@ -128,7 +128,7 @@ export class AggregationEngine {
       const daily   = TimeBucket.of(params.occurredAt, 'daily');
       const monthly = TimeBucket.of(params.occurredAt, 'monthly');
 
-      // ── Revenue stats (monthly) ──────────────────────────────────────────
+      // Revenue stats (monthly)
       await mgr.query(`
         INSERT INTO revenue_stats
           (id, station_id, billing_month, total_revenue_vnd, total_transactions)
@@ -139,7 +139,7 @@ export class AggregationEngine {
           updated_at           = NOW()
       `, [uuidv4(), params.stationId, monthly.bucketKey, params.amountVnd]);
 
-      // ── daily_station_metrics: update revenue ────────────────────────────
+      // daily_station_metrics: update revenue
       if (params.stationId) {
         await mgr.query(`
           INSERT INTO daily_station_metrics
@@ -151,7 +151,7 @@ export class AggregationEngine {
         `, [uuidv4(), params.stationId, daily.dateStr, params.amountVnd]);
       }
 
-      // ── daily_user_metrics: update amount_spent ──────────────────────────
+      // daily_user_metrics: update amount_spent
       await mgr.query(`
         INSERT INTO daily_user_metrics
           (id, user_id, metric_date, sessions_count, kwh_consumed, amount_spent_vnd)
@@ -166,7 +166,7 @@ export class AggregationEngine {
     });
   }
 
-  // ─── BOOKING EVENTS: usage & cancellation analytics ───────────────────────
+  // BOOKING EVENTS: usage & cancellation analytics
 
   /**
    * Tracking booking stats: created/confirmed/cancelled per station per day.
@@ -210,11 +210,11 @@ export class AggregationEngine {
     );
   }
 
-  // ─── KPI SNAPSHOT: system-wide metrics ────────────────────────────────────
+  // KPI SNAPSHOT: system-wide metrics
 
   /**
-   * Cập nhật KPI snapshot theo giờ.
-   * Được gọi từ cron job (không phải event consumer).
+   * Updates hourly KPI snapshots.
+   * Invoked by cron jobs, not event consumers.
    */
   async captureKpiSnapshot(kpi: {
     activeSessions:     number;

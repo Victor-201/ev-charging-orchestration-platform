@@ -1,11 +1,9 @@
 /**
- * Analytics Domain Events — events được map từ upstream services.
- *
- * Không phải domain events của analytics-service.
- * Đây là các inbound event models dùng để type-safe consume từ RabbitMQ.
+ * Analytics Domain Events.
+ * Represents inbound event models mapped from upstream services for type-safe RabbitMQ consumption.
  */
 
-// ─── Inbound Events từ charging-service ──────────────────────────────────────
+// Inbound Events from charging-service
 
 export interface SessionStartedPayload {
   eventType:    'session.started';
@@ -14,7 +12,7 @@ export interface SessionStartedPayload {
   userId:       string;
   chargerId:    string;
   bookingId:    string | null;
-  stationId?:   string;    // Enriched nếu có
+  stationId?:   string;    // Enriched if available
   startTime:    string;
   startMeterWh: number;
 }
@@ -32,7 +30,7 @@ export interface SessionCompletedPayload {
   endTime:         string;
 }
 
-// ─── Inbound Events từ payment-service ───────────────────────────────────────
+// Inbound Events from payment-service
 
 export interface PaymentCompletedPayload {
   eventType:    'payment.completed';
@@ -45,7 +43,7 @@ export interface PaymentCompletedPayload {
   occurredAt:    string;
 }
 
-// ─── Inbound Events từ booking-service ───────────────────────────────────────
+// Inbound Events from booking-service
 
 export interface BookingCreatedPayload {
   eventType:   'booking.created';
@@ -77,7 +75,7 @@ export interface BookingCancelledPayload {
   reason?:    string;
 }
 
-// ─── Union type ───────────────────────────────────────────────────────────────
+// Union type
 
 export type AnalyticsInboundEvent =
   | SessionStartedPayload

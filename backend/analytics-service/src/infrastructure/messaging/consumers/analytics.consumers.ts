@@ -18,16 +18,16 @@ import {
 /**
  * SessionEventConsumer
  *
- * Lắng nghe: session.started, session.completed
+ * Listens for: session.started, session.completed.
  *
- * session.started → log event (tracking active sessions)
- * session.completed → trigger aggregation engine:
- *   - daily_station_metrics (sessions+kwh+avg_duration)
+ * session.started: Logs the event to track active sessions.
+ * session.completed: Triggers the aggregation engine for:
+ *   - daily_station_metrics (sessions, kwh, avg_duration)
  *   - hourly_usage_stats (peak detection)
  *   - daily_user_metrics
  *   - user_behavior_stats
  *
- * Idempotent: xem processed_events trước khi process.
+ * Idempotent: Verifies processed_events before execution.
  */
 @Injectable()
 export class SessionEventConsumer {
@@ -68,9 +68,9 @@ export class SessionEventConsumer {
 
     await this.logEvent(payload, 'charging-control-service');
 
-    // Enrichment: stationId có thể không có trong payload.
-    // Ta dùng event_log để lookup qua booking nếu cần.
-    // Hiện tại trust stationId từ payload (nếu charging-service enrich).
+    // Enrichment: stationId might be missing from the payload.
+    // Utilize event_log for booking lookup if required.
+    // Currently trusts stationId from payload (if enriched by charging-service).
     const stationId = (payload as any).stationId ?? null;
 
     await this.aggregation.onSessionCompleted({
@@ -88,7 +88,7 @@ export class SessionEventConsumer {
     );
   }
 
-  // ─── helpers ───────────────────────────────────────────────────────────────
+  // helpers
 
   private extractEventId(payload: any, fallbackPrefix: string): string {
     return payload?.eventId ?? `${fallbackPrefix}:${payload?.sessionId ?? uuidv4()}`;
@@ -120,10 +120,8 @@ export class SessionEventConsumer {
   }
 }
 
-// ─── PaymentEventConsumer ─────────────────────────────────────────────────────
-
 /**
- * Lắng nghe: payment.completed
+ * Listens for: payment.completed.
  *
  * → revenue_stats (monthly per station)
  * → daily_station_metrics.total_revenue_vnd
@@ -173,8 +171,8 @@ export class PaymentEventConsumer {
       }),
     );
 
-    // Enrich stationId từ relatedId nếu có thể
-    // (Trong thực tế production: lookup từ booking_log hoặc gửi kèm stationId)
+    // Enrich stationId from relatedId when possible.
+    // (Production note: perform lookup from booking_log or ensure stationId is explicitly sent)
     const stationId = (payload as any).stationId ?? null;
 
     await this.aggregation.onPaymentCompleted({
@@ -192,10 +190,8 @@ export class PaymentEventConsumer {
   }
 }
 
-// ─── BookingEventConsumer ─────────────────────────────────────────────────────
-
 /**
- * Lắng nghe: booking.created, booking.confirmed, booking.cancelled
+ * Listens for: booking.created, booking.confirmed, booking.cancelled.
  *
  * → booking_stats per station per day
  * Idempotent.
@@ -276,7 +272,6 @@ export class BookingEventConsumer {
   }
 }
 
-// ─── OperationalEventConsumer ─────────────────────────────────────────────────
 // Tracks: booking.expired, booking.no_show, charger.fault.detected
 
 @Injectable()
@@ -340,7 +335,6 @@ export class OperationalEventConsumer {
   }
 }
 
-// ─── PaymentFailureConsumer ───────────────────────────────────────────────────
 // Tracks payment.failed events → failure_rate per charger/station
 
 @Injectable()
@@ -384,7 +378,6 @@ export class PaymentFailureAnalyticsConsumer {
   }
 }
 
-// ─── ArrearsAnalyticsConsumer ─────────────────────────────────────────────────
 // Tracks wallet.arrears.created → bad debt rate per station
 
 @Injectable()

@@ -4,10 +4,10 @@ import { DataSource } from 'typeorm';
 /**
  * PeakHourDetector — Domain Service
  *
- * Phân tích hourly_usage_stats để detect peak hours.
- * Algorithm: weighted average theo 4 tuần gần nhất, normalize theo percentile.
+ * Analyzes hourly_usage_stats to detect peak hours.
+ * Algorithm: Weighted average over the last 4 weeks, normalized by percentile.
  *
- * Output: mỗi giờ trong ngày (0-23) có avg_sessions và rank (1=highest).
+ * Output: Statistical summary for each hour of the day (0-23) including avg_sessions and rank (1 = highest).
  */
 @Injectable()
 export class PeakHourDetector {
@@ -16,8 +16,8 @@ export class PeakHourDetector {
   constructor(private readonly ds: DataSource) {}
 
   /**
-   * Detect peak hours cho một station trong N ngày gần nhất.
-   * @returns Mảng 24 phần tử (hour 0-23), sorted by avg_sessions DESC
+   * Detects peak hours for a specific station over the last N days.
+   * @returns An array of 24 elements (hours 0-23), sorted by avg_sessions in descending order.
    */
   async detectForStation(stationId: string, lookbackDays = 28): Promise<PeakHourResult[]> {
     const rows = await this.ds.query(`
@@ -48,12 +48,12 @@ export class PeakHourDetector {
       dataPoints:       parseInt(r.data_points),
       peakScore:        maxSessions > 0 ? parseFloat(r.avg_sessions) / maxSessions : 0,
       rank:             idx + 1,
-      isPeak:           idx < 3,  // top 3 giờ là peak
+      isPeak:           idx < 3,  // top 3 hours are considered peak
     }));
   }
 
   /**
-   * Platform-wide peak hours (tất cả stations).
+   * Platform-wide peak hours across all stations.
    */
   async detectPlatformWide(lookbackDays = 28): Promise<PeakHourResult[]> {
     const rows = await this.ds.query(`
@@ -155,7 +155,7 @@ export class PeakHourDetector {
   }
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 export interface PeakHourResult {
   hourOfDay:      number;   // 0-23

@@ -2,8 +2,8 @@ import {
   Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index,
 } from 'typeorm';
 
-// ─── event_log ────────────────────────────────────────────────────────────────
-// Append-only log của tất cả events nhận vào. Không aggregate tại đây.
+// event_log
+// Append-only log of all incoming events. Aggregation is not performed here.
 
 @Entity('event_log')
 @Index('idx_elog_type_time', ['eventType', 'receivedAt'])
@@ -18,10 +18,10 @@ export class EventLogOrmEntity {
   @CreateDateColumn({ name: 'received_at', type: 'timestamptz' })    receivedAt: Date;
 }
 
-// ─── daily_station_metrics ────────────────────────────────────────────────────
-// BCNF: (station_id, metric_date) → {sessions, kwh, revenue, avg_duration, utilization}
+// daily_station_metrics
+// BCNF: (station_id, metric_date) -> {sessions, kwh, revenue, avg_duration, utilization}
 // Candidate key: (station_id, metric_date)
-// Incremental upsert từ session.completed và payment.completed
+// Incremental upsert from session.completed and payment.completed events.
 
 @Entity('daily_station_metrics')
 @Index('idx_dsm_station_date', ['stationId', 'metricDate'])
@@ -38,9 +38,9 @@ export class DailyStationMetricsOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })              updatedAt: Date;
 }
 
-// ─── hourly_usage_stats ───────────────────────────────────────────────────────
-// BCNF: (station_id, hour_bucket) → {sessions, kwh, duration}
-// Đây là bảng time-series cho peak hour detection. Không full-recompute.
+// hourly_usage_stats
+// BCNF: (station_id, hour_bucket) -> {sessions, kwh, duration}
+// Time-series table for peak hour detection. Avoids full recomputation.
 // hour_bucket = truncated to hour (e.g., '2026-04-12 14:00:00+07')
 
 @Entity('hourly_usage_stats')
@@ -58,8 +58,8 @@ export class HourlyUsageStatsOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })                  updatedAt: Date;
 }
 
-// ─── revenue_stats ────────────────────────────────────────────────────────────
-// BCNF: (station_id, billing_month) → {total_revenue, transactions}
+// revenue_stats
+// BCNF: (station_id, billing_month) -> {total_revenue, transactions}
 // billing_month format: 'YYYY-MM' (stored as VARCHAR)
 // Nullable station_id = platform-wide aggregation
 
@@ -75,8 +75,8 @@ export class RevenueStatsOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })             updatedAt: Date;
 }
 
-// ─── user_behavior_stats ──────────────────────────────────────────────────────
-// BCNF: user_id → {all-time total sessions, kwh, avg_duration, last_session_at}
+// user_behavior_stats
+// BCNF: user_id -> {all-time total sessions, kwh, avg_duration, last_session_at}
 // 1 row per user, incremental update
 
 @Entity('user_behavior_stats')
@@ -92,8 +92,8 @@ export class UserBehaviorStatsOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })                  updatedAt: Date;
 }
 
-// ─── booking_stats ────────────────────────────────────────────────────────────
-// BCNF: (station_id, metric_date) → {created, confirmed, cancelled}
+// booking_stats
+// BCNF: (station_id, metric_date) -> {created, confirmed, cancelled}
 
 @Entity('booking_stats')
 @Index('idx_bks_station_date', ['stationId', 'metricDate'])
@@ -107,8 +107,8 @@ export class BookingStatsOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })                updatedAt: Date;
 }
 
-// ─── daily_user_metrics ───────────────────────────────────────────────────────
-// Giữ nguyên từ V1 — incremental per-user per-day
+// daily_user_metrics
+// Inherited from V1 — incremental per-user per-day.
 
 @Entity('daily_user_metrics')
 @Index('idx_dum_user_date', ['userId', 'metricDate'])
@@ -121,7 +121,7 @@ export class DailyUserMetricsOrmEntity {
   @Column({ name: 'amount_spent_vnd',   type: 'bigint', default: 0 })             amountSpentVnd: number;
 }
 
-// ─── platform_kpi_snapshots ───────────────────────────────────────────────────
+// platform_kpi_snapshots
 // Hourly system-wide snapshot
 
 @Entity('platform_kpi_snapshots')
@@ -137,7 +137,7 @@ export class KpiSnapshotOrmEntity {
   @Column({ name: 'revenue_last_hour_vnd', type: 'bigint', default: 0 })             revenueLastHourVnd: number;
 }
 
-// ─── processed_events (idempotency guard) ─────────────────────────────────────
+// processed_events (idempotency guard)
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {

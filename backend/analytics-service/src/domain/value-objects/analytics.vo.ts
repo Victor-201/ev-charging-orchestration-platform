@@ -1,16 +1,16 @@
 /**
  * Analytics Domain Value Objects
  *
- * Immutable, self-validating. Không có side effects.
+ * Immutable and self-validating. No side effects.
  */
 
-// ─── TimeBucket ───────────────────────────────────────────────────────────────
+// TimeBucket
 
 export type TimePeriod = 'hourly' | 'daily' | 'monthly';
 
 /**
- * TimeBucket: đại diện một khoảng thời gian cụ thể.
- * Chuẩn hóa timestamp về đầu bucket để merge aggregates.
+ * TimeBucket: Represents a specific time interval.
+ * Normalizes timestamps to the start of the bucket for consistent aggregation merging.
  */
 export class TimeBucket {
   readonly period:    TimePeriod;
@@ -23,7 +23,7 @@ export class TimeBucket {
     this.bucketAt  = bucketAt;
   }
 
-  /** Tạo TimeBucket từ timestamp và period (UTC-based) */
+  /** Creates a TimeBucket from a timestamp and period (UTC-based) */
   static of(ts: Date, period: TimePeriod): TimeBucket {
     const d = new Date(ts);
     switch (period) {
@@ -46,7 +46,7 @@ export class TimeBucket {
     }
   }
 
-  /** Giờ trong ngày (0-23) UTC — nhất quán với bucket key */
+  /** Hour of day (0-23) UTC — consistent with bucket key */
   get hourOfDay(): number {
     return new Date(this.bucketAt).getUTCHours();
   }
@@ -57,15 +57,15 @@ export class TimeBucket {
   }
 }
 
-// ─── Money ────────────────────────────────────────────────────────────────────
+// Money
 
-/** Số tiền VND (integer, không dùng float). */
+/** VND amount (integer; floating point values are prohibited). */
 export class MoneyVnd {
   readonly amountVnd: number;
 
   constructor(amountVnd: number) {
     if (!Number.isInteger(amountVnd) || amountVnd < 0) {
-      throw new Error(`MoneyVnd invalid: ${amountVnd} — phải là integer >= 0`);
+      throw new Error(`MoneyVnd invalid: ${amountVnd} — must be an integer >= 0`);
     }
     this.amountVnd = amountVnd;
   }
@@ -77,14 +77,14 @@ export class MoneyVnd {
   static ZERO = new MoneyVnd(0);
 }
 
-// ─── EnergyKwh ───────────────────────────────────────────────────────────────
+// EnergyKwh
 
 /** kWh consumed — 4 decimal places precision. */
 export class EnergyKwh {
   readonly value: number;
 
   constructor(value: number) {
-    if (value < 0) throw new Error(`EnergyKwh không được âm: ${value}`);
+    if (value < 0) throw new Error(`EnergyKwh cannot be negative: ${value}`);
     this.value = Math.round(value * 10000) / 10000; // 4dp
   }
 
@@ -95,13 +95,13 @@ export class EnergyKwh {
   static ZERO = new EnergyKwh(0);
 }
 
-// ─── DurationMinutes ─────────────────────────────────────────────────────────
+// DurationMinutes
 
 export class DurationMinutes {
   readonly value: number;
 
   constructor(value: number) {
-    if (value < 0) throw new Error(`DurationMinutes không được âm: ${value}`);
+    if (value < 0) throw new Error(`DurationMinutes cannot be negative: ${value}`);
     this.value = Math.round(value * 100) / 100; // 2dp
   }
 

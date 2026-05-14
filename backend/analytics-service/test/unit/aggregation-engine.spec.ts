@@ -1,12 +1,12 @@
 /**
  * Tests: AggregationEngine — incremental upsert logic
  *
- * Mock DataSource để test SQL logic pattern (không cần DB).
- * Verify: correct SQL params, correct ON CONFLICT behavior.
+ * Mocks DataSource to test SQL logic patterns without a physical database.
+ * Verifies: correct SQL parameters and ON CONFLICT idempotency behavior.
  */
 import { AggregationEngine } from '../../src/domain/services/aggregation.engine';
 
-// ─── Mock DataSource ──────────────────────────────────────────────────────────
+// Mock DataSource
 
 function makeMockDs(overrides?: Partial<any>) {
   const mockManager = {
@@ -15,11 +15,24 @@ function makeMockDs(overrides?: Partial<any>) {
   return {
     transaction: jest.fn().mockImplementation(async (cb: any) => cb(mockManager)),
     query:       jest.fn().mockResolvedValue([]),
-    _manager:    mockManager,   // expose for assertions
+    _manager:    mockManager,   // exposed for assertions
   };
 }
 
+import { Logger } from '@nestjs/common';
+
 describe('AggregationEngine', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   let engine: AggregationEngine;
   let mockDs: ReturnType<typeof makeMockDs>;
 
@@ -28,7 +41,7 @@ describe('AggregationEngine', () => {
     engine = new AggregationEngine(mockDs as any);
   });
 
-  // ── onSessionCompleted ────────────────────────────────────────────────────
+  // onSessionCompleted
 
   describe('onSessionCompleted', () => {
     const baseParams = {
@@ -41,26 +54,26 @@ describe('AggregationEngine', () => {
       occurredAt:      new Date('2026-04-12T14:30:00Z'),
     };
 
-    it('execute trong transaction', async () => {
+    it('executes within a transaction', async () => {
       await engine.onSessionCompleted(baseParams);
       expect(mockDs.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it('cập nhật 4 tables khi có stationId', async () => {
+    it('updates 4 tables when stationId is provided', async () => {
       await engine.onSessionCompleted(baseParams);
       const mgr = mockDs._manager;
       // daily_station_metrics, hourly_usage_stats, daily_user_metrics, user_behavior_stats
       expect(mgr.query).toHaveBeenCalledTimes(4);
     });
 
-    it('chỉ cập nhật 2 tables khi stationId = null (skip station/hourly tables)', async () => {
+    it('updates only 2 tables when stationId is null (skips station and hourly tables)', async () => {
       await engine.onSessionCompleted({ ...baseParams, stationId: null });
       const mgr = mockDs._manager;
-      // daily_user_metrics + user_behavior_stats chỉ
+      // only daily_user_metrics and user_behavior_stats
       expect(mgr.query).toHaveBeenCalledTimes(2);
     });
 
-    it('pass đúng kwhConsumed params vào SQL', async () => {
+    it('passes correct kwhConsumed parameters to SQL', async () => {
       await engine.onSessionCompleted(baseParams);
       const mgr = mockDs._manager;
       // 1st call: daily_station_metrics
@@ -70,7 +83,7 @@ describe('AggregationEngine', () => {
       expect(firstParams).toContain(15.5); // kwhConsumed
     });
 
-    it('SQL chứa ON CONFLICT DO UPDATE cho idempotency', async () => {
+    it('SQL contains ON CONFLICT DO UPDATE for idempotency', async () => {
       await engine.onSessionCompleted(baseParams);
       const mgr = mockDs._manager;
       const allSql = mgr.query.mock.calls.map(([sql]: [string]) => sql).join('\n');
@@ -78,7 +91,7 @@ describe('AggregationEngine', () => {
       expect(allSql).toContain('DO UPDATE');
     });
 
-    it('daily user metrics nhận đúng userId', async () => {
+    it('daily user metrics receives the correct userId', async () => {
       await engine.onSessionCompleted(baseParams);
       const mgr = mockDs._manager;
       // 3rd call: daily_user_metrics
@@ -88,7 +101,7 @@ describe('AggregationEngine', () => {
     });
   });
 
-  // ── onPaymentCompleted ────────────────────────────────────────────────────
+  // onPaymentCompleted
 
   describe('onPaymentCompleted', () => {
     const baseParams = {
@@ -100,33 +113,33 @@ describe('AggregationEngine', () => {
       occurredAt:    new Date('2026-04-12T15:00:00Z'),
     };
 
-    it('execute trong transaction', async () => {
+    it('executes within a transaction', async () => {
       await engine.onPaymentCompleted(baseParams);
       expect(mockDs.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it('cập nhật 3 tables khi có stationId', async () => {
+    it('updates 3 tables when stationId is provided', async () => {
       await engine.onPaymentCompleted(baseParams);
       const mgr = mockDs._manager;
-      expect(mgr.query).toHaveBeenCalledTimes(3); // revenue_stats, daily_station_metrics, daily_user_metrics
+      expect(mgr.query).toHaveBeenCalledTimes(3); // revenue_stats, daily_station_metrics, and daily_user_metrics
     });
 
-    it('chỉ cập nhật 2 tables khi stationId = null', async () => {
+    it('updates only 2 tables when stationId is null', async () => {
       await engine.onPaymentCompleted({ ...baseParams, stationId: null });
       const mgr = mockDs._manager;
-      expect(mgr.query).toHaveBeenCalledTimes(2); // revenue_stats (global) + daily_user_metrics
+      expect(mgr.query).toHaveBeenCalledTimes(2); // global revenue_stats and daily_user_metrics
     });
 
-    it('revenue_stats nhận đúng billing_month format', async () => {
+    it('revenue_stats receives the correct billing_month format', async () => {
       await engine.onPaymentCompleted(baseParams);
       const mgr = mockDs._manager;
       const [, params] = mgr.query.mock.calls[0]; // revenue_stats là call đầu tiên
-      // billing_month phải là 'YYYY-MM' format
+      // billing_month must be in 'YYYY-MM' format
       const billingMonth = params.find((p: any) => typeof p === 'string' && /^\d{4}-\d{2}$/.test(p));
       expect(billingMonth).toBe('2026-04');
     });
 
-    it('amount VND được pass đúng vào revenue_stats', async () => {
+    it('VND amount is passed correctly to revenue_stats', async () => {
       await engine.onPaymentCompleted(baseParams);
       const mgr = mockDs._manager;
       const [, params] = mgr.query.mock.calls[0];
@@ -134,10 +147,10 @@ describe('AggregationEngine', () => {
     });
   });
 
-  // ── onBookingEvent ────────────────────────────────────────────────────────
+  // onBookingEvent
 
   describe('onBookingEvent', () => {
-    it('booking.created → cập nhật booking_stats.bookings_created', async () => {
+    it('booking.created: updates booking_stats.bookings_created', async () => {
       await engine.onBookingEvent({
         eventType:  'booking.created',
         bookingId:  'b-001',
@@ -145,13 +158,13 @@ describe('AggregationEngine', () => {
         userId:     'user-001',
         occurredAt: new Date('2026-04-12T10:00:00Z'),
       });
-      expect(mockDs.query).toHaveBeenCalledTimes(2); // INSERT then UPDATE
+      expect(mockDs.query).toHaveBeenCalledTimes(2); // INSERT followed by UPDATE
       const updateSql: string = mockDs.query.mock.calls[1][0];
       expect(updateSql).toContain('bookings_created');
       expect(updateSql).toContain('+ 1');
     });
 
-    it('booking.cancelled → cập nhật bookings_cancelled', async () => {
+    it('booking.cancelled: updates bookings_cancelled', async () => {
       await engine.onBookingEvent({
         eventType:  'booking.cancelled',
         bookingId:  'b-002',
@@ -163,7 +176,7 @@ describe('AggregationEngine', () => {
       expect(updateSql).toContain('bookings_cancelled');
     });
 
-    it('stationId null → bỏ qua (không cập nhật)', async () => {
+    it('stationId null: skips updates', async () => {
       await engine.onBookingEvent({
         eventType:  'booking.created',
         bookingId:  'b-003',
@@ -175,10 +188,10 @@ describe('AggregationEngine', () => {
     });
   });
 
-  // ── captureKpiSnapshot ────────────────────────────────────────────────────
+  // captureKpiSnapshot
 
   describe('captureKpiSnapshot', () => {
-    it('insert vào platform_kpi_snapshots với đúng params', async () => {
+    it('inserts into platform_kpi_snapshots with correct parameters', async () => {
       await engine.captureKpiSnapshot({
         activeSessions:     5,
         totalChargers:      20,

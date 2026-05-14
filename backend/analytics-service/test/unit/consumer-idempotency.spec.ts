@@ -1,13 +1,14 @@
 /**
  * Tests: Event Consumer idempotency + event flow
  *
- * Manual instantiation — không dùng NestJS Testing Module để tránh DI complexity.
- * Test logic thực sự: idempotency guard, aggregation routing, event log.
+ * Manual instantiation — avoids NestJS Testing Module to minimize dependency injection complexity.
+ * Tests core logic: idempotency guard, aggregation routing, and event logs.
  */
 import { SessionEventConsumer } from '../../src/infrastructure/messaging/consumers/analytics.consumers';
 import { AggregationEngine } from '../../src/domain/services/aggregation.engine';
+import { Logger } from '@nestjs/common';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// Helpers
 
 function makeSessionCompletedPayload(overrides?: Partial<any>) {
   return {
@@ -61,13 +62,25 @@ function makeConsumer(alreadyProcessed = false) {
   return { consumer, peRepo, logRepo, aggregation };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// Global Log Suppression for this test file
+beforeAll(() => {
+  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
+
+// Tests
 
 describe('SessionEventConsumer', () => {
 
-  // ── session.completed: happy path ─────────────────────────────────────────
+  // session.completed: happy path
 
-  it('session.completed → gọi aggregation.onSessionCompleted', async () => {
+  it('session.completed: calls aggregation.onSessionCompleted', async () => {
     const { consumer, aggregation } = makeConsumer(false);
     const payload = makeSessionCompletedPayload();
     await consumer.onSessionCompleted(payload as any);
@@ -80,7 +93,7 @@ describe('SessionEventConsumer', () => {
     expect(call.userId).toBe('user-001');
   });
 
-  it('session.completed → log event vào event_log', async () => {
+  it('session.completed: logs the event into event_log', async () => {
     const { consumer, logRepo } = makeConsumer(false);
     await consumer.onSessionCompleted(makeSessionCompletedPayload() as any);
     expect(logRepo.save).toHaveBeenCalledTimes(1);
@@ -89,7 +102,7 @@ describe('SessionEventConsumer', () => {
     expect(logEntry.sourceService).toBe('charging-control-service');
   });
 
-  it('session.completed → ghi vào processed_events', async () => {
+  it('session.completed: records the event in processed_events', async () => {
     const { consumer, peRepo } = makeConsumer(false);
     await consumer.onSessionCompleted(makeSessionCompletedPayload() as any);
     expect(peRepo.save).toHaveBeenCalledTimes(1);
@@ -98,9 +111,8 @@ describe('SessionEventConsumer', () => {
     expect(saved.eventType).toBe('session.completed');
   });
 
-  // ── Idempotency ───────────────────────────────────────────────────────────
-
-  it('IDEMPOTENCY: duplicate event → skip aggregation', async () => {
+  // Idempotency
+  it('IDEMPOTENCY: duplicate event — skips aggregation', async () => {
     const { consumer, aggregation, logRepo } = makeConsumer(true); // already processed
 
     await consumer.onSessionCompleted(makeSessionCompletedPayload() as any);
@@ -109,21 +121,20 @@ describe('SessionEventConsumer', () => {
     expect(logRepo.save).not.toHaveBeenCalled();
   });
 
-  it('IDEMPOTENCY: eventId fallback từ sessionId khi không có eventId', async () => {
+  it('IDEMPOTENCY: eventId fallback to sessionId when eventId is missing', async () => {
     const { consumer, peRepo, aggregation } = makeConsumer(false);
     const payload = makeSessionCompletedPayload({ eventId: undefined });
 
     await consumer.onSessionCompleted(payload as any);
 
-    // Phải vẫn xử lý được (fallback eventId)
+    // Must still process correctly using the fallback eventId
     expect(aggregation.onSessionCompleted).toHaveBeenCalledTimes(1);
     const fallbackEventId: string = peRepo.create.mock.calls[0][0].eventId;
     expect(fallbackEventId).toContain('session.completed');
   });
 
-  // ── session.started: chỉ log, không aggregate ─────────────────────────────
-
-  it('session.started → chỉ log event, không gọi aggregation', async () => {
+  // session.started: log only, no aggregation
+  it('session.started: logs the event without calling aggregation', async () => {
     const { consumer, logRepo, aggregation } = makeConsumer(false);
 
     await consumer.onSessionStarted({
@@ -143,7 +154,7 @@ describe('SessionEventConsumer', () => {
   });
 });
 
-// ─── Event Mapping Coverage ───────────────────────────────────────────────────
+// Event Mapping Coverage
 
 describe('Event → Aggregation Mapping', () => {
   it('session.completed payload có đủ fields cho AggregationEngine', () => {
@@ -156,14 +167,14 @@ describe('Event → Aggregation Mapping', () => {
     expect(payload).toHaveProperty('endTime');
   });
 
-  it('billing_month format từ occurrence date (UTC)', () => {
+  it('billing_month format derived from occurrence date (UTC)', () => {
     const ts = new Date('2026-04-12T15:00:00Z');
     const month = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}`;
     expect(month).toBe('2026-04');
     expect(month).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/);
   });
 
-  it('hourly bucket key UTC-based', () => {
+  it('hourly bucket key (UTC-based)', () => {
     const ts      = new Date('2026-04-12T14:35:00Z');
     const hour    = ts.getUTCHours();                    // 14 UTC
     const dateStr = ts.toISOString().split('T')[0];      // '2026-04-12'

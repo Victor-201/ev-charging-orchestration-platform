@@ -1,4 +1,16 @@
-﻿import { LoggerModule } from 'nestjs-pino';
+/**
+ * Analytics Service - Data Aggregation and Business Intelligence
+ *
+ * Responsibility:
+ * - Real-time event aggregation from various microservices
+ * - Generating system-wide KPIs and performance metrics
+ * - Analyzing user behavior and revenue trends
+ * - Materialized view management for dashboard performance
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Consumers), Redis (Caching)
+ */
+import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 // @ts-ignore from '@nestjs/common';
@@ -87,6 +99,9 @@ const ALL_ENTITIES = [
         password: cfg.get('DB_PASSWORD', 'ev_secret'),
         database: cfg.get('DB_NAME',     'ev_analytics_db'),
         entities:    ALL_ENTITIES,
+        migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
+        migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    12,
@@ -114,12 +129,12 @@ const ALL_ENTITIES = [
   controllers: [AnalyticsController],
 
   providers: [
-    // â”€â”€ Domain Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Domain Services
     AggregationEngine,
     PeakHourDetector,
     StreamingAggregator,
 
-    // â”€â”€ Use Cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Use Cases
     GetStationUsageUseCase,
     GetRevenueUseCase,
     GetPeakHoursUseCase,
@@ -127,12 +142,12 @@ const ALL_ENTITIES = [
     GetUserBehaviorUseCase,
     DashboardUseCase,
 
-    // â”€â”€ Cron Jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Cron Jobs
     KpiCaptureJob,
     MaterializedViewRefreshJob,
     DataWarehouseExportJob,
 
-    // â”€â”€ Event Consumers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Event Consumers
     SessionEventConsumer,
     PaymentEventConsumer,
     BookingEventConsumer,
@@ -140,7 +155,7 @@ const ALL_ENTITIES = [
     PaymentFailureAnalyticsConsumer,   // track payment failure rate
     ArrearsAnalyticsConsumer,          // track bad debt rate
 
-    // â”€â”€ Guards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Guards
     JwtAuthGuard,
     RolesGuard,
   ],
