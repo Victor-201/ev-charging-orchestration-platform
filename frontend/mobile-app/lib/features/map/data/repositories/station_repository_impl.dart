@@ -1,0 +1,198 @@
+import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
+import '../../domain/entities/station_entity.dart';
+import '../../domain/repositories/i_station_repository.dart';
+import '../../../../core/constants/api_paths.dart';
+import '../../../../core/errors/error_mapper.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/network/dio_client.dart';
+
+class StationModel extends StationEntity {
+  const StationModel({
+    required super.id,
+    required super.name,
+    required super.address,
+    required super.latitude,
+    required super.longitude,
+    required super.status,
+    required super.chargers,
+    super.distanceKm,
+  });
+
+  factory StationModel.fromJson(Map<String, dynamic> json) {
+    final chargerList = (json['chargers'] as List<dynamic>? ?? [])
+        .map((c) => ChargerModel.fromJson(c as Map<String, dynamic>))
+        .toList();
+    return StationModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
+      latitude:
+          (json['latitude'] as num?)?.toDouble() ??
+          (json['lat'] as num?)?.toDouble() ??
+          0,
+      longitude:
+          (json['longitude'] as num?)?.toDouble() ??
+          (json['lng'] as num?)?.toDouble() ??
+          0,
+      status: json['status']?.toString() ?? 'OFFLINE',
+      chargers: chargerList,
+      distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class ChargerModel extends ChargerEntity {
+  const ChargerModel({
+    required super.id,
+    required super.name,
+    required super.status,
+    required super.connectorType,
+    required super.powerKw,
+    super.pricePerKwh,
+  });
+
+  factory ChargerModel.fromJson(Map<String, dynamic> json) {
+    return ChargerModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'OFFLINE',
+      connectorType: json['connectorType']?.toString() ?? 'Other',
+      powerKw: (json['powerKw'] as num?)?.toDouble() ?? 0,
+      pricePerKwh: (json['pricePerKwh'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class PricingModel extends PricingEntity {
+  const PricingModel({
+    required super.chargerId,
+    required super.pricePerKwh,
+    super.idleFeePerMinute,
+    super.totalEstimateVnd,
+  });
+
+  factory PricingModel.fromJson(Map<String, dynamic> json) {
+    return PricingModel(
+      chargerId: json['chargerId']?.toString() ?? '',
+      pricePerKwh: (json['pricePerKwh'] as num?)?.toDouble() ?? 0,
+      idleFeePerMinute: (json['idleFeePerMinute'] as num?)?.toDouble(),
+      totalEstimateVnd: (json['totalEstimateVnd'] as num?)?.toDouble(),
+    );
+  }
+}
+
+class StationRepositoryImpl implements IStationRepository {
+  final DioClient _client;
+
+  StationRepositoryImpl({required DioClient client}) : _client = client;
+
+  @override
+  Future<Either<Failure, List<StationEntity>>> getStations({
+    required double lat,
+    required double lng,
+    required double radiusKm,
+    String? connectorType,
+    String? status,
+  }) async {
+    try {
+      final response = await _client.get(
+        ApiPaths.stations,
+        queryParameters: {
+          'lat': lat,
+          'lng': lng,
+          'radiusKm': radiusKm,
+          if (connectorType != null) 'connectorType': connectorType,
+          if (status != null) 'status': status,
+        },
+      );
+      List<dynamic> list = [];
+      if (response.data is List) {
+        list = response.data as List<dynamic>;
+      } else if (response.data is Map) {
+        list =
+            (response.data['items'] ?? response.data['data'] ?? [])
+                as List<dynamic>;
+      }
+      return Right(
+        list
+            .map((e) => StationModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return Left(ErrorMapper.fromDioException(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, StationEntity>> getStationById(String id) async {
+    try {
+      final response = await _client.get(ApiPaths.stationById(id));
+      final data = response.data is Map<String, dynamic>
+          ? (response.data['data'] ?? response.data) as Map<String, dynamic>
+          : <String, dynamic>{};
+      return Right(StationModel.fromJson(data));
+    } on DioException catch (e) {
+      return Left(ErrorMapper.fromDioException(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PricingEntity>> getChargerPricing({
+    required String stationId,
+    required String chargerId,
+    required String connectorType,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    try {
+      final response = await _client.get(
+        ApiPaths.chargerPricing(stationId, chargerId),
+        queryParameters: {
+          'connectorType': connectorType,
+          'startTime': startTime.toIso8601String(),
+          'endTime': endTime.toIso8601String(),
+        },
+      );
+      final data = response.data is Map<String, dynamic>
+          ? (response.data['data'] ?? response.data) as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      // Inject chargerId if not returned by backend
+      data['chargerId'] ??= chargerId;
+
+      return Right(PricingModel.fromJson(data));
+    } on DioException catch (e) {
+      return Left(ErrorMapper.fromDioException(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<StationEntity>>> searchStations(
+    String keyword, {
+    int limit = 8,
+  }) async {
+    if (keyword.trim().isEmpty) return const Right([]);
+    try {
+      final response = await _client.get(
+        ApiPaths.stations,
+        queryParameters: {'search': keyword.trim(), 'limit': limit},
+      );
+      List<dynamic> list = [];
+      if (response.data is List) {
+        list = response.data as List<dynamic>;
+      } else if (response.data is Map) {
+        list =
+            (response.data['items'] ?? response.data['data'] ?? [])
+                as List<dynamic>;
+      }
+      return Right(
+        list
+            .map((e) => StationModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+    } on DioException catch (e) {
+      return Left(ErrorMapper.fromDioException(e));
+    }
+  }
+}

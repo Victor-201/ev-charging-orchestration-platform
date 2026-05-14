@@ -1,0 +1,178 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import '../bloc/booking_bloc.dart';
+import '../../../../core/design_system/app_colors.dart';
+import '../../../../core/design_system/app_theme.dart';
+import '../../../../core/design_system/app_typography.dart';
+import '../../../../core/design_system/ev_button.dart';
+
+/// Màn hình hàng đợi — S-09
+/// Hiển thị vị trí hàng đợi, ETA = position × 45 phút
+class QueueStatusScreen extends StatefulWidget {
+  final String chargerId;
+  const QueueStatusScreen({super.key, required this.chargerId});
+
+  @override
+  State<QueueStatusScreen> createState() => _QueueStatusScreenState();
+}
+
+class _QueueStatusScreenState extends State<QueueStatusScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    context.read<BookingBloc>().add(QueueJoin(chargerId: widget.chargerId));
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Hàng đợi sạc'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: BlocConsumer<BookingBloc, BookingState>(
+        listener: (context, state) {
+          if (state is BookingError) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error));
+          }
+        },
+        builder: (context, state) {
+          if (state is QueueState) return _buildQueueView(context, state);
+          if (state is BookingLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return const Center(child: Text('Đang tải hàng đợi...'));
+        },
+      ),
+    );
+  }
+
+  Widget _buildQueueView(BuildContext context, QueueState state) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        children: [
+          const SizedBox(height: AppSpacing.xxxl),
+
+          // Số thứ tự — hero number
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (_, __) => Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.secondary.withValues(
+                        alpha: 0.15 + 0.1 * _pulseController.value),
+                    AppColors.secondary.withValues(alpha: 0.05),
+                  ],
+                ),
+                border: Border.all(
+                  color: AppColors.secondary
+                      .withValues(alpha: 0.3 + 0.2 * _pulseController.value),
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${state.position ?? '--'}',
+                    style: AppTypography.displayLg.copyWith(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 56,
+                    ),
+                  ),
+                  Text(
+                    'Vị trí của bạn',
+                    style: AppTypography.caption
+                        .copyWith(color: AppColors.grey600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxxl),
+
+          // ETA
+          if (state.estimatedWaitMinutes != null)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.timer_outlined,
+                      color: AppColors.secondary, size: 24),
+                  const SizedBox(width: AppSpacing.sm),
+                  Column(
+                    children: [
+                      Text(
+                        '~ ${state.estimatedWaitMinutes} phút',
+                        style: AppTypography.headingLg.copyWith(
+                            color: AppColors.secondary,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        'Thời gian chờ ước tính',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.grey600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+          const Spacer(),
+
+          Text(
+            'Cập nhật mỗi 30 giây. Chúng tôi sẽ thông báo khi đến lượt bạn.',
+            style: AppTypography.caption.copyWith(color: AppColors.grey600),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          EVButton(
+            label: 'Rời hàng đợi',
+            variant: EVButtonVariant.danger,
+            icon: Icons.exit_to_app_outlined,
+            onPressed: () {
+              context.read<BookingBloc>().add(
+                  QueueLeave(chargerId: widget.chargerId));
+              context.pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
