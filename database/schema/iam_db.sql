@@ -89,6 +89,7 @@ CREATE TABLE email_verification_tokens (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash VARCHAR(255) NOT NULL UNIQUE,
+    short_code VARCHAR(6),
     expires_at TIMESTAMPTZ NOT NULL,
     verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
