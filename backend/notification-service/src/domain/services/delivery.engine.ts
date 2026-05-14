@@ -13,24 +13,26 @@ import {
 import { NotificationGateway } from '../../infrastructure/realtime/notification.gateway';
 import { FcmPushService } from '../../infrastructure/push/fcm-push.service';
 import { NOTIFICATION_TEMPLATES } from '../../domain/events/notification.events';
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
 
 /**
  * DeliveryEngine — Multi-channel Notification Dispatcher
  *
  * Flow:
  *   Event Payload
- *     → create Notification domain object
- *     → persist to DB (notifications table)
- *     → load user preferences
- *     → dispatch to channels:
- *         ① enableRealtime → Socket.IO emit
- *         ② enablePush     → FCM (với quiet hours check)
- *         ③ enableEmail    → Email stub (không block)
+ *     -> create Notification domain object
+ *     -> persist to DB (notifications table)
+ *     -> load user preferences
+ *     -> dispatch to channels:
+ *         1. enableRealtime -> Socket.IO emit
+ *         2. enablePush     -> FCM (with quiet hours check)
+ *         3. enableEmail    -> Email stub (non-blocking)
  *
  * Design decisions:
- * - Persist trước → realtime sau (client có thể lấy lại nếu miss realtime)
- * - Channel dispatch không throw → log error, tiếp tục
- * - Duplicate guard: eventId trong processed_events (ở consumer level)
+ * - Persist first -> realtime second (client can recover if realtime is missed)
+ * - Channel dispatch does not throw -> logs error, continues
+ * - Duplicate guard: eventId in processed_events (at consumer level)
  */
 @Injectable()
 export class DeliveryEngine {
@@ -43,11 +45,34 @@ export class DeliveryEngine {
     private readonly prefRepo: Repository<NotificationPreferenceOrmEntity>,
     private readonly gateway:   NotificationGateway,
     private readonly fcm:       FcmPushService,
-  ) {}
+    private readonly config:    ConfigService,
+  ) {
+    const smtpUser = this.config.get<string>('SMTP_USER');
+    const smtpPass = this.config.get<string>('SMTP_PASS');
+    const smtpHost = this.config.get<string>('SMTP_HOST', 'smtp.gmail.com');
+    const smtpPort = this.config.get<number>('SMTP_PORT', 587);
+    
+    if (smtpUser && smtpPass) {
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+      this.logger.log(`SMTP configured for ${smtpUser} via ${smtpHost}`);
+    } else {
+      this.logger.warn('SMTP credentials not provided, will use stub for emails');
+    }
+  }
+
+  private transporter: nodemailer.Transporter | null = null;
 
   /**
-   * Dispatch notification cho một user.
-   * Idempotency guard phải được thực hiện ở tầng consumer trước khi gọi method này.
+   * Dispatch notification for a user.
+   * Idempotency guard must be implemented at the consumer level before calling this method.
    */
   async dispatch(params: {
     userId:    string;
@@ -56,7 +81,7 @@ export class DeliveryEngine {
     title:     string;
     body:      string;
     metadata?: Record<string, any>;
-    // Optional structured payloads cho specific realtime events
+    // Optional structured payloads for specific realtime events
     realtimePayload?: {
       bookingUpdate?:  object;
       queueUpdate?:    object;
@@ -64,7 +89,7 @@ export class DeliveryEngine {
     };
   }): Promise<Notification> {
 
-    // ── 1. Tạo domain aggregate ──────────────────────────────────────────────
+    // 1. Create domain aggregate
     const notification = Notification.create({
       userId:   params.userId,
       type:     params.type,
@@ -74,7 +99,7 @@ export class DeliveryEngine {
       metadata: params.metadata ?? {},
     });
 
-    // ── 2. Persist ───────────────────────────────────────────────────────────
+    // 2. Persist
     await this.notifRepo.save(
       this.notifRepo.create({
         id:       notification.id,
@@ -89,7 +114,7 @@ export class DeliveryEngine {
       }),
     );
 
-    // ── 3. Load preferences ──────────────────────────────────────────────────
+    // 3. Load preferences
     const prefRow = await this.prefRepo.findOneBy({ userId: params.userId });
     const pref = prefRow
       ? NotificationPreference.reconstitute({
@@ -104,7 +129,7 @@ export class DeliveryEngine {
         })
       : NotificationPreference.createDefault(params.userId);
 
-    // ── 4. Dispatch to channels ──────────────────────────────────────────────
+    // 4. Dispatch to channels
 
     const dispatches: Promise<void>[] = [];
 
@@ -123,17 +148,17 @@ export class DeliveryEngine {
       dispatches.push(this.dispatchEmailStub(notification));
     }
 
-    // Fire all channels in parallel — không block on individual failures
+    // Fire all channels in parallel - non-blocking on individual failures
     await Promise.allSettled(dispatches);
 
     this.logger.log(
-      `Dispatched ${params.type} → user=${params.userId} channels=[${params.channels.join(',')}]`,
+      `Dispatched ${params.type} -> user=${params.userId} channels=[${params.channels.join(',')}]`,
     );
 
     return notification;
   }
 
-  // ─── Channel Dispatch Implementations ────────────────────────────────────
+  // Channel Dispatch Implementations
 
   private async dispatchRealtime(
     notification: Notification,
@@ -187,14 +212,35 @@ export class DeliveryEngine {
   }
 
   private async dispatchEmailStub(notification: Notification): Promise<void> {
-    // STUB: Email delivery via nodemailer/SMTP.
-    // Production: integrate với email-service hoặc AWS SES.
-    this.logger.log(
-      `[EMAIL STUB] Would send email to user=${notification.userId} subject="${notification.title}"`,
-    );
+    const overrideEmail = this.config.get<string>('TEST_EMAIL_OVERRIDE');
+    const targetEmail = overrideEmail || notification.metadata?.targetEmail;
+
+    if (!targetEmail) {
+      this.logger.warn(`[EMAIL STUB] Cannot send email for user=${notification.userId}, no target email specified and no override`);
+      return;
+    }
+
+    if (!this.transporter) {
+      this.logger.log(
+        `[EMAIL STUB] Would send email to target=${targetEmail} subject="${notification.title}"`,
+      );
+      return;
+    }
+
+    try {
+      await this.transporter.sendMail({
+        from: this.config.get<string>('SMTP_FROM', '"EVoltSync" <default.name201@gmail.com>'),
+        to: targetEmail,
+        subject: notification.title,
+        html: notification.body,
+      });
+      this.logger.log(`[EMAIL] Sent email to ${targetEmail} (subject: "${notification.title}")`);
+    } catch (err: any) {
+      this.logger.error(`[EMAIL] Failed to send email to ${targetEmail}: ${err.message}`);
+    }
   }
 
-  /** FCM data payload chỉ chấp nhận Record<string, string> */
+  /** FCM data payload only accepts Record<string, string> */
   private serializeMetadataForFcm(metadata: Record<string, any>): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [k, v] of Object.entries(metadata)) {
@@ -203,7 +249,7 @@ export class DeliveryEngine {
     return result;
   }
 
-  // ─── Idempotency Helper (dùng ở consumer) ────────────────────────────────
+  // Idempotency Helper (used at consumer level)
 
   async isProcessed(
     eventId: string,

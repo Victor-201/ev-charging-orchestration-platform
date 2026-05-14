@@ -12,13 +12,14 @@ import type {
   SessionStartedEvent, SessionCompletedEvent,
   QueueUpdatedEvent,
   BillingIdleFeeChargedEvent, BillingExtraChargeEvent, BillingRefundIssuedEvent,
+  EmailVerificationRequestedEvent,
 } from '../../../domain/events/notification.events';
 
 /**
- * DLQ_OPTS â€” standard queueOptions for all notification consumers.
+ * DLQ_OPTS: standard queueOptions for all notification consumers.
  *
- * x-dead-letter-exchange: failed messages â†’ DLQ fanout exchange.
- * x-message-ttl: messages expire after 24h if not consumed â†’ DLQ.
+ * x-dead-letter-exchange: failed messages -> DLQ fanout exchange.
+ * x-message-ttl: messages expire after 24h if not consumed -> DLQ.
  * x-delivery-limit: max 3 delivery attempts before DLQ (requires RabbitMQ Quorum Queues).
  */
 function buildQueueOpts(routingKeyStr?: string) {
@@ -33,26 +34,26 @@ function buildQueueOpts(routingKeyStr?: string) {
 
 
 /**
- * NotificationConsumers â€” Event-Driven Notification Triggers
+ * NotificationConsumers: Event-Driven Notification Triggers
  *
- * Má»—i consumer:
+ * Each consumer:
  * 1. Idempotency check (processed_events PK lookup)
  * 2. Mark processed
- * 3. Build notification content tá»« template registry
+ * 3. Build notification content from template registry
  * 4. Delegate to DeliveryEngine (persist + dispatch channels)
  *
  * Channels per event type:
- *   booking.created    â†’ in_app + push
- *   booking.confirmed  â†’ in_app + push (booking_update realtime)
- *   booking.cancelled  â†’ in_app + push (booking_update realtime)
- *   payment.completed  â†’ push + in_app
- *   payment.failed     â†’ push + in_app
- *   session.started    â†’ push + in_app (charging_update realtime)
- *   session.completed  â†’ push + email (charging_update realtime)
- *   queue.updated      â†’ in_app (queue_update realtime)
+ *   booking.created    -> in_app + push
+ *   booking.confirmed  -> in_app + push (booking_update realtime)
+ *   booking.cancelled  -> in_app + push (booking_update realtime)
+ *   payment.completed  -> push + in_app
+ *   payment.failed     -> push + in_app
+ *   session.started    -> push + in_app (charging_update realtime)
+ *   session.completed  -> push + email (charging_update realtime)
+ *   queue.updated      -> in_app (queue_update realtime)
  */
 
-// â”€â”€â”€ BookingNotificationConsumer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// BookingNotificationConsumer
 
 @Injectable()
 export class BookingNotificationConsumer {
@@ -148,7 +149,7 @@ export class BookingNotificationConsumer {
   }
 }
 
-// â”€â”€â”€ PaymentNotificationConsumer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// PaymentNotificationConsumer
 
 @Injectable()
 export class PaymentNotificationConsumer {
@@ -199,14 +200,14 @@ export class PaymentNotificationConsumer {
       type:     'payment.failed',
       channels: ['push', 'in_app'],
       title:    tpl.title(payload),
-      // Dùng reason từ PaymentFailedEvent (chứa thông tin số tiền cần nạp thêm)
+      // Use reason from PaymentFailedEvent (contains information about the amount to deposit)
       body:     payload.reason ?? tpl.body(payload),
       metadata: { transactionId: payload.transactionId, reason: payload.reason },
     });
   }
 }
 
-// â”€â”€â”€ ChargingNotificationConsumer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ChargingNotificationConsumer
 
 @Injectable()
 export class ChargingNotificationConsumer {
@@ -285,7 +286,7 @@ export class ChargingNotificationConsumer {
   }
 }
 
-// â”€â”€â”€ QueueNotificationConsumer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// QueueNotificationConsumer
 
 @Injectable()
 export class QueueNotificationConsumer {
@@ -338,7 +339,7 @@ export class QueueNotificationConsumer {
   }
 }
 
-// â”€â”€â”€ BookingLifecycleExtendedConsumer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// BookingLifecycleExtendedConsumer
 // Handles: booking.expired, booking.no_show
 
 @Injectable()
@@ -409,7 +410,7 @@ export class BookingLifecycleExtendedConsumer {
   }
 }
 
-// ─── FaultNotificationConsumer ──────────────────────────────────────────────
+// FaultNotificationConsumer
 
 @Injectable()
 export class FaultNotificationConsumer {
@@ -464,7 +465,7 @@ export class FaultNotificationConsumer {
   }
 }
 
-// ─── BillingNotificationConsumer ─────────────────────────────────────────────
+// BillingNotificationConsumer
 // billing.idle_fee_charged_v1 | billing.extra_charge_v1 | billing.refund_issued_v1
 
 @Injectable()
@@ -572,5 +573,46 @@ export class BillingNotificationConsumer {
     this.logger.log(
       `billing.refund_issued: user=${payload.userId} refund=${payload.refundAmountVnd}VND`,
     );
+  }
+}
+
+// AuthNotificationConsumer
+
+@Injectable()
+export class AuthNotificationConsumer {
+  private readonly logger = new Logger(AuthNotificationConsumer.name);
+
+  constructor(
+    @InjectRepository(ProcessedEventOrmEntity)
+    private readonly peRepo: Repository<ProcessedEventOrmEntity>,
+    private readonly engine: DeliveryEngine,
+  ) {}
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging', // IAM service publishes to ev.charging
+    routingKey:   'user.email_verification_requested',
+    queue:        'notification.user.email_verification',
+    queueOptions: buildQueueOpts('dlq.notification.user.email_verification'),
+  })
+  async onEmailVerificationRequested(payload: EmailVerificationRequestedEvent): Promise<void> {
+    const eventId = payload.eventId ?? `user.email_verification:${payload.userId}:${Date.now()}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'user.email_verification_requested', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['user.email_verification_requested'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'user.email_verification_requested' as any, // Not yet in NotificationType enum, using as any for now or need to add it
+      channels: ['email'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: {
+        targetEmail: payload.email,
+        rawToken:    payload.rawToken,
+        shortCode:   payload.shortCode,
+      },
+    });
+
+    this.logger.log(`user.email_verification_requested notification: email=${payload.email}`);
   }
 }

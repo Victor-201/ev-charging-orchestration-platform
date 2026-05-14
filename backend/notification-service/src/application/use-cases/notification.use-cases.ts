@@ -11,10 +11,10 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities/notification.orm-entities';
 import { Device, DevicePlatform } from '../../domain/entities/notification.aggregate';
 
-// Re-exports cho AppModule
+// Re-exports for AppModule
 export { NotificationOrmEntity, ProcessedEventOrmEntity, DeviceOrmEntity, NotificationPreferenceOrmEntity };
 
-// ─── GetNotificationsUseCase ──────────────────────────────────────────────────
+
 
 /**
  * GET /notifications?limit=&unreadOnly=true
@@ -63,7 +63,7 @@ export class GetNotificationsUseCase {
   }
 }
 
-// ─── DeviceManagementUseCase ──────────────────────────────────────────────────
+
 
 /**
  * POST /devices/register
@@ -80,8 +80,8 @@ export class DeviceManagementUseCase {
   ) {}
 
   /**
-   * Đăng ký device mới hoặc cập nhật token nếu device đã tồn tại.
-   * Upsert by pushToken: nếu token đã có → update userId/lastActiveAt.
+   * Registers a new device or updates the token if it already exists.
+   * Upsert by pushToken: if token exists -> update userId/lastActiveAt.
    */
   async register(params: {
     userId:     string;
@@ -89,11 +89,11 @@ export class DeviceManagementUseCase {
     pushToken:  string;
     deviceName?: string;
   }): Promise<DeviceOrmEntity> {
-    // Upsert by pushToken — token rotation (old token → new token)
+    // Upsert by pushToken: token rotation (old token -> new token)
     const existing = await this.repo.findOneBy({ pushToken: params.pushToken });
 
     if (existing) {
-      // Token đã registered — update userId và refresh
+      // Token already registered: update userId and refresh
       await this.repo.update(
         { pushToken: params.pushToken },
         { userId: params.userId, lastActiveAt: new Date(), deviceName: params.deviceName ?? existing.deviceName },
@@ -118,7 +118,7 @@ export class DeviceManagementUseCase {
     return row;
   }
 
-  /** Xóa device (user logout hoặc revoke push) */
+  /** Unregisters device (user logout or revoked push permission) */
   async unregister(deviceId: string, userId: string): Promise<void> {
     const device = await this.repo.findOneBy({ id: deviceId, userId });
     if (!device) throw new NotFoundException(`Device ${deviceId} not found`);
@@ -126,7 +126,7 @@ export class DeviceManagementUseCase {
     this.logger.log(`Device unregistered: id=${deviceId} user=${userId}`);
   }
 
-  /** Lấy tất cả devices của user */
+  /** Lists all devices for a user */
   async listForUser(userId: string): Promise<DeviceOrmEntity[]> {
     return this.repo.find({
       where: { userId },
@@ -135,7 +135,7 @@ export class DeviceManagementUseCase {
   }
 }
 
-// ─── NotificationPreferenceUseCase ───────────────────────────────────────────
+
 
 /**
  * GET /preferences
@@ -152,7 +152,7 @@ export class NotificationPreferenceUseCase {
     const existing = await this.repo.findOneBy({ userId });
     if (existing) return existing;
 
-    // Auto-create với defaults
+    // Auto-create with defaults
     const row = this.repo.create({
       userId,
       enablePush:      true,

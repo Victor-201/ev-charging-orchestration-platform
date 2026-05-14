@@ -1,20 +1,19 @@
 /**
- * Notification Inbound Events — type-safe mapping từ upstream services.
+ * Notification Inbound Events: type-safe mapping from upstream services.
  *
  * PHASE 1 – EVENT MAPPING:
  *
- * Source Event                → Notification Type         → Channels
- * ─────────────────────────────────────────────────────────────────────
- * booking.created             → booking.created          → in_app + realtime
- * booking.confirmed           → booking.confirmed        → push + realtime
- * booking.cancelled           → booking.cancelled        → push + in_app
- * payment.completed           → payment.completed        → push + in_app
- * session.started             → session.started          → push + realtime
- * session.completed           → session.completed        → push + email
- * queue.updated (queue.*)     → queue.updated            → realtime (socket only)
+ * Source Event                -> Notification Type        -> Channels
+ * booking.created             -> booking.created          -> in_app + realtime
+ * booking.confirmed           -> booking.confirmed        -> push + realtime
+ * booking.cancelled           -> booking.cancelled        -> push + in_app
+ * payment.completed           -> payment.completed        -> push + in_app
+ * session.started             -> session.started          -> push + realtime
+ * session.completed           -> session.completed        -> push + email
+ * queue.updated (queue.*)     -> queue.updated            -> realtime (socket only)
  */
 
-// ─── Booking Events ───────────────────────────────────────────────────────────
+// Booking Events
 
 export interface BookingCreatedEvent {
   eventType:  'booking.created';
@@ -46,7 +45,7 @@ export interface BookingCancelledEvent {
   reason?:    string;
 }
 
-// ─── Payment Events ───────────────────────────────────────────────────────────
+// Payment Events
 
 export interface PaymentCompletedEvent {
   eventType:     'payment.completed';
@@ -66,7 +65,7 @@ export interface PaymentFailedEvent {
   reason?:       string;
 }
 
-// ─── Charging Events ──────────────────────────────────────────────────────────
+// Charging Events
 
 export interface SessionStartedEvent {
   eventType:    'session.started';
@@ -92,7 +91,7 @@ export interface SessionCompletedEvent {
   endTime:         string;
 }
 
-// ─── Queue Events ─────────────────────────────────────────────────────────────
+// Queue Events
 
 export interface QueueUpdatedEvent {
   eventType:    'queue.updated';
@@ -106,7 +105,7 @@ export interface QueueUpdatedEvent {
   status:       'waiting' | 'moved' | 'called' | 'expired';
 }
 
-// ─── Billing Notification Events ─────────────────────────────────────────────
+// Billing Notification Events
 
 export interface BillingIdleFeeChargedEvent {
   eventType:             'billing.idle_fee_charged_v1';
@@ -142,9 +141,20 @@ export interface BillingRefundIssuedEvent {
   transactionId:    string;
 }
 
-// ─── Notification Template ────────────────────────────────────────────────────
+// IAM / User Events
 
-/** Hàm build notification content từ event payload */
+export interface EmailVerificationRequestedEvent {
+  eventType: 'user.email_verification_requested';
+  eventId: string;
+  userId: string;
+  email: string;
+  rawToken: string;
+  shortCode: string;
+}
+
+// Notification Template
+
+/** Function to build notification content from event payload */
 export interface NotificationTemplate {
   title:   (payload: any) => string;
   body:    (payload: any) => string;
@@ -153,65 +163,75 @@ export interface NotificationTemplate {
 /** Centralized template registry */
 export const NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate> = {
   'booking.created': {
-    title: ()        => 'Đặt lịch thành công ✅',
+    title: ()        => 'Đặt lịch thành công',
     body:  (p: BookingCreatedEvent) =>
       `Lịch sạc #${p.bookingId.slice(0,8)} đã được tạo. Bắt đầu: ${new Date(p.startTime).toLocaleString('vi-VN')}.`,
   },
   'booking.confirmed': {
-    title: ()        => 'Lịch sạc được xác nhận 🔋',
+    title: ()        => 'Lịch sạc được xác nhận',
     body:  (p: BookingConfirmedEvent) =>
       `Lịch sạc #${p.bookingId.slice(0,8)}${p.stationName ? ` tại ${p.stationName}` : ''} đã được xác nhận!`,
   },
   'booking.cancelled': {
-    title: ()        => 'Lịch sạc đã hủy ❌',
+    title: ()        => 'Lịch sạc đã hủy',
     body:  (p: BookingCancelledEvent) =>
       `Lịch sạc #${p.bookingId.slice(0,8)} đã bị hủy.${p.reason ? ` Lý do: ${p.reason}` : ''}`,
   },
   'payment.completed': {
-    title: ()        => 'Thanh toán thành công 💳',
+    title: ()        => 'Thanh toán thành công',
     body:  (p: PaymentCompletedEvent) =>
       `Thanh toán ${p.amount.toLocaleString('vi-VN')} VND thành công.`,
   },
   'payment.failed': {
-    title: ()        => 'Thanh toán thất bại ⚠️',
+    title: ()        => 'Thanh toán thất bại',
     body:  (p: PaymentFailedEvent) =>
       `Thanh toán ${p.amount.toLocaleString('vi-VN')} VND thất bại.${p.reason ? ` ${p.reason}` : ' Vui lòng thử lại.'}`,
   },
   'session.started': {
-    title: ()        => 'Bắt đầu sạc ⚡',
+    title: ()        => 'Bắt đầu sạc',
     body:  (p: SessionStartedEvent) =>
       `Phiên sạc của bạn đã bắt đầu lúc ${new Date(p.startTime).toLocaleTimeString('vi-VN')}.`,
   },
   'session.completed': {
-    title: ()        => 'Sạc hoàn tất! 🎉',
+    title: ()        => 'Sạc hoàn tất',
     body:  (p: SessionCompletedEvent) =>
       `Bạn đã sạc ${p.kwhConsumed.toFixed(2)} kWh trong ${Math.round(p.durationMinutes)} phút. Cảm ơn!`,
   },
   'queue.updated': {
-    title: ()        => 'Cập nhật hàng đợi 📋',
+    title: ()        => 'Cập nhật hàng đợi',
     body:  (p: QueueUpdatedEvent) =>
       p.status === 'called'
         ? `Đến lượt bạn! Hãy đến trạm sạc ngay.`
         : `Vị trí của bạn trong hàng đợi: #${p.position}. Chờ khoảng ${p.estimatedWaitMinutes} phút.`,
   },
   'billing.idle_fee_charged_v1': {
-    title: ()        => 'Phí chiếm dụng trụ sạc ⏰',
+    title: ()        => 'Phí chiếm dụng trụ sạc',
     body:  (p: BillingIdleFeeChargedEvent) =>
       `Xe bạn đã cắm súng ${p.chargeableIdleMinutes + p.idleGraceMinutes} phút sau khi sạc đầy ` +
       `(${p.idleGraceMinutes} phút miễn phí). Phí chiếm dụng: ${p.idleFeeVnd.toLocaleString('vi-VN')} VND ` +
       `(${p.idleFeePerMinuteVnd.toLocaleString('vi-VN')} VND/phút × ${p.chargeableIdleMinutes} phút). Vui lòng rút súng!`,
   },
   'billing.extra_charge_v1': {
-    title: ()        => 'Trừ thêm từ ví 💳',
+    title: ()        => 'Trừ thêm từ ví',
     body:  (p: BillingExtraChargeEvent) =>
       `Phiên sạc của bạn tốn tổng ${p.totalFeeVnd.toLocaleString('vi-VN')} VND ` +
       `(cọc: ${p.depositAmount.toLocaleString('vi-VN')} VND). ` +
       `Đã trừ thêm ${p.extraAmountVnd.toLocaleString('vi-VN')} VND từ ví.`,
   },
   'billing.refund_issued_v1': {
-    title: ()        => 'Hoàn tiền vào ví 💰',
+    title: ()        => 'Hoàn tiền vào ví',
     body:  (p: BillingRefundIssuedEvent) =>
       `Phiên sạc hoàn tất. Tổng phí: ${p.totalFeeVnd.toLocaleString('vi-VN')} VND. ` +
       `Đã hoàn ${p.refundAmountVnd.toLocaleString('vi-VN')} VND tiền cọc thừa về ví của bạn.`,
+  },
+  'user.email_verification_requested': {
+    title: ()        => 'Xác thực tài khoản EVoltSync của bạn',
+    body:  (p: EmailVerificationRequestedEvent) => 
+      `<h2>Chào mừng đến với EVoltSync!</h2>` +
+      `<p>Cảm ơn bạn đã đăng ký. Vui lòng xác thực địa chỉ email của bạn để tiếp tục.</p>` +
+      `<p><b>Mã xác nhận 6 số của bạn:</b> <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${p.shortCode}</span></p>` +
+      `<p>Hoặc bấm vào nút bên dưới để tự động xác thực:</p>` +
+      `<a href="ev://app/auth/verify?token=${p.rawToken}" style="display: inline-block; padding: 12px 24px; background-color: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Xác thực ngay</a>` +
+      `<p style="margin-top: 20px; font-size: 12px; color: #666;">Nếu bạn không yêu cầu email này, bạn có thể bỏ qua.</p>`,
   },
 };

@@ -1,3 +1,15 @@
+/**
+ * Notification Service - User Communication and Messaging
+ *
+ * Responsibility:
+ * - Real-time push notifications (Firebase Cloud Messaging)
+ * - WebSocket gateway for in-app live updates
+ * - Management of user notification preferences and devices
+ * - Consuming events from other services to trigger alerts (Auth, Booking, Charging, Billing)
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Consumers), Socket.io (Real-time), FCM (External)
+ */
 import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
@@ -31,6 +43,7 @@ import {
   BookingLifecycleExtendedConsumer,
   FaultNotificationConsumer,
   BillingNotificationConsumer,
+  AuthNotificationConsumer,
 } from './infrastructure/messaging/consumers/notification.consumers';
 
 // Application Use Cases
@@ -86,6 +99,9 @@ const ALL_ENTITIES = [
         password: cfg.get('DB_PASSWORD', 'ev_secret'),
         database: cfg.get('DB_NAME',     'ev_notification_db'),
         entities:    ALL_ENTITIES,
+        migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
+        migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    10,
@@ -139,6 +155,7 @@ const ALL_ENTITIES = [
     BookingLifecycleExtendedConsumer,
     FaultNotificationConsumer,
     BillingNotificationConsumer,   // ← Idle Fee / Extra Charge / Refund notifications
+    AuthNotificationConsumer,
 
     // ── Guards ────────────────────────────────────────────────────────────────
     JwtAuthGuard,

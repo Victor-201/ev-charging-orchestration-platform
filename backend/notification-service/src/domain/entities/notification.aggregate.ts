@@ -1,12 +1,12 @@
 /**
  * Notification Domain Aggregates
  *
- * Clean Architecture: Domain layer không phụ thuộc framework hay infrastructure.
- * Tất cả business invariants được enforce tại đây.
+ * Clean Architecture: Domain layer does not depend on framework or infrastructure.
+ * All business invariants are enforced here.
  */
 import { v4 as uuidv4 } from 'uuid';
 
-// ─── Types & Enums ────────────────────────────────────────────────────────────
+// Types & Enums
 
 export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'failed' | 'read';
 export type NotificationChannel = 'in_app' | 'push' | 'email' | 'sms';
@@ -16,14 +16,14 @@ export type NotificationType =
   | 'payment.completed' | 'payment.failed'
   | 'session.started' | 'session.completed'
   | 'queue.updated' | 'charger.fault' | 'system'
-  | 'billing.idle_fee_charged_v1'   // Phí chiếm dụng trụ sạc
-  | 'billing.extra_charge_v1'       // Trừ thêm tiền từ ví
-  | 'billing.refund_issued_v1';     // Hoàn tiền cọc về ví
+  | 'billing.idle_fee_charged_v1'   // Idle fee charged
+  | 'billing.extra_charge_v1'       // Extra charge from wallet
+  | 'billing.refund_issued_v1';     // Deposit refund to wallet
 
 
 export type DevicePlatform = 'ios' | 'android' | 'web';
 
-// ─── Notification Aggregate ───────────────────────────────────────────────────
+// Notification Aggregate
 
 export interface NotificationProps {
   id:        string;
@@ -42,10 +42,10 @@ export interface NotificationProps {
  * Notification — Aggregate Root
  *
  * Invariants:
- * - Không thể read một notification đã read
- * - Không thể fail một notification đã delivered
- * - title không được rỗng
- * - userId là required
+ * - Cannot read an already read notification
+ * - Cannot fail an already delivered notification
+ * - title cannot be empty
+ * - userId is required
  */
 export class Notification {
   private readonly props: NotificationProps;
@@ -84,26 +84,26 @@ export class Notification {
     return new Notification(props);
   }
 
-  /** Đánh dấu delivered (channel đã gửi thành công) */
+  /** Mark as delivered (channel sent successfully) */
   markSent(): void {
     if (this.props.status === 'read') return;
     this.props.status = 'sent';
   }
 
-  /** Đánh dấu failed */
+  /** Mark as failed */
   markFailed(): void {
     if (this.props.status === 'read' || this.props.status === 'delivered') return;
     this.props.status = 'failed';
   }
 
-  /** User đã đọc notification */
+  /** Mark as read by user */
   markRead(): void {
     if (this.props.status === 'read') return;
     this.props.status = 'read';
     this.props.readAt = new Date();
   }
 
-  // ─── Getters ─────────────────────────────────────────────────────────────
+  // Getters
 
   get id():        string             { return this.props.id; }
   get userId():    string             { return this.props.userId; }
@@ -118,7 +118,7 @@ export class Notification {
   get isRead():    boolean            { return this.props.status === 'read'; }
 }
 
-// ─── Device Aggregate ─────────────────────────────────────────────────────────
+// Device Aggregate
 
 export interface DeviceProps {
   id:           string;
@@ -134,8 +134,8 @@ export interface DeviceProps {
  * Device — Aggregate Root
  *
  * Invariants:
- * - pushToken phải non-empty (FCM token)
- * - 1 pushToken chỉ thuộc về 1 user (enforced at DB level UNIQUE)
+ * - pushToken must be non-empty (FCM token)
+ * - 1 pushToken only belongs to 1 user (enforced at DB level UNIQUE)
  */
 export class Device {
   private readonly props: DeviceProps;
@@ -168,7 +168,7 @@ export class Device {
     return new Device(props);
   }
 
-  /** Cập nhật FCM token mới (token rotation) */
+  /** Update with new FCM token (token rotation) */
   updateToken(newToken: string): void {
     if (!newToken) throw new Error('Device: new pushToken required');
     this.props.pushToken    = newToken;
@@ -188,7 +188,7 @@ export class Device {
   get createdAt():    Date          { return this.props.createdAt; }
 }
 
-// ─── NotificationPreference Aggregate ────────────────────────────────────────
+// NotificationPreference Aggregate
 
 export interface NotificationPreferenceProps {
   userId:          string;
@@ -196,7 +196,7 @@ export interface NotificationPreferenceProps {
   enableRealtime:  boolean;
   enableEmail:     boolean;
   enableSms:       boolean;
-  quietHoursStart: number | null;  // 0-23 (giờ bắt đầu yên tĩnh)
+  quietHoursStart: number | null;  // 0-23 (quiet start hour)
   quietHoursEnd:   number | null;  // 0-23
   updatedAt:       Date;
 }
@@ -204,8 +204,8 @@ export interface NotificationPreferenceProps {
 /**
  * NotificationPreference — Aggregate Root (1 per user)
  *
- * Quyết định channel nào được kích hoạt khi gửi notification.
- * Quiet hours: không gửi push trong khoảng giờ đó.
+ * Determines which channels are enabled for sending notifications.
+ * Quiet hours: push notifications are suppressed during this period.
  */
 export class NotificationPreference {
   private readonly props: NotificationPreferenceProps;
@@ -214,7 +214,7 @@ export class NotificationPreference {
     this.props = props;
   }
 
-  /** Tạo với cài đặt mặc định (bật tất cả) */
+  /** Create with default settings (all enabled) */
   static createDefault(userId: string): NotificationPreference {
     if (!userId) throw new Error('NotificationPreference: userId required');
     return new NotificationPreference({
@@ -233,7 +233,7 @@ export class NotificationPreference {
     return new NotificationPreference(props);
   }
 
-  /** Kiểm tra có thể gửi push ngay bây giờ không (quiet hours) */
+  /** Check if a push notification can be sent now (evaluates quiet hours) */
   canSendPushNow(): boolean {
     if (!this.props.enablePush) return false;
     if (this.props.quietHoursStart == null || this.props.quietHoursEnd == null) return true;
@@ -242,7 +242,7 @@ export class NotificationPreference {
     const start = this.props.quietHoursStart;
     const end   = this.props.quietHoursEnd;
 
-    // Handle overnight range (e.g. 22:00 → 07:00)
+    // Handle overnight range (e.g. 22:00 -> 07:00)
     if (start > end) {
       return currentHour < start && currentHour >= end;
     }

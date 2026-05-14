@@ -2,8 +2,8 @@ import {
   Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index,
 } from 'typeorm';
 
-// â”€â”€â”€ notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: id â†’ {user_id, type, channel, title, body, status, metadata, read_at}
+// notifications
+// BCNF: id -> {user_id, type, channel, title, body, status, metadata, read_at}
 // Indexes: fast unread query, fast per-user query
 
 @Entity('notifications')
@@ -22,9 +22,9 @@ export class NotificationOrmEntity {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })                createdAt: Date;
 }
 
-// â”€â”€â”€ devices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: id â†’ {user_id, platform, push_token, device_name, last_active_at}
-// push_token UNIQUE: 1 FCM token â†’ 1 device row (upsert on re-register)
+// devices
+// BCNF: id -> {user_id, platform, push_token, device_name, last_active_at}
+// push_token UNIQUE: 1 FCM token -> 1 device row (upsert on re-register)
 // BCNF justified: token determines no other non-key attribute
 
 @Entity('devices')
@@ -40,8 +40,8 @@ export class DeviceOrmEntity {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })                  createdAt: Date;
 }
 
-// â”€â”€â”€ notification_preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: user_id â†’ {enable_push, enable_realtime, enable_email, quiet_hours}
+// notification_preferences
+// BCNF: user_id -> {enable_push, enable_realtime, enable_email, quiet_hours}
 // Candidate key: user_id (1 row per user)
 
 @Entity('notification_preferences')
@@ -56,7 +56,7 @@ export class NotificationPreferenceOrmEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })                 updatedAt: Date;
 }
 
-// â”€â”€â”€ processed_events (idempotency guard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events (idempotency guard)
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
