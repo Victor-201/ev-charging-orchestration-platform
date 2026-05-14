@@ -13,9 +13,9 @@ export interface IBookingRepository {
   findById(id: string): Promise<Booking | null>;
   findByUserAndStatus(userId: string, status: BookingStatus): Promise<Booking[]>;
   findActiveByCharger(chargerId: string): Promise<Booking[]>;
-  /** Danh sách booking active trong ngày — dùng để tính availability slots */
+  /** List of active bookings for the day - used to calculate availability slots */
   findByChargerAndDate(chargerId: string, date: Date): Promise<Booking[]>;
-  /** Overlap check — for use inside transactions */
+  /** Overlap check - for use inside transactions */
   hasOverlap(
     chargerId: string,
     startTime: Date,
@@ -31,9 +31,9 @@ export interface IBookingRepository {
   getQueuePosition(userId: string, chargerId: string): Promise<number>;
   /** Find booking by idempotency key */
   findByIdempotencyKey(key: string): Promise<Booking | null>;
-  /** Find by deposit transaction ID — for payment callback lookup */
+  /** Find by deposit transaction ID - for payment callback lookup */
   findByDepositTransactionId(transactionId: string): Promise<Booking | null>;
-  /** Danh sách booking của user, phân trang */
+  /** Paginated list of user bookings */
   findByUser(userId: string, limit?: number, offset?: number): Promise<{ items: Booking[]; total: number }>;
 }
 

@@ -7,7 +7,7 @@ export interface QueueEntry {
   connectorType: string;
   requestedAt: Date;
   userPriority: number;   // 1–10; premium subscriber = 10
-  urgencyScore: number;   // 0–10; low battery SoC → higher
+  urgencyScore: number;   // 0-10; low battery SoC -> higher
   status: 'waiting' | 'assigned' | 'cancelled';
   score?: number;
 }

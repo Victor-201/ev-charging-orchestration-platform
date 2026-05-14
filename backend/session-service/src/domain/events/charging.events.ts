@@ -1,15 +1,15 @@
 /**
- * Domain Events cho Charging Service
+ * Domain Events for Charging Service
  *
- * Tất cả events đều có eventType string literal để routing qua RabbitMQ.
- * occurredAt được set tại thời điểm tạo event (domain time, không phải publish time).
+ * All events have string literal eventType for routing via RabbitMQ.
+ * occurredAt is set at event creation time (domain time, not publish time).
  */
 export abstract class ChargingDomainEvent {
   readonly occurredAt: Date = new Date();
   abstract readonly eventType: string;
 }
 
-// ─── Session Events ───────────────────────────────────────────────────────────
+// Session Events
 
 export class SessionStartedEvent extends ChargingDomainEvent {
   readonly eventType = 'session.started';
@@ -65,13 +65,13 @@ export class SessionCompletedEvent extends ChargingDomainEvent {
     public readonly endTime: Date,
     /** Duration in minutes */
     public readonly durationMinutes: number,
-    /** Tiền điện thực tế (VND) */
+    /** Actual energy fee (VND) */
     public readonly energyFeeVnd: number = 0,
-    /** Phí chiếm dụng (VND) */
+    /** Idle fee (VND) */
     public readonly idleFeeVnd: number = 0,
-    /** Tiền cọ đã giữ trước (VND) — dùng để đối soát */
+    /** Deposit amount previously held (VND) - used for reconciliation */
     public readonly depositAmount: number = 0,
-    /** Transaction ID của giao dịch cọ */
+    /** Deposit transaction ID */
     public readonly depositTransactionId: string | null = null,
   ) {
     super();
@@ -103,7 +103,7 @@ export class SessionErrorEvent extends ChargingDomainEvent {
   }
 }
 
-// ─── Charger State Events ─────────────────────────────────────────────────────
+// Charger State Events
 
 export class ChargerStatusChangedEvent extends ChargingDomainEvent {
   readonly eventType = 'charger.status.changed';

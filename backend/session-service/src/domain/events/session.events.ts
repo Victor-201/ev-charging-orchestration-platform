@@ -1,6 +1,6 @@
 import { DomainEvent } from './domain-event.base';
 
-// ─── session.booking_created_v1 ──────────────────────────────────────────────────────────
+// session.booking_created_v1
 
 export class BookingCreatedEvent extends DomainEvent {
   readonly eventType = 'session.booking_created_v1';
@@ -16,7 +16,7 @@ export class BookingCreatedEvent extends DomainEvent {
   }
 }
 
-// ─── Deposit Requested (auto-trigger sau khi booking.create) ──────────────────
+// Deposit Requested (auto-trigger after booking.create)
 
 export class SessionReservedEvent extends DomainEvent {
   readonly eventType = 'session.reserved_v1';
@@ -31,7 +31,7 @@ export class SessionReservedEvent extends DomainEvent {
   }
 }
 
-// ─── Booking Confirmed (auto sau khi payment thành công) ──────────────────────
+// Booking Confirmed (auto after successful payment)
 
 export class BookingConfirmedEvent extends DomainEvent {
   readonly eventType = 'booking.confirmed';
@@ -49,7 +49,7 @@ export class BookingConfirmedEvent extends DomainEvent {
   }
 }
 
-// ─── Booking Cancelled (hoàn 100% deposit vào ví) ────────────────────────────
+// Booking Cancelled (refund 100% deposit to wallet)
 
 export class BookingCancelledEvent extends DomainEvent {
   readonly eventType = 'booking.cancelled';
@@ -66,7 +66,7 @@ export class BookingCancelledEvent extends DomainEvent {
   }
 }
 
-// ─── Booking Completed (QR đã quét, session bắt đầu) ────────────────────────
+// Booking Completed (QR scanned, session started)
 
 export class BookingCompletedEvent extends DomainEvent {
   readonly eventType = 'booking.completed';
@@ -82,7 +82,7 @@ export class BookingCompletedEvent extends DomainEvent {
   }
 }
 
-// ─── Booking Expired (5 phút không thanh toán) ───────────────────────────────
+// Booking Expired (5 minutes unpaid)
 
 export class BookingExpiredEvent extends DomainEvent {
   readonly eventType = 'booking.expired';
@@ -96,7 +96,7 @@ export class BookingExpiredEvent extends DomainEvent {
   }
 }
 
-// ─── Booking No-Show (phạt 20% deposit) ──────────────────────────────────────
+// Booking No-Show (20% deposit penalty)
 
 export class BookingNoShowEvent extends DomainEvent {
   readonly eventType = 'booking.no_show';

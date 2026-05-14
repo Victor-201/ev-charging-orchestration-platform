@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 export abstract class DomainEvent {
   readonly eventId: string;
   readonly occurredAt: Date;

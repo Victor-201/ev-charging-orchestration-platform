@@ -1,6 +1,6 @@
 import { ChargingSession } from '../entities/charging-session.aggregate';
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// Interfaces
 
 export interface ISessionRepository {
   save(session: ChargingSession): Promise<void>;
@@ -9,7 +9,7 @@ export interface ISessionRepository {
   findActiveByUser(userId: string): Promise<ChargingSession | null>;
   findByBookingId(bookingId: string): Promise<ChargingSession | null>;
   findByUserId(userId: string, limit?: number): Promise<ChargingSession[]>;
-  /** Find STOPPED sessions older than cutoff — for reconciliation */
+  /** Find STOPPED sessions older than cutoff - for reconciliation */
   findStoppedBefore(cutoff: Date): Promise<ChargingSession[]>;
   /** Idempotency check on start */
   findByIdempotencyKey(key: string): Promise<ChargingSession | null>;

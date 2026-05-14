@@ -8,9 +8,9 @@ export interface ConnectorInfo {
 export interface ChargerInfo {
   id: string;
   stationId: string;
-  /** Connector chính (primary) */
+  /** Primary connector */
   connectorType: string;
-  /** Tất cả connectors của trụ (1 trụ có thể có nhiều loại) */
+  /** All connectors on the charger (1 charger can have multiple types) */
   connectors: ConnectorInfo[];
   maxPowerKw: number;
   status: 'available' | 'in_use' | 'offline' | 'reserved' | 'faulted';
