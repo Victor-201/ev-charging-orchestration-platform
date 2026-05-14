@@ -2,13 +2,13 @@ import { INestApplication } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 /**
- * Shared Swagger setup helper — dùng chung cho tất cả 10 microservices.
+ * Shared Swagger setup helper — Used by all microservices.
  *
- * Chỉ bật khi NODE_ENV !== 'production' hoặc SWAGGER_ENABLED=true
- * → Trong Docker production, Swagger sẽ không chạy để tiết kiệm tài nguyên.
- * → Trong development (npm run start:dev), Swagger luôn bật.
+ * Enabled only when NODE_ENV !== 'production' or SWAGGER_ENABLED=true.
+ * - In production Docker environments, Swagger is disabled to save resources.
+ * - In development (npm run start:dev), Swagger is always active.
  *
- * Truy cập: http://localhost:{PORT}/api/docs
+ * Access URL: http://localhost:{PORT}/api/docs
  */
 export function setupSwagger(
   app: INestApplication,
@@ -57,7 +57,8 @@ export function setupSwagger(
   });
 
   // eslint-disable-next-line no-console
+  // Necessary for visibility in local development logs.
   console.log(
-    `📖 Swagger UI: http://localhost:${config.port}/api/docs`,
+    `Swagger UI: http://localhost:${config.port}/api/docs`,
   );
 }

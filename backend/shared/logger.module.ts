@@ -5,14 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Shared Pino Logger Module
  *
- * Cung cấp structured JSON logging cho toàn bộ hệ thống.
- * Mỗi request tự động nhận một X-Request-ID duy nhất được gắn vào
- * tất cả dòng log liên quan — hỗ trợ Distributed Tracing phân tán.
+ * Provides structured JSON logging for the entire platform.
+ * Each request automatically receives a unique X-Request-ID attached to
+ * all related log lines — supporting distributed tracing.
  *
- * Development: Log được in ra màu sắc đẹp (pino-pretty).
- * Production:  Log ra JSON thuần, ELK Stack / Datadog đọc trực tiếp.
+ * Development: Logs are printed in a human-readable, colorized format (pino-pretty).
+ * Production: Logs are output as raw JSON for ingestion by ELK Stack / Datadog.
  *
- * Sử dụng:
+ * Usage:
  *   imports: [SharedLoggerModule]
  *   constructor(private readonly logger: PinoLogger) {}
  */
@@ -48,7 +48,7 @@ import { v4 as uuidv4 } from 'uuid';
             return { statusCode: res.statusCode };
           },
         },
-        // Gắn X-Request-ID vào mỗi request tự động
+        // Attach X-Request-ID to every request automatically
         genReqId: (req: any) => {
           const existing = req.headers['x-request-id'];
           if (existing) return existing;
@@ -56,23 +56,23 @@ import { v4 as uuidv4 } from 'uuid';
           req.headers['x-request-id'] = id;
           return id;
         },
-        // Thêm X-Request-ID vào response headers
+        // Add X-Request-ID to response headers
         customReceivedMessage: (req: any) =>
-          `→ ${req.method} ${req.url}`,
+          `-> ${req.method} ${req.url}`,
         customSuccessMessage: (req: any, res: any) =>
-          `← ${req.method} ${req.url} ${res.statusCode}`,
+          `<- ${req.method} ${req.url} ${res.statusCode}`,
         customErrorMessage: (req: any, res: any, err: Error) =>
-          `✖ ${req.method} ${req.url} ${res.statusCode}: ${err.message}`,
-        // Bỏ qua log cho /health (quá nhiều noise)
+          `[ERROR] ${req.method} ${req.url} ${res.statusCode}: ${err.message}`,
+        // Skip logging for /health endpoints to reduce noise
         autoLogging: {
           ignore: (req: any) => req.url?.includes('/health'),
         },
-        // Thêm service name vào mọi dòng log
+        // Add service name to every log line
         base: {
           service: process.env.npm_package_name ?? 'ev-service',
           env:     process.env.NODE_ENV ?? 'development',
         },
-        // Redact thông tin nhạy cảm
+        // Redact sensitive information from logs
         redact: {
           paths:  ['req.headers.authorization', 'req.headers.cookie', '*.password', '*.token'],
           censor: '[REDACTED]',
