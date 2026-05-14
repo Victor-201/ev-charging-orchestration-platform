@@ -5,12 +5,12 @@ import { OcppGatewayService } from './ocpp-gateway.service';
 /**
  * OcppCommandConsumer
  *
- * Lắng nghe lệnh từ platform backend → chuyển đổi thành OCPP commands
- * gửi xuống trụ sạc vật lý qua WebSocket.
+ * Listen to commands from platform backend -> convert to OCPP commands
+ * send to physical chargers via WebSocket.
  *
  * Events consumed:
- *   - ocpp.remote.start  → RemoteStartTransaction
- *   - ocpp.remote.stop   → RemoteStopTransaction
+ *   - ocpp.remote.start  -> RemoteStartTransaction
+ *   - ocpp.remote.stop   -> RemoteStopTransaction
  */
 @Injectable()
 export class OcppCommandConsumer {
@@ -19,7 +19,7 @@ export class OcppCommandConsumer {
   constructor(private readonly gateway: OcppGatewayService) {}
 
   /**
-   * Platform → Charger: Kích hoạt sạc từ xa (sau khi QR được xác thực)
+   * Platform -> Charger: Trigger remote start (after QR validation)
    * Routing key: ocpp.remote.start
    */
   @RabbitSubscribe({
@@ -42,7 +42,7 @@ export class OcppCommandConsumer {
 
     if (!this.gateway.isConnected(payload.chargerId)) {
       this.logger.error(
-        `Charger ${payload.chargerId} is not connected — cannot RemoteStart`,
+        `Charger ${payload.chargerId} is not connected - cannot RemoteStart`,
       );
       return;
     }
@@ -59,7 +59,7 @@ export class OcppCommandConsumer {
   }
 
   /**
-   * Platform → Charger: Dừng sạc từ xa (session timeout / user request)
+   * Platform -> Charger: Trigger remote stop (session timeout / user request)
    * Routing key: ocpp.remote.stop
    */
   @RabbitSubscribe({
@@ -77,7 +77,7 @@ export class OcppCommandConsumer {
     );
 
     if (!this.gateway.isConnected(payload.chargerId)) {
-      this.logger.error(`Charger ${payload.chargerId} not connected — cannot RemoteStop`);
+      this.logger.error(`Charger ${payload.chargerId} not connected - cannot RemoteStop`);
       return;
     }
 

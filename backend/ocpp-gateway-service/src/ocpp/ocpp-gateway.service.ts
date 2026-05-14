@@ -5,17 +5,14 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 
-// ─── OCPP 1.6J Message Types ─────────────────────────────────────────────────
-// [2, messageId, action, payload]  — Call
-// [3, messageId, payload]          — CallResult
-// [4, messageId, errorCode, errorDescription, errorDetails] — CallError
+
 
 export type OcppMessage =
   | [2, string, string, object]       // Call
   | [3, string, object]               // CallResult
   | [4, string, string, string, object]; // CallError
 
-// ─── Charger Connection Registry ─────────────────────────────────────────────
+
 
 export interface ChargerConnection {
   chargerId:   string;
@@ -34,9 +31,9 @@ export interface ChargerConnection {
  *  1. Accept charger WS connections at ws://host:PORT/ocpp/:chargerId
  *  2. Handle: BootNotification, Heartbeat, StatusNotification, MeterValues,
  *             StartTransaction, StopTransaction, Authorize
- *  3. Forward MeterValues → RabbitMQ ev.telemetry (telemetry.ingested)
- *  4. Forward charger status changes → RabbitMQ ev.charging (charger.status.changed)
- *  5. Receive RemoteStart/Stop commands from RabbitMQ → send to charger
+ *  3. Forward MeterValues -> RabbitMQ ev.telemetry (telemetry.ingested)
+ *  4. Forward charger status changes -> RabbitMQ ev.charging (charger.status.changed)
+ *  5. Receive RemoteStart/Stop commands from RabbitMQ -> send to charger
  */
 @Injectable()
 export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
@@ -73,7 +70,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     this.chargers.clear();
   }
 
-  // ─── Charger Lifecycle ──────────────────────────────────────────────────────
+  
 
   private registerCharger(chargerId: string, socket: WebSocket): void {
     const conn: ChargerConnection = {
@@ -107,7 +104,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // ─── OCPP Message Dispatcher ────────────────────────────────────────────────
+  
 
   private async handleMessage(chargerId: string, msg: OcppMessage): Promise<void> {
     const [messageType] = msg;
@@ -117,7 +114,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
       const [, messageId, action, payload] = msg as [2, string, string, object];
       await this.handleCall(chargerId, messageId, action, payload);
     } else if (messageType === 3) {
-      // CallResult — response to our command
+      // CallResult - response to our command
       const [, messageId, payload] = msg as [3, string, object];
       const resolver = this.pendingCalls.get(messageId);
       if (resolver) {
@@ -127,7 +124,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     } else if (messageType === 4) {
       // CallError
       const [, messageId, errorCode, errorDescription] = msg as [4, string, string, string, object];
-      this.logger.error(`CallError from ${chargerId} [${messageId}]: ${errorCode} — ${errorDescription}`);
+      this.logger.error(`CallError from ${chargerId} [${messageId}]: ${errorCode} - ${errorDescription}`);
       const resolver = this.pendingCalls.get(messageId);
       if (resolver) {
         resolver({ error: errorCode });
@@ -170,7 +167,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // ─── OCPP Action Handlers ──────────────────────────────────────────────────
+  
 
   private async handleBootNotification(
     chargerId: string,
@@ -230,8 +227,8 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Task 1.4 — MeterValues → RabbitMQ ev.telemetry
-   * Maps OCPP 1.6J measurand types to platform telemetry fields.
+   * Maps OCPP 1.6J MeterValues to platform telemetry.
+   * Forwards measurand types (Power, Energy, SoC, etc.) to RabbitMQ ev.telemetry.
    */
   private async handleMeterValues(
     chargerId: string,
@@ -300,7 +297,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
         eventId:            uuidv4(),
         chargerId,
         sessionId:          String(payload.transactionId ?? 'unknown'),
-        hardwareTimestamp:  hwTimestamp,          // ← Task 5.1: dùng cho offline resilience
+        hardwareTimestamp:  hwTimestamp,          // Original hardware time for offline resilience
         powerKw:            powerKw ?? null,
         currentA:           currentA ?? null,
         voltageV:           voltageV ?? null,
@@ -373,10 +370,10 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ─── Task 1.3 — Send Commands to Charger ───────────────────────────────────
+  
 
   /**
-   * RemoteStartTransaction — triggered by platform when session should start.
+   * RemoteStartTransaction - triggered by platform when session should start.
    * Called by OcppCommandConsumer when it receives 'ocpp.remote.start' from RabbitMQ.
    */
   async remoteStartTransaction(chargerId: string, opts: {
@@ -410,7 +407,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * RemoteStopTransaction — triggered by platform when session should stop.
+   * RemoteStopTransaction - triggered by platform when session should stop.
    */
   async remoteStopTransaction(chargerId: string, transactionId: number): Promise<boolean> {
     const messageId = uuidv4();
@@ -430,7 +427,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
+  
 
   private sendCallResult(chargerId: string, messageId: string, payload: object): void {
     const msg: OcppMessage = [3, messageId, payload];
@@ -465,7 +462,7 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // ─── Public Queries ─────────────────────────────────────────────────────────
+  
 
   getConnectedChargers(): ChargerConnection[] {
     return [...this.chargers.values()];
