@@ -113,6 +113,7 @@
 | id          | uuid         | NO            | Khóa chính (PK), Mặc định: uuid_generate_v4() |
 | user_id     | uuid         | NO            | Khóa ngoại (FK) → users.id ON DELETE CASCADE  |
 | token_hash  | varchar(255) | NO            | Duy nhất (UNIQUE)                             |
+| short_code  | varchar(6)   | NO            |
 | expires_at  | timestamptz  | NO            |                                               |
 | verified_at | timestamptz  | YES           |                                               |
 | created_at  | timestamptz  | NO            | Mặc định: NOW()                               |
