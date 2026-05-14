@@ -1,6 +1,7 @@
+import * as crypto from 'crypto';
 /**
  * Role Aggregate — auth-service RBAC bounded context
- * Aligned với: auth_db.sql roles, permissions, role_permissions tables
+ * Aligned with: auth_db.sql roles, permissions, role_permissions tables.
  */
 export interface Permission {
   id: string;

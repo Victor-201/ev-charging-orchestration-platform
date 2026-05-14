@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -28,7 +29,7 @@ import {
 
 const MAX_VEHICLES_PER_USER = 10;
 
-// ─── Get My Profile ───────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetMyProfileUseCase {
@@ -59,7 +60,7 @@ export class GetMyProfileUseCase {
   }
 }
 
-// ─── Update My Profile ────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class UpdateMyProfileUseCase {
@@ -105,7 +106,7 @@ export class UpdateMyProfileUseCase {
   }
 }
 
-// ─── Soft Delete User ─────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class SoftDeleteUserUseCase {
@@ -144,7 +145,7 @@ export class SoftDeleteUserUseCase {
   }
 }
 
-// ─── Get Profile Audit Log ────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetProfileAuditLogUseCase {
@@ -162,7 +163,7 @@ export class GetProfileAuditLogUseCase {
   }
 }
 
-// ─── Get Vehicles ─────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetVehiclesUseCase {
@@ -196,7 +197,7 @@ export class GetVehiclesUseCase {
   }
 }
 
-// ─── Add Vehicle ──────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class AddVehicleUseCase {
@@ -273,7 +274,7 @@ export class AddVehicleUseCase {
   }
 }
 
-// ─── Update Vehicle ───────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class UpdateVehicleUseCase {
@@ -310,7 +311,7 @@ export class UpdateVehicleUseCase {
   }
 }
 
-// ─── Delete Vehicle ───────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class DeleteVehicleUseCase {
@@ -342,7 +343,7 @@ export class DeleteVehicleUseCase {
   }
 }
 
-// ─── Set Primary Vehicle ──────────────────────────────────────────────────────
+
 
 @Injectable()
 export class SetPrimaryVehicleUseCase {
@@ -378,7 +379,7 @@ export class SetPrimaryVehicleUseCase {
   }
 }
 
-// ─── Get Vehicle Audit Log ────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetVehicleAuditLogUseCase {
@@ -396,7 +397,7 @@ export class GetVehicleAuditLogUseCase {
   }
 }
 
-// ─── Sync User Cache (Event Consumer) ────────────────────────────────────────
+
 
 @Injectable()
 export class SyncUserCacheUseCase {

@@ -3,10 +3,8 @@ import {
   Index, ManyToMany, JoinTable, ManyToOne, JoinColumn,
 } from 'typeorm';
 
-// ─────────────────────────────────────────────────────────────────────────────
 // users — master identity record
 // Aligned: auth_db.sql users table (BCNF)
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('users')
 @Index(['email'], { unique: true })
 @Index(['status'])
@@ -39,14 +37,14 @@ export class UserOrmEntity {
   @Column({ name: 'email_verified', default: false })
   emailVerified: boolean;
 
-  // ── MFA ───────────────────────────────────────────────────────────────────
+  // MFA
   @Column({ name: 'mfa_enabled', default: false })
   mfaEnabled: boolean;
 
   @Column({ name: 'mfa_secret', type: 'varchar', length: 255, nullable: true })
   mfaSecret: string | null;
 
-  // ── Account Lock ──────────────────────────────────────────────────────────
+  // Account Lock
   @Column({ name: 'failed_login_count', type: 'smallint', default: 0 })
   failedLoginCount: number;
 
@@ -61,10 +59,8 @@ export class UserOrmEntity {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
 // auth_sessions — refresh token + device tracking
 // Aligned: auth_db.sql auth_sessions table
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('auth_sessions')
 @Index(['userId'])
 @Index(['refreshTokenHash'], { unique: true })
@@ -97,9 +93,7 @@ export class SessionOrmEntity {
   createdAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // roles — RBAC roles (admin, staff, user)
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('roles')
 export class RoleOrmEntity {
   @PrimaryColumn('uuid')
@@ -121,9 +115,7 @@ export class RoleOrmEntity {
   updatedAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // permissions — resource:action pairs
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('permissions')
 export class PermissionOrmEntity {
   @PrimaryColumn('uuid')
@@ -145,9 +137,7 @@ export class PermissionOrmEntity {
   createdAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // role_permissions — junction: role ↔ permission
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('role_permissions')
 export class RolePermissionOrmEntity {
   @Column({ name: 'role_id', type: 'uuid', primary: true })
@@ -160,9 +150,7 @@ export class RolePermissionOrmEntity {
   grantedAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// user_roles — junction: user ↔ role (với expiry support)
-// ─────────────────────────────────────────────────────────────────────────────
+// user_roles — junction: user ↔ role (with expiry support)
 @Entity('user_roles')
 @Index(['userId'])
 export class UserRoleOrmEntity {
@@ -182,9 +170,7 @@ export class UserRoleOrmEntity {
   expiresAt: Date | null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // email_verification_tokens
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('email_verification_tokens')
 @Index(['tokenHash'], { unique: true })
 export class EmailVerificationTokenOrmEntity {
@@ -197,6 +183,9 @@ export class EmailVerificationTokenOrmEntity {
   @Column({ name: 'token_hash', length: 255, unique: true })
   tokenHash: string;
 
+  @Column({ name: 'short_code', type: 'varchar', length: 6, nullable: true })
+  shortCode: string | null;
+
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;
 
@@ -207,9 +196,7 @@ export class EmailVerificationTokenOrmEntity {
   createdAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // password_reset_tokens
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('password_reset_tokens')
 @Index(['tokenHash'], { unique: true })
 export class PasswordResetTokenOrmEntity {
@@ -232,9 +219,7 @@ export class PasswordResetTokenOrmEntity {
   createdAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // event_outbox — transactional outbox
-// ─────────────────────────────────────────────────────────────────────────────
 @Entity('event_outbox')
 @Index(['status', 'createdAt'], { where: `"status" = 'pending'` })
 @Index(['aggregateType', 'aggregateId'])

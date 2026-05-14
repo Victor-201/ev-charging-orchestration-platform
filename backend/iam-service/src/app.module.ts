@@ -1,3 +1,15 @@
+/**
+ * IAM Service - Identity and Access Management
+ *
+ * Responsibility:
+ * - User authentication (Login, Register, MFA)
+ * - Authorization (Role-based access control)
+ * - Session management and token issuance
+ * - User profile and identity lifecycle
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Events), Redis (Cache)
+ */
 import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
@@ -37,7 +49,7 @@ import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox.publis
           PasswordResetTokenOrmEntity, OutboxOrmEntity,
         ],
         migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
-        migrationsRun: false,
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
         migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging: cfg.get('NODE_ENV') !== 'production',

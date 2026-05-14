@@ -28,7 +28,7 @@ export class AddVehicleDto {
 
   @IsString()
   @Length(3, 20)
-  @Matches(/^[A-Z0-9\-\.]+$/i, { message: 'Biển số không hợp lệ' })
+  @Matches(/^[A-Z0-9\-\.]+$/i, { message: 'Invalid plate number format' })
   @Transform(({ value }) => value?.toUpperCase().trim())
   plateNumber: string;
 
@@ -50,7 +50,7 @@ export class AddVehicleDto {
   usableCapacityKwh?: number;
 
   @IsOptional()
-  @IsEnum(ConnectorType, { message: 'Loại connector không hợp lệ' })
+  @IsEnum(ConnectorType, { message: 'Invalid connector type' })
   defaultChargePort?: ConnectorType;
 
   @IsOptional()
@@ -76,32 +76,32 @@ export class UpdateVehicleDto {
 /**
  * AutoChargeSetupDto
  *
- * User cấu hình "Cắm là Sạc" cho xe của mình.
- * Cung cấp MAC address (từ nhãn xe / app VinFast) để binding.
+ * Sets up "Plug & Charge" (AutoCharge) for the vehicle.
+ * Requires MAC address (from vehicle tag or VinFast app) for binding.
  */
 export class AutoChargeSetupDto {
   /**
-   * MAC address của cáp sạc xe (ví dụ: AA:BB:CC:DD:EE:FF)
-   * Được in trên tem xe hoặc lấy từ app VinFast.
+   * Vehicle charging cable MAC address (e.g., AA:BB:CC:DD:EE:FF).
+   * Printed on the vehicle tag or retrieved from the VinFast app.
    */
   @IsOptional()
   @IsString()
   @Matches(/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/, {
-    message: 'MAC address không hợp lệ (chuẩn: AA:BB:CC:DD:EE:FF)',
+    message: 'Invalid MAC address (format: AA:BB:CC:DD:EE:FF)',
   })
   macAddress?: string | null;
 
   /**
-   * Số VIN 17 ký tự (Vehicle Identification Number)
-   * Dùng cho ISO 15118 Plug & Charge (tầng cao hơn).
+   * 17-character VIN (Vehicle Identification Number).
+   * Used for ISO 15118 Plug & Charge (higher level protocols).
    */
   @IsOptional()
   @IsString()
-  @Length(17, 17, { message: 'VIN phải đúng 17 ký tự' })
-  @Matches(/^[A-HJ-NPR-Z0-9]{17}$/, { message: 'VIN không hợp lệ (loại trừ I, O, Q)' })
+  @Length(17, 17, { message: 'VIN must be exactly 17 characters' })
+  @Matches(/^[A-HJ-NPR-Z0-9]{17}$/, { message: 'Invalid VIN (excludes I, O, Q)' })
   vinNumber?: string | null;
 
-  /** Bật / Tắt tính năng AutoCharge (Cắm là Sạc) */
+  /** Enable/Disable AutoCharge (Plug & Charge) */
   @IsOptional()
   autochargeEnabled?: boolean;
 }

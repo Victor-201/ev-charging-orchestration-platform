@@ -4,35 +4,35 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+// Register
 
 export class RegisterDto {
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => value?.toLowerCase().trim())
   email: string;
 
   @IsString()
-  @MinLength(8, { message: 'Mật khẩu tối thiểu 8 ký tự' })
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
   password: string;
 
   @IsString()
-  @MinLength(2, { message: 'Họ tên tối thiểu 2 ký tự' })
+  @MinLength(2, { message: 'Full name must be at least 2 characters' })
   @Transform(({ value }) => value?.trim())
   fullName: string;
 
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[0-9]{9,15}$/, { message: 'Số điện thoại không hợp lệ' })
+  @Matches(/^\+?[0-9]{9,15}$/, { message: 'Invalid phone number format' })
   phone?: string;
 
-  @IsDateString({}, { message: 'Ngày sinh phải có định dạng YYYY-MM-DD' })
+  @IsDateString({}, { message: 'Birth date must follow YYYY-MM-DD format' })
   dateOfBirth: string;
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// Login
 
 export class LoginDto {
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsEmail({}, { message: 'Invalid email format' })
   @Transform(({ value }) => value?.toLowerCase().trim())
   email: string;
 
@@ -44,25 +44,25 @@ export class LoginDto {
   mfaToken?: string;
 }
 
-// ─── Refresh Token ────────────────────────────────────────────────────────────
+// Refresh Token
 
 export class RefreshTokenDto {
   @IsString()
   refreshToken: string;
 }
 
-// ─── Change Password ──────────────────────────────────────────────────────────
+// Change Password
 
 export class ChangePasswordDto {
   @IsString()
   currentPassword: string;
 
   @IsString()
-  @MinLength(8, { message: 'Mật khẩu mới tối thiểu 8 ký tự' })
+  @MinLength(8, { message: 'New password must be at least 8 characters' })
   newPassword: string;
 }
 
-// ─── Assign Role ──────────────────────────────────────────────────────────────
+// Assign Role
 
 export class AssignRoleDto {
   @IsUUID()
@@ -76,7 +76,7 @@ export class AssignRoleDto {
   expiresAt?: string;
 }
 
-// ─── Revoke Role ──────────────────────────────────────────────────────────────
+// Revoke Role
 
 export class RevokeRoleDto {
   @IsUUID()
@@ -86,15 +86,34 @@ export class RevokeRoleDto {
   roleName: string;
 }
 
-// ─── MFA ──────────────────────────────────────────────────────────────────────
+// MFA
 
 export class VerifyMfaDto {
   @IsString()
-  @Length(6, 6, { message: 'MFA token phải có đúng 6 chữ số' })
+  @Length(6, 6, { message: 'MFA token must be exactly 6 digits' })
   token: string;
 }
 
 export class DisableMfaDto {
   @IsString()
   password: string;
+}
+
+// Email Verification
+
+export class VerifyEmailDto {
+  @IsOptional()
+  @IsString()
+  token?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(6, 6)
+  code?: string;
+}
+
+export class ResendVerificationDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Transform(({ value }) => value?.toLowerCase().trim())
+  email: string;
 }

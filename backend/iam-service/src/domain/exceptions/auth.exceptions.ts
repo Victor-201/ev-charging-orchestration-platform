@@ -33,6 +33,12 @@ export class TokenExpiredException extends DomainException {
   }
 }
 
+export class InvalidVerificationCodeException extends DomainException {
+  constructor() {
+    super('Invalid verification code', 'INVALID_VERIFICATION_CODE');
+  }
+}
+
 export class SessionNotFoundException extends DomainException {
   constructor() {
     super('Session not found', 'SESSION_NOT_FOUND');
@@ -90,3 +96,8 @@ export class RateLimitExceededException extends DomainException {
   }
 }
 
+export class EmailNotVerifiedException extends DomainException {
+  constructor() {
+    super('Email address is not verified', 'EMAIL_NOT_VERIFIED');
+  }
+}

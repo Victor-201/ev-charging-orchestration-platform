@@ -3,10 +3,8 @@ import {
   Index, ManyToOne, JoinColumn,
 } from 'typeorm';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// users_cache â€” read model synced from auth-service via events
-// BCNF: user_id â†’ {email, full_name, phone, role_name, status}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// users_cache — read model synced from auth-service via events
+// BCNF: user_id -> {email, full_name, phone, role_name, status}
 @Entity('users_cache')
 export class UsersCacheOrmEntity {
   @PrimaryColumn('uuid')
@@ -30,11 +28,11 @@ export class UsersCacheOrmEntity {
   @Column({ name: 'email_verified', default: false })
   emailVerified: boolean;
 
-  /** Cờ nợ xấu — block user khỏi booking mới cho đến khi thanh toán xong */
+  /** Bad debt flag — blocks user from new bookings until debt is cleared */
   @Column({ name: 'has_outstanding_debt', default: false })
   hasOutstandingDebt: boolean;
 
-  /** Số tiền đang nợ (VND) */
+  /** Outstanding debt amount (VND) */
   @Column({ name: 'arrears_amount', type: 'numeric', precision: 12, scale: 0, default: 0 })
   arrearsAmount: number;
 
@@ -42,8 +40,8 @@ export class UsersCacheOrmEntity {
   syncedAt: Date;
 }
 
-// ─── user_arrears ──────────────────────────────────────────────────────────────────
-// Chi tiết từng khoản nợ của user
+// user_arrears
+// Detailed record of each user debt instance
 @Entity('user_arrears')
 @Index(['userId', 'status'])
 export class UserArrearsOrmEntity {
@@ -75,10 +73,8 @@ export class UserArrearsOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// user_profiles â€” extended profile (avatar, address)
-// BCNF: user_id â†’ {avatar_url, address}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// user_profiles — extended profile (avatar, address)
+// BCNF: user_id -> {avatar_url, address}
 @Entity('user_profiles')
 export class UserProfileOrmEntity {
   @PrimaryColumn({ name: 'user_id', type: 'uuid' })
@@ -94,10 +90,8 @@ export class UserProfileOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// user_fcm_tokens â€” push notification devices
-// BCNF: fcm_token â†’ {user_id, device_type, is_active}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// user_fcm_tokens — push notification devices
+// BCNF: fcm_token -> {user_id, device_type, is_active}
 @Entity('user_fcm_tokens')
 @Index(['userId'])
 export class UserFcmTokenOrmEntity {
@@ -127,10 +121,8 @@ export class UserFcmTokenOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// vehicle_models â€” EV model specs (BCNF decomposition)
-// CK: (brand, model_name, year) â†’ {battery_kwh, charge_port, max_power_kw}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// vehicle_models — EV model specs (BCNF decomposition)
+// CK: (brand, model_name, year) -> {battery_kwh, charge_port, max_power_kw}
 @Entity('vehicle_models')
 export class VehicleModelOrmEntity {
   @PrimaryColumn('uuid')
@@ -166,10 +158,8 @@ export class VehicleModelOrmEntity {
   maxDcPowerKw: number | null;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// vehicles â€” individual EV owned by a user
-// BCNF: vehicle_id â†’ {owner_id, model_id, plate_number, color, status}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// vehicles — individual EV owned by a user
+// BCNF: vehicle_id -> {owner_id, model_id, plate_number, color, status}
 @Entity('vehicles')
 @Index(['ownerId', 'status'])
 @Index(['plateNumber'], { unique: true })
@@ -203,19 +193,19 @@ export class VehicleOrmEntity {
 
   /**
    * MAC address của xe (từ dây sạc OCPP)
-   * Dùng cho AutoCharge: cắm là sạc không cần QR
+   * Used for AutoCharge: plug-and-charge without QR codes.
    */
   @Column({ name: 'mac_address', type: 'varchar', length: 17, nullable: true, unique: true })
   macAddress: string | null;
 
   /**
    * Số VIN (Vehicle Identification Number) — 17 ký tự chuẩn quốc tế
-   * Dùng cho ISO 15118 Plug & Charge
+   * Used for ISO 15118 Plug & Charge.
    */
   @Column({ name: 'vin_number', type: 'varchar', length: 17, nullable: true, unique: true })
   vinNumber: string | null;
 
-  /** AutoCharge được kích hoạt? User phải chủ động bật */
+  /** Is AutoCharge activated? User must explicitly enable this. */
   @Column({ name: 'autocharge_enabled', default: false })
   autochargeEnabled: boolean;
 
@@ -233,9 +223,7 @@ export class VehicleOrmEntity {
   updatedAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// vehicle_audit_logs — audit trail mọi thay đổi của vehicle
-// ─────────────────────────────────────────────────────────────────────────────
+// vehicle_audit_logs — audit trail for vehicle changes
 @Entity('vehicle_audit_logs')
 @Index(['vehicleId'])
 @Index(['userId'])
@@ -262,9 +250,7 @@ export class VehicleAuditLogOrmEntity {
   createdAt: Date;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// profile_audit_logs — audit trail mọi thay đổi của user profile
-// ─────────────────────────────────────────────────────────────────────────────
+// profile_audit_logs — audit trail for user profile changes
 @Entity('profile_audit_logs')
 @Index(['userId'])
 export class ProfileAuditLogOrmEntity {
@@ -289,9 +275,7 @@ export class ProfileAuditLogOrmEntity {
 
 
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// staff_profiles â€” staff-specific data
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// staff_profiles — staff-specific data
 @Entity('staff_profiles')
 @Index(['stationId'])
 export class StaffProfileOrmEntity {
@@ -337,10 +321,8 @@ export class StaffProfileOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// attendance â€” daily check-in/check-out per staff
-// BCNF: (staff_id, work_date) â†’ {check_in, check_out, status}
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// attendance — daily check-in/check-out per staff
+// BCNF: (staff_id, work_date) -> {check_in, check_out, status}
 @Entity('attendance')
 @Index(['staffId', 'workDate'])
 export class AttendanceOrmEntity {
@@ -376,9 +358,7 @@ export class AttendanceOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// subscriptions â€” user plan subscriptions
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// subscriptions — user plan subscriptions
 @Entity('subscriptions')
 @Index(['userId', 'status'])
 export class SubscriptionOrmEntity {
@@ -416,9 +396,7 @@ export class SubscriptionOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// processed_events â€” idempotency for consumed events
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events — idempotency for consumed events
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
   @PrimaryColumn({ name: 'event_id', length: 100 })
@@ -431,9 +409,7 @@ export class ProcessedEventOrmEntity {
   processedAt: Date;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // event_outbox
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @Entity('event_outbox')
 @Index(['status', 'createdAt'], { where: `"status" = 'pending'` })
 export class OutboxOrmEntity {

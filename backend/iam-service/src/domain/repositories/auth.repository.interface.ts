@@ -3,7 +3,7 @@ import { Session } from '../entities/session.aggregate';
 import { Role, Permission } from '../entities/role.aggregate';
 import { EntityManager } from 'typeorm';
 
-// ─── User Repository ──────────────────────────────────────────────────────────
+// User Repository
 
 export interface IUserRepository {
   save(user: User, manager?: EntityManager): Promise<void>;
@@ -13,7 +13,7 @@ export interface IUserRepository {
 }
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 
-// ─── Session Repository ───────────────────────────────────────────────────────
+// Session Repository
 
 export interface ISessionRepository {
   save(session: Session, manager?: EntityManager): Promise<void>;
@@ -25,7 +25,7 @@ export interface ISessionRepository {
 }
 export const SESSION_REPOSITORY = Symbol('SESSION_REPOSITORY');
 
-// ─── Role Repository ──────────────────────────────────────────────────────────
+// Role Repository
 
 export interface IRoleRepository {
   findByName(name: string): Promise<Role | null>;
@@ -42,9 +42,30 @@ export interface IRoleRepository {
 }
 export const ROLE_REPOSITORY = Symbol('ROLE_REPOSITORY');
 
-// ─── Permission Repository ────────────────────────────────────────────────────
+// Permission Repository
 
 export interface IPermissionRepository {
   findByUserId(userId: string): Promise<Permission[]>;
 }
 export const PERMISSION_REPOSITORY = Symbol('PERMISSION_REPOSITORY');
+
+// Email Verification Repository
+
+export interface EmailVerificationToken {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  shortCode: string | null;
+  expiresAt: Date;
+  verifiedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface IEmailVerificationRepository {
+  create(userId: string, tokenHash: string, shortCode: string, expiresAt: Date): Promise<EmailVerificationToken>;
+  findByTokenHash(tokenHash: string): Promise<EmailVerificationToken | null>;
+  findByShortCode(shortCode: string): Promise<EmailVerificationToken | null>;
+  markVerified(id: string): Promise<void>;
+  deleteByUserId(userId: string): Promise<void>;
+}
+export const EMAIL_VERIFICATION_REPOSITORY = Symbol('EMAIL_VERIFICATION_REPOSITORY');

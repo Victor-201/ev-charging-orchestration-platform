@@ -1,24 +1,28 @@
 import {
   Controller, Post, Get, Delete, Patch, Body, Req, HttpCode, HttpStatus,
   UseGuards, UnauthorizedException, BadRequestException, ForbiddenException,
-  HttpException, Param, ParseUUIDPipe, Logger,
+  HttpException, Param, ParseUUIDPipe, Logger, Query,
 } from '@nestjs/common';
 import { Request } from 'express';
 import {
   RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
   ChangePasswordUseCase, AssignRoleUseCase, RevokeRoleUseCase,
   GetUserSessionsUseCase, SetupMfaUseCase, VerifyMfaUseCase, DisableMfaUseCase,
+  VerifyEmailUseCase, ResendVerificationEmailUseCase,
   RegisterCommand, LoginCommand,
 } from '../../application/use-cases/auth.use-cases';
 import {
   RegisterDto, LoginDto, RefreshTokenDto, ChangePasswordDto,
   AssignRoleDto, RevokeRoleDto, VerifyMfaDto, DisableMfaDto,
+  VerifyEmailDto, ResendVerificationDto,
 } from '../../application/dtos/auth.dto';
 import {
   UserAlreadyExistsException, InvalidCredentialsException,
   UserInactiveException, TokenExpiredException, RoleNotFoundException,
   DomainException, AccountLockedException, MfaRequiredException,
   InvalidMfaTokenException, MfaNotEnabledException, RateLimitExceededException,
+  EmailNotVerifiedException,
+  InvalidVerificationCodeException,
 } from '../../domain/exceptions/auth.exceptions';
 import { JwtAuthGuard, AuthenticatedUser } from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard } from '../../shared/guards/roles.guard';
@@ -41,9 +45,10 @@ export class AuthController {
     private readonly setupMfaUC: SetupMfaUseCase,
     private readonly verifyMfaUC: VerifyMfaUseCase,
     private readonly disableMfaUC: DisableMfaUseCase,
+    private readonly verifyEmailUC: VerifyEmailUseCase,
+    private readonly resendVerifUC: ResendVerificationEmailUseCase,
   ) {}
 
-  // â”€â”€â”€ POST /auth/register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -64,7 +69,6 @@ export class AuthController {
     }
   }
 
-  // â”€â”€â”€ POST /auth/login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -86,11 +90,11 @@ export class AuthController {
       if (e instanceof InvalidMfaTokenException) throw new UnauthorizedException(e.message);
       if (e instanceof InvalidCredentialsException) throw new UnauthorizedException(e.message);
       if (e instanceof UserInactiveException) throw new ForbiddenException(e.message);
+      if (e instanceof EmailNotVerifiedException) throw new ForbiddenException({ code: 'EMAIL_NOT_VERIFIED', message: e.message });
       throw e;
     }
   }
 
-  // â”€â”€â”€ POST /auth/refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -104,7 +108,6 @@ export class AuthController {
     }
   }
 
-  // â”€â”€â”€ POST /auth/logout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -116,7 +119,6 @@ export class AuthController {
     await this.logoutUC.execute(user.id, sessionId);
   }
 
-  // â”€â”€â”€ GET /auth/me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -124,7 +126,6 @@ export class AuthController {
     return { id: user.id, email: user.email, roles: user.roles };
   }
 
-  // â”€â”€â”€ PATCH /auth/change-password â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Patch('change-password')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -141,7 +142,6 @@ export class AuthController {
     }
   }
 
-  // â”€â”€â”€ GET /auth/sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('sessions')
   @UseGuards(JwtAuthGuard)
@@ -149,7 +149,6 @@ export class AuthController {
     return this.getSessionsUC.execute(user.id);
   }
 
-  // â”€â”€â”€ DELETE /auth/sessions/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Delete('sessions/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -161,7 +160,6 @@ export class AuthController {
     await this.logoutUC.execute(user.id, sessionId);
   }
 
-  // â”€â”€â”€ DELETE /auth/sessions (Revoke all) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Delete('sessions')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -170,7 +168,6 @@ export class AuthController {
     await this.logoutUC.execute(user.id);
   }
 
-  // â”€â”€â”€ POST /auth/roles/assign (Admin only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('roles/assign')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -193,7 +190,6 @@ export class AuthController {
     }
   }
 
-  // â”€â”€â”€ POST /auth/roles/revoke (Admin only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('roles/revoke')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -208,7 +204,6 @@ export class AuthController {
     }
   }
 
-  // â”€â”€â”€ MFA Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('mfa/setup')
   @UseGuards(JwtAuthGuard)
@@ -245,5 +240,37 @@ export class AuthController {
       if (e instanceof MfaNotEnabledException) throw new BadRequestException(e.message);
       throw e;
     }
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request) {
+    if (!dto.token && !dto.code) throw new BadRequestException('Must provide either a token or a 6-digit code');
+    try {
+      const input = dto.token ? { token: dto.token } : { code: dto.code! };
+      const result = await this.verifyEmailUC.execute(input, {
+        ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0] ?? req.ip,
+        userAgent: req.headers['user-agent'],
+        deviceFingerprint: req.headers['x-device-fingerprint'] as string,
+      });
+      return { 
+        message: 'Email verified successfully', 
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+        sessionId: result.sessionId
+      };
+    } catch (e) {
+      if (e instanceof InvalidVerificationCodeException) throw new BadRequestException(e.message);
+      if (e instanceof TokenExpiredException) throw new BadRequestException('Token has expired or is invalid');
+      throw e;
+    }
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    // Return 204 regardless of email existence to prevent account enumeration.
+    await this.resendVerifUC.execute(dto.email);
   }
 }

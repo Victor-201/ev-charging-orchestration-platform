@@ -2,17 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 import { RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase, ChangePasswordUseCase } from '../../src/application/use-cases/auth.use-cases';
 import { User, UserStatus } from '../../src/domain/entities/user.aggregate';
 import { Session } from '../../src/domain/entities/session.aggregate';
 import { UserAlreadyExistsException, InvalidCredentialsException, TokenExpiredException } from '../../src/domain/exceptions/auth.exceptions';
-import { USER_REPOSITORY, SESSION_REPOSITORY, ROLE_REPOSITORY } from '../../src/domain/repositories/auth.repository.interface';
+import { USER_REPOSITORY, SESSION_REPOSITORY, ROLE_REPOSITORY, EMAIL_VERIFICATION_REPOSITORY } from '../../src/domain/repositories/auth.repository.interface';
 import { EVENT_BUS } from '../../src/infrastructure/messaging/outbox/outbox-event-bus';
 import { RiskScoringService } from '../../src/domain/services/risk-scoring.service';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
+// Mocks
 
 const mockUserRepo = {
   save: jest.fn(),
@@ -43,6 +43,15 @@ const mockEventBus = {
   publishAll: jest.fn(),
 };
 
+const mockEmailVerificationRepo = {
+  save: jest.fn(),
+  findByToken: jest.fn(),
+  findByTokenHash: jest.fn(),
+  deleteByUserId: jest.fn(),
+  create: jest.fn(),
+  markVerified: jest.fn(),
+};
+
 const mockDataSource = {
   transaction: jest.fn().mockImplementation((cb: (m: any) => any) => cb({})),
 };
@@ -61,7 +70,7 @@ const mockConfig = {
   }),
 };
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// Helper
 
 function makeUser(overrides?: Partial<any>) {
   return User.reconstitute({
@@ -79,7 +88,7 @@ function makeUser(overrides?: Partial<any>) {
   });
 }
 
-// ─── RegisterUseCase Tests ────────────────────────────────────────────────────
+// RegisterUseCase Tests
 
 describe('RegisterUseCase', () => {
   let useCase: RegisterUseCase;
@@ -91,6 +100,7 @@ describe('RegisterUseCase', () => {
         RegisterUseCase,
         { provide: USER_REPOSITORY, useValue: mockUserRepo },
         { provide: ROLE_REPOSITORY, useValue: mockRoleRepo },
+        { provide: EMAIL_VERIFICATION_REPOSITORY, useValue: mockEmailVerificationRepo },
         { provide: EVENT_BUS, useValue: mockEventBus },
         { provide: DataSource, useValue: mockDataSource },
       ],
@@ -99,7 +109,7 @@ describe('RegisterUseCase', () => {
   });
 
   it('should register a new user successfully', async () => {
-    mockUserRepo.existsByEmail.mockResolvedValue(false);
+    mockUserRepo.findByEmail.mockResolvedValue(null);
     mockUserRepo.save.mockResolvedValue(undefined);
     mockRoleRepo.findByName.mockResolvedValue({ id: 'role-1', name: 'user', permissions: [] });
     mockRoleRepo.assignRoleToUser.mockResolvedValue(undefined);
@@ -118,7 +128,8 @@ describe('RegisterUseCase', () => {
   });
 
   it('should throw UserAlreadyExistsException if email is taken', async () => {
-    mockUserRepo.existsByEmail.mockResolvedValue(true);
+    const user = makeUser({ email: 'existing@example.com', emailVerified: true });
+    mockUserRepo.findByEmail.mockResolvedValue(user);
 
     await expect(
       useCase.execute({
@@ -131,7 +142,7 @@ describe('RegisterUseCase', () => {
   });
 
   it('should throw if user is under 18 years old', async () => {
-    mockUserRepo.existsByEmail.mockResolvedValue(false);
+    mockUserRepo.findByEmail.mockResolvedValue(null);
 
     await expect(
       useCase.execute({
@@ -144,7 +155,7 @@ describe('RegisterUseCase', () => {
   });
 });
 
-// ─── LoginUseCase Tests ───────────────────────────────────────────────────────
+// LoginUseCase Tests
 
 describe('LoginUseCase', () => {
   let useCase: LoginUseCase;
@@ -158,9 +169,11 @@ describe('LoginUseCase', () => {
         { provide: USER_REPOSITORY,    useValue: mockUserRepo },
         { provide: SESSION_REPOSITORY, useValue: mockSessionRepo },
         { provide: ROLE_REPOSITORY,    useValue: mockRoleRepo },
+        { provide: EMAIL_VERIFICATION_REPOSITORY, useValue: mockEmailVerificationRepo },
+        { provide: EVENT_BUS,          useValue: mockEventBus },
         { provide: JwtService,         useValue: mockJwtService },
         { provide: ConfigService,      useValue: mockConfig },
-        // Redis mock — rate limiting cần nhưng stub được
+        // Redis mock - rate limiting is required but can be stubbed
         { provide: 'REDIS_CLIENT', useValue: {
           incr:    jest.fn().mockResolvedValue(1),
           expire:  jest.fn().mockResolvedValue(1),
@@ -213,7 +226,7 @@ describe('LoginUseCase', () => {
   });
 });
 
-// ─── RefreshTokenUseCase Tests ────────────────────────────────────────────────
+// RefreshTokenUseCase Tests
 
 describe('RefreshTokenUseCase', () => {
   let useCase: RefreshTokenUseCase;
@@ -287,7 +300,7 @@ describe('RefreshTokenUseCase', () => {
   });
 });
 
-// ─── LogoutUseCase Tests ──────────────────────────────────────────────────────
+// LogoutUseCase Tests
 
 describe('LogoutUseCase', () => {
   let useCase: LogoutUseCase;

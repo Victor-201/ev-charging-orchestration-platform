@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 export abstract class DomainEvent {
   readonly eventId: string;
   readonly occurredAt: Date;
@@ -9,7 +10,7 @@ export abstract class DomainEvent {
   }
 }
 
-// ─── User Events ──────────────────────────────────────────────────────────────
+// User Events
 
 export class UserRegisteredEvent extends DomainEvent {
   readonly eventType = 'user.registered';
@@ -46,7 +47,17 @@ export class EmailVerifiedEvent extends DomainEvent {
   constructor(public readonly userId: string, public readonly email: string) { super(); }
 }
 
-// ─── Role Events ──────────────────────────────────────────────────────────────
+export class EmailVerificationRequestedEvent extends DomainEvent {
+  readonly eventType = 'user.email_verification_requested';
+  constructor(
+    public readonly userId: string,
+    public readonly email: string,
+    public readonly rawToken: string,
+    public readonly shortCode: string,
+  ) { super(); }
+}
+
+// Role Events
 
 export class RoleAssignedEvent extends DomainEvent {
   readonly eventType = 'role.assigned';
@@ -65,7 +76,7 @@ export class RoleRevokedEvent extends DomainEvent {
   ) { super(); }
 }
 
-// ─── Security Events ──────────────────────────────────────────────────────────
+// Security Events
 
 export class AccountLockedEvent extends DomainEvent {
   readonly eventType = 'user.account_locked';

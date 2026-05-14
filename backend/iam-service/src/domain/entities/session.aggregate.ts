@@ -1,7 +1,8 @@
+import * as crypto from 'crypto';
 /**
  * Session Aggregate — auth-service bounded context
- * Aligned với: auth_db.sql auth_sessions table
- * Owns: refresh token lifecycle, device tracking
+ * Aligned with: auth_db.sql auth_sessions table.
+ * Owns: refresh token lifecycle, device tracking.
  */
 export class Session {
   private _revokedAt: Date | null;
@@ -37,7 +38,7 @@ export class Session {
     this.createdAt = props.createdAt ?? new Date();
   }
 
-  // ─── Factory Methods ───────────────────────────────────────────────────────
+  // Factory Methods
 
   static create(props: {
     userId: string;
@@ -73,10 +74,10 @@ export class Session {
     return new Session(props);
   }
 
-  // ─── Domain Behaviors ──────────────────────────────────────────────────────
+  // Domain Behaviors
 
   /**
-   * Invariant: session phải active (chưa revoke và chưa expire) để dùng được
+   * Invariant: session must be active (not revoked and not expired) to be usable.
    */
   assertIsUsable(): void {
     if (this._revokedAt !== null) {

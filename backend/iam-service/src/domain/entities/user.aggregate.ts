@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { DomainEvent } from '../events/auth.events';
 import {
   UserInactiveException,
@@ -35,19 +36,19 @@ export class User {
   private _updatedAt: Date;
   private _domainEvents: DomainEvent[] = [];
 
-  // ── MFA fields ──────────────────────────────────────────────────────────────
+  // MFA fields
   private _mfaEnabled: boolean;
   private _mfaSecret: string | null;
 
-  // ── Account lock fields ──────────────────────────────────────────────────────
+  // Account lock fields
   private _failedLoginCount: number;
   private _lockedUntil: Date | null;
 
   readonly id: string;
   readonly email: string;
-  readonly fullName: string;
-  readonly phone: string | null;
-  readonly dateOfBirth: Date;
+  fullName: string;
+  phone: string | null;
+  dateOfBirth: Date;
   readonly createdAt: Date;
 
   private constructor(props: {
@@ -82,7 +83,7 @@ export class User {
     this._updatedAt = props.updatedAt ?? new Date();
   }
 
-  // ─── Factory Methods ───────────────────────────────────────────────────────
+  // Factory Methods
 
   static create(props: {
     email: string;
@@ -134,7 +135,24 @@ export class User {
     return new User(props);
   }
 
-  // ─── Domain Behaviors ──────────────────────────────────────────────────────
+  // Domain Behaviors
+
+  updateUnverifiedRegistration(props: {
+    fullName: string;
+    phone?: string;
+    dateOfBirth: Date;
+    passwordHash: string;
+  }): void {
+    if (this._emailVerified) {
+      throw new Error("Cannot update registration data for verified user");
+    }
+    User.assertAgeRequirement(props.dateOfBirth);
+    this.fullName = props.fullName.trim();
+    this.phone = props.phone?.trim() ?? null;
+    this.dateOfBirth = props.dateOfBirth;
+    this._passwordHash = props.passwordHash;
+    this._updatedAt = new Date();
+  }
 
   verifyEmail(): void {
     this._emailVerified = true;
@@ -164,9 +182,6 @@ export class User {
     }
   }
 
-  /**
-   * Kiểm tra account bị lock chưa hết hạn
-   */
   assertIsNotLocked(): void {
     if (this._lockedUntil && this._lockedUntil > new Date()) {
       throw new AccountLockedException(this._lockedUntil);
@@ -179,10 +194,10 @@ export class User {
     this._domainEvents.push(new PasswordChangedEvent(this.id));
   }
 
-  // ─── Account Lock / Suspicious Activity ───────────────────────────────────
+  // Account Lock / Suspicious Activity
 
   /**
-   * Ghi nhận login thất bại; tự lock nếu vượt ngưỡng
+   * Records a failed login attempt; automatically locks the account if the threshold is exceeded.
    */
   incrementFailedLogin(maxAttempts = 5, lockDurationMinutes = 30): void {
     this._failedLoginCount += 1;
@@ -195,18 +210,12 @@ export class User {
     }
   }
 
-  /**
-   * Reset counter sau login thành công
-   */
   resetFailedLogin(): void {
     this._failedLoginCount = 0;
     this._lockedUntil = null;
     this._updatedAt = new Date();
   }
 
-  /**
-   * Admin-force lock
-   */
   lockAccount(durationMinutes: number): void {
     const lockUntil = new Date(Date.now() + durationMinutes * 60_000);
     this._lockedUntil = lockUntil;
@@ -224,7 +233,7 @@ export class User {
     this._domainEvents.push(new SuspiciousLoginEvent(this.id, reason, ipAddress));
   }
 
-  // ─── MFA ──────────────────────────────────────────────────────────────────
+  // MFA
 
   enableMfa(secret: string): void {
     this._mfaEnabled = true;
@@ -238,7 +247,7 @@ export class User {
     this._updatedAt = new Date();
   }
 
-  // ─── Private Invariants ────────────────────────────────────────────────────
+  // Private Invariants
 
   private static assertAgeRequirement(dateOfBirth: Date): void {
     const minAge = 18;
@@ -249,7 +258,7 @@ export class User {
     }
   }
 
-  // ─── Getters ───────────────────────────────────────────────────────────────
+  // Getters
 
   get status(): UserStatus { return this._status; }
   get passwordHash(): string { return this._passwordHash; }

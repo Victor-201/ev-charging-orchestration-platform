@@ -2,9 +2,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OutboxOrmEntity } from '../../persistence/typeorm/entities/auth.orm-entities';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import * as crypto from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import * as crypto from 'crypto';
 
 export interface IEventBus {
   publishAll(events: Array<{ eventType: string; [key: string]: any }>): Promise<void>;
@@ -65,7 +65,7 @@ export class OutboxPublisher {
         this.logger.error(`Failed to publish outbox event ${event.id}: ${err}`);
         const newCount = (event.retryCount ?? 0) + 1;
         await this.repo.update(event.id, {
-          status: newCount >= 5 ? 'failed' : 'pending', // dead-letter sau 5 lần
+          status: newCount >= 5 ? 'failed' : 'pending', // dead-letter after 5 attempts
           retryCount: newCount,
           errorMessage: String(err),
         });

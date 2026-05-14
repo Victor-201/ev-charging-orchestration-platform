@@ -7,7 +7,7 @@ import {
 } from '../../../../domain/repositories/user-profile.repository.interface';
 import { UserProfileOrmEntity, UsersCacheOrmEntity } from '../entities/user.orm-entities';
 
-// ─── UserProfile Repository ───────────────────────────────────────────────────
+// UserProfile Repository
 
 @Injectable()
 export class UserProfileRepository implements IUserProfileRepository {
@@ -49,7 +49,7 @@ export class UserProfileRepository implements IUserProfileRepository {
   }
 }
 
-// ─── UsersCache Repository ────────────────────────────────────────────────────
+// UsersCache Repository
 
 @Injectable()
 export class UsersCacheRepository implements IUsersCacheRepository {

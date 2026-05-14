@@ -37,7 +37,7 @@ import {
       StaffProfileOrmEntity, AttendanceOrmEntity, SubscriptionOrmEntity,
       UserFcmTokenOrmEntity, ProcessedEventOrmEntity, OutboxOrmEntity,
       VehicleAuditLogOrmEntity, ProfileAuditLogOrmEntity,
-      UserArrearsOrmEntity,       // ─ ghi nhận chi tiết từng khoản nợ
+      UserArrearsOrmEntity,       // Records detailed debt entries
     ]),
   ],
   controllers: [UserController],
@@ -56,9 +56,9 @@ import {
     AddVehicleUseCase, UpdateVehicleUseCase, DeleteVehicleUseCase,
     SetPrimaryVehicleUseCase, SyncUserCacheUseCase,
     SoftDeleteUserUseCase, GetProfileAuditLogUseCase, GetVehicleAuditLogUseCase,
-    // ─── Arrears Lock Consumers ──────────────────────────────────────────────
-    WalletArrearsCreatedConsumer, // wallet.arrears.created → set cờ nợ + ghi user_arrears
-    WalletArrearsClearedConsumer, // wallet.arrears.cleared → xóa cờ nợ
+    // Arrears management consumers
+    WalletArrearsCreatedConsumer, // wallet.arrears.created -> sets debt flag + records arrears entry
+    WalletArrearsClearedConsumer, // wallet.arrears.cleared -> clears debt flag
   ],
 })
 export class UserModule {}

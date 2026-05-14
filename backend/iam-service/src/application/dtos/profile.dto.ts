@@ -5,7 +5,7 @@ import { Transform } from 'class-transformer';
 
 export class UpdateProfileDto {
   @IsOptional()
-  @IsUrl({}, { message: 'Avatar URL không hợp lệ' })
+  @IsUrl({}, { message: 'Invalid Avatar URL' })
   @MaxLength(500)
   avatarUrl?: string | null;
 

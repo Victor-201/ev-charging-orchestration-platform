@@ -3,8 +3,8 @@ import { UserProfileUpdatedEvent } from '../events/user.events';
 
 /**
  * UserProfile Aggregate Root — user-service bounded context
- * Quản lý: extended profile (avatar, address) — NOT identity data
- * Identity data (email, phone, fullName) đến từ users_cache (read-only)
+ * Manages: extended profile (avatar, address) — NOT identity data.
+ * Identity data (email, phone, fullName) comes from users_cache (read-only).
  */
 export class UserProfile {
   private _avatarUrl: string | null;

@@ -37,7 +37,6 @@ export class UserController {
     private readonly getVehicleAuditUC: GetVehicleAuditLogUseCase,
   ) {}
 
-  // â”€â”€â”€ GET /users/me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
@@ -49,7 +48,6 @@ export class UserController {
     }
   }
 
-  // â”€â”€â”€ PATCH /users/me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Patch('me')
   async updateMe(
@@ -62,7 +60,6 @@ export class UserController {
     });
   }
 
-  // â”€â”€â”€ DELETE /users/me (soft delete) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -70,7 +67,6 @@ export class UserController {
     await this.softDeleteUserUC.execute(user.id);
   }
 
-  // â”€â”€â”€ GET /users/me/audit-log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('me/audit-log')
   async myProfileAuditLog(
@@ -80,14 +76,12 @@ export class UserController {
     return this.getProfileAuditUC.execute(user.id, limit ? parseInt(limit) : 20);
   }
 
-  // â”€â”€â”€ GET /users/me/vehicles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('me/vehicles')
   async myVehicles(@CurrentUser() user: AuthenticatedUser) {
     return this.getVehiclesUC.execute(user.id);
   }
 
-  // â”€â”€â”€ POST /users/me/vehicles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post('me/vehicles')
   @HttpCode(HttpStatus.CREATED)
@@ -116,7 +110,6 @@ export class UserController {
     }
   }
 
-  // â”€â”€â”€ PATCH /users/me/vehicles/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Patch('me/vehicles/:id')
   async updateMyVehicle(
@@ -133,7 +126,6 @@ export class UserController {
     }
   }
 
-  // â”€â”€â”€ DELETE /users/me/vehicles/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Delete('me/vehicles/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -150,7 +142,6 @@ export class UserController {
     }
   }
 
-  // â”€â”€â”€ PATCH /users/me/vehicles/:id/primary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Patch('me/vehicles/:id/primary')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -167,7 +158,6 @@ export class UserController {
     }
   }
 
-  // â”€â”€â”€ GET /users/me/vehicles/:id/audit-log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('me/vehicles/:id/audit-log')
   async vehicleAuditLog(
@@ -178,12 +168,12 @@ export class UserController {
     return this.getVehicleAuditUC.execute(vehicleId, user.id, limit ? parseInt(limit) : 20);
   }
 
-  // â”€â”€â”€ PATCH /users/me/vehicles/:id/autocharge-setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
   /**
-   * Cáº¥u hÃ¬nh tÃ­nh nÄƒng "Cáº¯m lÃ  Sáº¡c" cho xe.
-   * User cung cáº¥p MAC address + báº­t autocharge_enabled = true.
-   * OCPP Gateway sáº½ dÃ¹ng MAC Ä‘á»ƒ nháº­n diá»‡n xe vÃ  tá»± start session.
+   * Configures the "Plug & Charge" (AutoCharge) feature for a vehicle.
+   * Requires the device MAC address and enabling the feature.
+   * The OCPP Gateway utilizes the MAC address to identify the vehicle and automatically initiate sessions.
    */
   @Patch('me/vehicles/:id/autocharge-setup')
   async setupAutocharge(
@@ -208,9 +198,9 @@ export class UserController {
     }
 
     if (updateFields.length === 0) {
-      throw new BadRequestException('KhÃ´ng cÃ³ giÃ¡ trá»‹ nÃ o Ä‘Æ°á»£c cung cáº¥p');
+      throw new BadRequestException('No values provided for update');
     }
 
-    return { message: 'AutoCharge setup Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t', vehicleId };
+    return { message: 'AutoCharge configuration updated', vehicleId };
   }
 }

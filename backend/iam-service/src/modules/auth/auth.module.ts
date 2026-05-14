@@ -11,15 +11,18 @@ import {
 import { UserRepository } from '../../infrastructure/persistence/typeorm/repositories/user.repository';
 import { SessionRepository } from '../../infrastructure/persistence/typeorm/repositories/session.repository';
 import { RoleRepository } from '../../infrastructure/persistence/typeorm/repositories/role.repository';
+import { EmailVerificationRepository } from '../../infrastructure/persistence/typeorm/repositories/email-verification.repository';
 import { OutboxEventBus, EVENT_BUS } from '../../infrastructure/messaging/outbox/outbox-event-bus';
 import {
   RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
   ChangePasswordUseCase, AssignRoleUseCase, RevokeRoleUseCase,
   GetUserSessionsUseCase, SetupMfaUseCase, VerifyMfaUseCase, DisableMfaUseCase,
+  VerifyEmailUseCase, ResendVerificationEmailUseCase,
 } from '../../application/use-cases/auth.use-cases';
 import { AuthController } from './auth.controller';
 import {
   USER_REPOSITORY, SESSION_REPOSITORY, ROLE_REPOSITORY,
+  EMAIL_VERIFICATION_REPOSITORY,
 } from '../../domain/repositories/auth.repository.interface';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard } from '../../shared/guards/roles.guard';
@@ -65,6 +68,7 @@ import { RiskScoringService } from '../../domain/services/risk-scoring.service';
     { provide: USER_REPOSITORY, useClass: UserRepository },
     { provide: SESSION_REPOSITORY, useClass: SessionRepository },
     { provide: ROLE_REPOSITORY, useClass: RoleRepository },
+    { provide: EMAIL_VERIFICATION_REPOSITORY, useClass: EmailVerificationRepository },
     // Event bus
     { provide: EVENT_BUS, useClass: OutboxEventBus },
     // Guards
@@ -88,6 +92,7 @@ import { RiskScoringService } from '../../domain/services/risk-scoring.service';
     RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
     ChangePasswordUseCase, AssignRoleUseCase, RevokeRoleUseCase,
     GetUserSessionsUseCase, SetupMfaUseCase, VerifyMfaUseCase, DisableMfaUseCase,
+    VerifyEmailUseCase, ResendVerificationEmailUseCase,
   ],
 })
 export class AuthModule {}

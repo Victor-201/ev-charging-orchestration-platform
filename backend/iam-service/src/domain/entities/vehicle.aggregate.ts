@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import { DomainEvent } from '../events/user.events';
 import {
   VehicleRegisteredEvent, VehicleDeletedEvent, PrimaryVehicleChangedEvent,

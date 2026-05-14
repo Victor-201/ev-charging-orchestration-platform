@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 export abstract class DomainEvent {
   readonly eventId: string;
   readonly occurredAt: Date;
@@ -9,7 +10,7 @@ export abstract class DomainEvent {
   }
 }
 
-// ─── Profile Events ───────────────────────────────────────────────────────────
+// Profile Events
 
 export class UserProfileUpdatedEvent extends DomainEvent {
   readonly eventType = 'user.profile_updated';
@@ -19,7 +20,7 @@ export class UserProfileUpdatedEvent extends DomainEvent {
   ) { super(); }
 }
 
-// ─── Vehicle Events ───────────────────────────────────────────────────────────
+// Vehicle Events
 
 export class VehicleRegisteredEvent extends DomainEvent {
   readonly eventType = 'vehicle.registered';

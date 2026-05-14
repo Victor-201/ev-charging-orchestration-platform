@@ -9,17 +9,17 @@ import {
   UserArrearsOrmEntity,
 } from '../../persistence/typeorm/entities/user.orm-entities';
 
-// ─── WalletArrearsCreatedConsumer ─────────────────────────────────────────────
+// WalletArrearsCreatedConsumer
 
 /**
- * Lắng nghe wallet.arrears.created từ Payment Service.
+ * Listens for wallet.arrears.created from Payment Service.
  *
- * Khi user không đủ tiền thanh toán phần vượt deposit:
- * 1. Ghi nợ vào user_arrears
- * 2. Set flag hasOutstandingDebt = true + arrearsAmount trên users_cache
- * 3. User sẽ bị chặn tạo booking mới cho đến khi thanh toán hết nợ
+ * When a user has insufficient funds for payment exceeding the deposit:
+ * 1. Record debt in user_arrears.
+ * 2. Set hasOutstandingDebt = true and arrearsAmount in users_cache.
+ * 3. The user will be blocked from creating new bookings until the debt is cleared.
  *
- * Middleware tại API Gateway check hasOutstandingDebt trước khi cho vào POST /bookings.
+ * API Gateway middleware checks hasOutstandingDebt before allowing POST /bookings.
  */
 @Injectable()
 export class WalletArrearsCreatedConsumer {
@@ -52,7 +52,7 @@ export class WalletArrearsCreatedConsumer {
     if (exists) return;
     await this.peRepo.save({ eventId, eventType: 'wallet.arrears.created' });
 
-    // Ghi record nợ
+    // Record debt
     await this.arrearsRepo.save(this.arrearsRepo.create({
       id:            uuidv4(),
       userId:        payload.userId,
@@ -63,7 +63,7 @@ export class WalletArrearsCreatedConsumer {
       clearedAt:     null,
     }));
 
-    // Cập nhật flag trên users_cache
+    // Update flag on users_cache
     const user = await this.usersCacheRepo.findOneBy({ userId: payload.userId });
     if (user) {
       await this.usersCacheRepo.update(payload.userId, {
@@ -80,15 +80,15 @@ export class WalletArrearsCreatedConsumer {
   }
 }
 
-// ─── WalletArrearsClearedConsumer ─────────────────────────────────────────────
+// WalletArrearsClearedConsumer
 
 /**
- * Lắng nghe wallet.arrears.cleared từ Payment Service.
+ * Listens for wallet.arrears.cleared from Payment Service.
  *
- * Khi user nạp tiền đủ để trả nợ:
- * 1. Mark tất cả arrears = cleared
- * 2. Reset hasOutstandingDebt = false
- * 3. User có thể đặt booking lại
+ * When a user tops up enough to clear the debt:
+ * 1. Mark all arrears as cleared.
+ * 2. Reset hasOutstandingDebt = false.
+ * 3. The user can book again.
  */
 @Injectable()
 export class WalletArrearsClearedConsumer {
@@ -119,7 +119,7 @@ export class WalletArrearsClearedConsumer {
     if (exists) return;
     await this.peRepo.save({ eventId, eventType: 'wallet.arrears.cleared' });
 
-    // Clear tất cả outstanding arrears
+    // Clear all outstanding arrears
     await this.arrearsRepo.update(
       { userId: payload.userId, status: 'outstanding' },
       { status: 'cleared', clearedAt: new Date(), updatedAt: new Date() } as any,
