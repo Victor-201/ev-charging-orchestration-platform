@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +13,7 @@ import {
   IUserRepository, USER_REPOSITORY,
   ISessionRepository, SESSION_REPOSITORY,
   IRoleRepository, ROLE_REPOSITORY,
+  IEmailVerificationRepository, EMAIL_VERIFICATION_REPOSITORY, EmailVerificationToken,
 } from '../../domain/repositories/auth.repository.interface';
 import {
   UserAlreadyExistsException,
@@ -24,13 +25,15 @@ import {
   InvalidMfaTokenException,
   MfaNotEnabledException,
   RateLimitExceededException,
+  EmailNotVerifiedException,
 } from '../../domain/exceptions/auth.exceptions';
 import { IEventBus, EVENT_BUS } from '../../infrastructure/messaging/outbox/outbox-event-bus';
-import { RoleAssignedEvent } from '../../domain/events/auth.events';
+import { RoleAssignedEvent, EmailVerifiedEvent, EmailVerificationRequestedEvent } from '../../domain/events/auth.events';
+import { InvalidVerificationCodeException } from '../../domain/exceptions/auth.exceptions';
 import { RiskScoringService, RiskLevel } from '../../domain/services/risk-scoring.service';
 import { Redis } from 'ioredis';
 
-// ─── Value Objects / Commands ─────────────────────────────────────────────────
+
 
 export interface TokenPair {
   accessToken: string;
@@ -57,7 +60,7 @@ export interface LoginCommand {
   mfaToken?: string;  // optional: provided when user has MFA enabled
 }
 
-// ─── Register Use Case ────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class RegisterUseCase {
@@ -66,40 +69,70 @@ export class RegisterUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
+    @Inject(EMAIL_VERIFICATION_REPOSITORY) private readonly emailVerifRepo: IEmailVerificationRepository,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
     private readonly dataSource: DataSource,
   ) {}
 
   async execute(cmd: RegisterCommand): Promise<{ id: string; email: string; fullName: string }> {
-    const exists = await this.userRepo.existsByEmail(cmd.email);
-    if (exists) throw new UserAlreadyExistsException(cmd.email);
-
+    let user = await this.userRepo.findByEmail(cmd.email);
     const passwordHash = await bcrypt.hash(cmd.password, 12);
-    const user = User.create({
-      email: cmd.email,
-      fullName: cmd.fullName,
-      phone: cmd.phone,
-      dateOfBirth: cmd.dateOfBirth,
-      passwordHash,
-    });
+    let isNewUser = false;
+
+    if (user) {
+      if (user.emailVerified) {
+        throw new UserAlreadyExistsException(cmd.email);
+      }
+      
+      // User exists but not verified -> Overwrite data and generate new token
+      user.updateUnverifiedRegistration({
+        fullName: cmd.fullName,
+        phone: cmd.phone,
+        dateOfBirth: cmd.dateOfBirth,
+        passwordHash,
+      });
+      // Delete old verification tokens
+      await this.emailVerifRepo.deleteByUserId(user.id);
+    } else {
+      user = User.create({
+        email: cmd.email,
+        fullName: cmd.fullName,
+        phone: cmd.phone,
+        dateOfBirth: cmd.dateOfBirth,
+        passwordHash,
+      });
+      isNewUser = true;
+    }
 
     const defaultRole = await this.roleRepo.findByName('user');
 
     await this.dataSource.transaction(async (manager: EntityManager) => {
-      await this.userRepo.save(user, manager);
-      if (defaultRole) {
-        await this.roleRepo.assignRoleToUser(user.id, defaultRole.id, null);
-      }
-      await this.eventBus.publishAll(user.domainEvents, manager);
-      user.clearDomainEvents();
+      await this.userRepo.save(user!, manager);
+      await this.eventBus.publishAll(user!.domainEvents, manager);
+      user!.clearDomainEvents();
     });
 
-    this.logger.log(`Registered user: ${user.id} <${user.email}>`);
+    if (isNewUser && defaultRole) {
+      await this.roleRepo.assignRoleToUser(user.id, defaultRole.id, null);
+    }
+
+    // Create email verification token (expires in 24 hours)
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const shortCode = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.emailVerifRepo.create(user.id, tokenHash, shortCode, expiresAt);
+
+    this.logger.log(`Registered user: ${user.id} <${user.email}> | verif-token created`);
+    
+    const event = new EmailVerificationRequestedEvent(user.id, user.email, rawToken, shortCode);
+    await this.eventBus.publishAll([event]);
+
     return { id: user.id, email: user.email, fullName: user.fullName };
   }
 }
 
-// ─── Login Use Case (Risk-Based) ──────────────────────────────────────────────
+
 
 @Injectable()
 export class LoginUseCase {
@@ -116,36 +149,49 @@ export class LoginUseCase {
     private readonly config: ConfigService,
     private readonly riskScoring: RiskScoringService,
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    @Inject(EMAIL_VERIFICATION_REPOSITORY) private readonly emailVerifRepo: IEmailVerificationRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
   ) {}
 
   async execute(cmd: LoginCommand): Promise<TokenPair> {
-    // ── STEP 1: IP Rate Limiting ─────────────────────────────────────────────
     if (cmd.ipAddress) {
       await this.checkIpRateLimit(cmd.ipAddress);
     }
 
-    // ── STEP 2: Find user ────────────────────────────────────────────────────
     const user = await this.userRepo.findByEmail(cmd.email);
     if (!user) throw new InvalidCredentialsException();
 
-    // ── STEP 3: Check account lock ───────────────────────────────────────────
     user.assertIsNotLocked();
     user.assertIsActive();
 
-    // ── STEP 4: Verify password ──────────────────────────────────────────────
     const valid = await bcrypt.compare(cmd.password, user.passwordHash);
     if (!valid) {
       user.incrementFailedLogin(5, 30);
       await this.userRepo.save(user);
-      // Track IP failure in Redis
+      
       if (cmd.ipAddress) {
         await this.redis.incr(`auth:fail:ip:${cmd.ipAddress}`);
         await this.redis.expire(`auth:fail:ip:${cmd.ipAddress}`, 900);
       }
       throw new InvalidCredentialsException();
     }
+    
+    if (!user.emailVerified) {
+      this.logger.warn(`Login failed: Email not verified for ${user.email}`);
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const shortCode = String(Math.floor(100000 + Math.random() * 900000));
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      await this.emailVerifRepo.deleteByUserId(user.id);
+      await this.emailVerifRepo.create(user.id, tokenHash, shortCode, expiresAt);
+      
+      const event = new EmailVerificationRequestedEvent(user.id, user.email, rawToken, shortCode);
+      await this.eventBus.publishAll([event]);
+      
+      throw new EmailNotVerifiedException();
+    }
 
-    // ── STEP 5: Risk Scoring ─────────────────────────────────────────────────
     const activeSessions = await this.sessionRepo.findActiveByUserId(user.id);
     const knownFingerprints = activeSessions
       .filter(s => s.deviceFingerprint)
@@ -166,13 +212,12 @@ export class LoginUseCase {
     if (risk.level === RiskLevel.HIGH) {
       user.flagSuspiciousActivity(risk.reasons.join('; '), cmd.ipAddress);
       await this.userRepo.save(user);
-      throw new InvalidCredentialsException(); // don't reveal detail
+      // Generic error to prevent account enumeration/discovery.
+      throw new InvalidCredentialsException();
     }
 
-    // ── STEP 6: MFA Check ────────────────────────────────────────────────────
     if (user.mfaEnabled) {
       if (!cmd.mfaToken) {
-        // Return partial token indicating MFA required
         throw new MfaRequiredException();
       }
       const verified = speakeasy.totp.verify({
@@ -184,7 +229,6 @@ export class LoginUseCase {
       if (!verified) throw new InvalidMfaTokenException();
     }
 
-    // ── STEP 7: Reset failed count + issue tokens ────────────────────────────
     user.resetFailedLogin();
     await this.userRepo.save(user);
 
@@ -211,7 +255,6 @@ export class LoginUseCase {
     });
     await this.sessionRepo.save(session);
 
-    // Clear IP failure counter on success
     if (cmd.ipAddress) {
       await this.redis.del(`auth:fail:ip:${cmd.ipAddress}`);
     }
@@ -232,7 +275,7 @@ export class LoginUseCase {
   }
 }
 
-// ─── Refresh Token Use Case ───────────────────────────────────────────────────
+
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -258,7 +301,7 @@ export class RefreshTokenUseCase {
     const roles = await this.roleRepo.findRolesByUserId(user.id);
     const roleNames = roles.map(r => r.name);
 
-    // Token rotation: revoke cũ, tạo mới
+    // Rotate session: revoke current refresh token to prevent reuse.
     await this.sessionRepo.revokeById(session.id);
 
     const expiresIn = parseInt(this.config.get('JWT_EXPIRES_IN_SECONDS', '900'));
@@ -285,7 +328,7 @@ export class RefreshTokenUseCase {
   }
 }
 
-// ─── Logout Use Case ──────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class LogoutUseCase {
@@ -302,7 +345,7 @@ export class LogoutUseCase {
   }
 }
 
-// ─── Change Password Use Case ─────────────────────────────────────────────────
+
 
 @Injectable()
 export class ChangePasswordUseCase {
@@ -333,7 +376,7 @@ export class ChangePasswordUseCase {
   }
 }
 
-// ─── Assign Role Use Case ─────────────────────────────────────────────────────
+
 
 @Injectable()
 export class AssignRoleUseCase {
@@ -361,7 +404,7 @@ export class AssignRoleUseCase {
   }
 }
 
-// ─── Revoke Role Use Case ─────────────────────────────────────────────────────
+
 
 @Injectable()
 export class RevokeRoleUseCase {
@@ -376,7 +419,7 @@ export class RevokeRoleUseCase {
   }
 }
 
-// ─── Get User Sessions Use Case ───────────────────────────────────────────────
+
 
 @Injectable()
 export class GetUserSessionsUseCase {
@@ -397,7 +440,7 @@ export class GetUserSessionsUseCase {
   }
 }
 
-// ─── MFA Use Cases ────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class SetupMfaUseCase {
@@ -407,9 +450,9 @@ export class SetupMfaUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}
 
-  /**
-   * Setup TOTP MFA: generate secret, return QR code URL
-   * User phải verify trước khi MFA được activate (xem VerifyMfaSetupUseCase)
+   /**
+   * Setup TOTP MFA: generate secret, return QR code URL.
+   * User must verify before MFA is activated (see VerifyMfaSetupUseCase).
    */
   async execute(userId: string): Promise<{ secret: string; otpAuthUrl: string; qrCodeUrl: string }> {
     const user = await this.userRepo.findById(userId);
@@ -420,7 +463,7 @@ export class SetupMfaUseCase {
       length: 32,
     });
 
-    // Lưu secret tạm (chưa enable — chỉ enable sau khi verify)
+    // Save secret temporarily (not yet enabled — enabled only after verification)
     user.enableMfa(secret.base32);
     await this.userRepo.save(user);
 
@@ -471,5 +514,126 @@ export class DisableMfaUseCase {
 
     user.disableMfa();
     await this.userRepo.save(user);
+  }
+}
+
+
+
+@Injectable()
+export class VerifyEmailUseCase {
+  private readonly logger = new Logger(VerifyEmailUseCase.name);
+
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(EMAIL_VERIFICATION_REPOSITORY)
+    private readonly emailVerifRepo: IEmailVerificationRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+    @Inject(SESSION_REPOSITORY) private readonly sessionRepo: ISessionRepository,
+    @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
+  ) {}
+
+  async execute(
+    input: { token: string } | { code: string },
+    cmd?: { deviceFingerprint?: string; ipAddress?: string; userAgent?: string },
+  ): Promise<TokenPair> {
+    // Resolve record by magic-link token OR 6-digit short code
+    let record: EmailVerificationToken | null = null;
+    let isShortCode = false;
+    if ('code' in input) {
+      record = await this.emailVerifRepo.findByShortCode(input.code);
+      isShortCode = true;
+    } else {
+      const tokenHash = crypto.createHash('sha256').update(input.token).digest('hex');
+      record = await this.emailVerifRepo.findByTokenHash(tokenHash);
+    }
+
+    if (!record) {
+      if (isShortCode) throw new InvalidVerificationCodeException();
+      throw new TokenExpiredException();
+    }
+    if (record.expiresAt < new Date() && !record.verifiedAt) {
+      if (isShortCode) throw new InvalidVerificationCodeException();
+      throw new TokenExpiredException();
+    }
+
+    const user = await this.userRepo.findById(record.userId);
+    if (!user) throw new InvalidCredentialsException();
+
+    if (!record.verifiedAt) {
+      user.verifyEmail();
+      await this.userRepo.save(user);
+      await this.emailVerifRepo.markVerified(record.id);
+
+      const event = new EmailVerifiedEvent(user.id, user.email);
+      await this.eventBus.publishAll([event]);
+
+      this.logger.log(`Email verified: user=${user.id} <${user.email}>`);
+    }
+
+    user.assertIsActive();
+    user.resetFailedLogin();
+    await this.userRepo.save(user);
+
+    const roles = await this.roleRepo.findRolesByUserId(user.id);
+    const roleNames = roles.map(r => r.name);
+
+    const expiresIn = parseInt(this.config.get('JWT_EXPIRES_IN_SECONDS', '900'));
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, roles: roleNames },
+      { expiresIn },
+    );
+
+    const rawRefreshToken = crypto.randomBytes(64).toString('hex');
+    const newTokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+    const refreshTtlDays = parseInt(this.config.get('REFRESH_TOKEN_TTL_DAYS', '7'));
+
+    const session = Session.create({
+      userId: user.id,
+      refreshTokenHash: newTokenHash,
+      deviceFingerprint: cmd?.deviceFingerprint,
+      ipAddress: cmd?.ipAddress,
+      userAgent: cmd?.userAgent,
+      expiresAt: new Date(Date.now() + refreshTtlDays * 24 * 60 * 60 * 1000),
+    });
+    await this.sessionRepo.save(session);
+
+    return { accessToken, refreshToken: rawRefreshToken, expiresIn, sessionId: session.id };
+  }
+}
+
+
+
+@Injectable()
+export class ResendVerificationEmailUseCase {
+  private readonly logger = new Logger(ResendVerificationEmailUseCase.name);
+
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(EMAIL_VERIFICATION_REPOSITORY)
+    private readonly emailVerifRepo: IEmailVerificationRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+  ) {}
+
+  async execute(email: string): Promise<void> {
+    const user = await this.userRepo.findByEmail(email);
+    if (!user) return; // Do not disclose if email exists
+
+    if (user.emailVerified) return; // Already verified, skip
+
+    // Delete old token and create new one
+    await this.emailVerifRepo.deleteByUserId(user.id);
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const shortCode = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await this.emailVerifRepo.create(user.id, tokenHash, shortCode, expiresAt);
+
+    this.logger.log(`Resend verification email for user=${user.id} <${user.email}>`);
+    
+    const event = new EmailVerificationRequestedEvent(user.id, user.email, rawToken, shortCode);
+    await this.eventBus.publishAll([event]);
   }
 }
