@@ -48,7 +48,7 @@ export class StationRepository implements IStationRepository {
     if (filter.status)  qb.andWhere('s.status = :status',  { status: filter.status });
     if (filter.ownerId) qb.andWhere('s.owner_id = :ownerId', { ownerId: filter.ownerId });
 
-    // Geo bounding box — approximation (NOT haversine, dùng cho tất cả queries)
+    // Geo bounding box — approximation (NOT haversine, used for all queries)
     if (filter.nearLat !== undefined && filter.nearLng !== undefined && filter.radiusKm) {
       const deltaLat = filter.radiusKm / 111;   // 1° lat ≈ 111 km
       const deltaLng = filter.radiusKm / (111 * Math.cos(filter.nearLat * Math.PI / 180));
@@ -60,6 +60,14 @@ export class StationRepository implements IStationRepository {
         lngMin: filter.nearLng - deltaLng,
         lngMax: filter.nearLng + deltaLng,
       });
+    }
+
+    // Full-text search: name OR address (case-insensitive, parameterized — safe from injection)
+    if (filter.search && filter.search.trim().length > 0) {
+      qb.andWhere(
+        '(s.name ILIKE :search OR s.address ILIKE :search)',
+        { search: `%${filter.search.trim()}%` },
+      );
     }
 
     const limit  = filter.limit  ?? 20;
@@ -111,7 +119,7 @@ export class StationRepository implements IStationRepository {
     }));
   }
 
-  // ─── Mappers ─────────────────────────────────────────────────────────────────
+  // Mappers
 
   private toDomain(e: StationOrmEntity, chargers: Charger[]): Station {
     return Station.reconstitute({

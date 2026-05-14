@@ -7,8 +7,8 @@ import { OutboxOrmEntity } from '../../persistence/typeorm/entities/station.orm-
 
 /**
  * OutboxPublisher — polling scheduler
- * Đọc pending events từ event_outbox → publish lên RabbitMQ → mark processed/failed
- * Retry tối đa 5 lần, sau đó chuyển sang 'failed'
+ * Reads pending events from event_outbox, publishes to RabbitMQ, and marks them as processed or failed.
+ * Retries up to 5 times before transitioning to 'failed'.
  */
 @Injectable()
 export class OutboxPublisher {

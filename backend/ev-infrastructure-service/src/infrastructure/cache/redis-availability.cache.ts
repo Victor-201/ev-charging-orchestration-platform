@@ -39,7 +39,7 @@ export class RedisAvailabilityCache {
     this.client.on('ready', ()    => this.logger.log('[Redis] Connected'));
   }
 
-  // ── Health ────────────────────────────────────────────────────────────────
+  // Health
 
   async healthCheck(): Promise<boolean> {
     try {
@@ -50,7 +50,7 @@ export class RedisAvailabilityCache {
     }
   }
 
-  // ── Stampede-safe get-or-set ──────────────────────────────────────────────
+  // Stampede-safe get-or-set
 
   private async singleFlight<T>(
     key: string,
@@ -76,7 +76,7 @@ export class RedisAvailabilityCache {
     }
   }
 
-  // ── Charger availability ──────────────────────────────────────────────────
+  // Charger availability
 
   async setChargerStatus(chargerId: string, status: string): Promise<void> {
     const key = `ev:infra:charger:status:${chargerId}`;
@@ -93,7 +93,7 @@ export class RedisAvailabilityCache {
     this.logger.debug(`[Cache] Invalidated charger ${chargerId}`);
   }
 
-  // ── Station available count ───────────────────────────────────────────────
+  // Station available count
 
   async setStationAvailableCount(stationId: string, count: number): Promise<void> {
     await this.client.set(`ev:infra:station:available:${stationId}`, count.toString(), 'EX', this.STATION_COUNT_TTL);
@@ -114,7 +114,7 @@ export class RedisAvailabilityCache {
     this.logger.debug(`[Cache] Invalidated station ${stationId}`);
   }
 
-  // ── Station list (read-heavy, stampede-protected) ─────────────────────────
+  // Station list (read-heavy, stampede-protected)
 
   async getStationList<T>(cacheKey: string, loader: () => Promise<T>): Promise<T | null> {
     const key = `ev:infra:stations:list:${cacheKey}`;
@@ -136,14 +136,14 @@ export class RedisAvailabilityCache {
     this.logger.debug('[Cache] Invalidated all station list keys');
   }
 
-  // ── Station detail ────────────────────────────────────────────────────────
+  // Station detail
 
   async getStationDetail<T>(stationId: string, loader: () => Promise<T>): Promise<T | null> {
     const key = `ev:infra:station:detail:${stationId}`;
     return this.singleFlight<T>(key, this.STATION_DETAIL_TTL, loader);
   }
 
-  // ── Geo index ─────────────────────────────────────────────────────────────
+  // Geo index
 
   async geoAdd(stationId: string, longitude: number, latitude: number): Promise<void> {
     await this.client.geoadd('ev:infra:geo:index', longitude, latitude, stationId);

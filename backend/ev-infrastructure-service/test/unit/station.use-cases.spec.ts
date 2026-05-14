@@ -20,7 +20,7 @@ import {
 import { CHARGER_REPOSITORY } from '../../src/domain/repositories/charger.repository.interface';
 import { EVENT_BUS } from '../../src/infrastructure/messaging/outbox/outbox-event-bus';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
+// Mocks
 
 const mockStationRepo = {
   findById:             jest.fn(),
@@ -50,11 +50,11 @@ const mockDataSource = {
 const mockCity = {
   id: 'city-uuid-1',
   cityName: 'TP.HCM',
-  region: 'Miền Nam',
+  region: 'South',
   countryCode: 'VN',
 };
 
-// ─── Helper factories ─────────────────────────────────────────────────────────
+// Helper factories
 
 function makeStation(overrides?: any): Station {
   return Station.reconstitute({
@@ -88,7 +88,7 @@ function makeCharger(overrides?: any): Charger {
   });
 }
 
-// ─── Domain Layer Tests ───────────────────────────────────────────────────────
+// Domain Layer Tests
 
 describe('Station Aggregate', () => {
   const validProps = {
@@ -205,7 +205,7 @@ describe('Charger Aggregate', () => {
   });
 });
 
-// ─── CreateStationUseCase Tests ───────────────────────────────────────────────
+// CreateStationUseCase Tests
 
 describe('CreateStationUseCase', () => {
   let useCase: CreateStationUseCase;
@@ -258,7 +258,7 @@ describe('CreateStationUseCase', () => {
   });
 });
 
-// ─── AddChargerUseCase Tests ──────────────────────────────────────────────────
+// AddChargerUseCase Tests
 
 describe('AddChargerUseCase', () => {
   let useCase: AddChargerUseCase;
@@ -320,7 +320,7 @@ describe('AddChargerUseCase', () => {
   });
 });
 
-// ─── UpdateChargerStatusUseCase Tests ─────────────────────────────────────────
+// UpdateChargerStatusUseCase Tests
 
 describe('UpdateChargerStatusUseCase', () => {
   let useCase: UpdateChargerStatusUseCase;
@@ -367,7 +367,7 @@ describe('UpdateChargerStatusUseCase', () => {
   });
 });
 
-// ─── ListStationsUseCase Tests ────────────────────────────────────────────────
+// ListStationsUseCase Tests
 
 describe('ListStationsUseCase', () => {
   let useCase: ListStationsUseCase;

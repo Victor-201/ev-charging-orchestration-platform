@@ -3,7 +3,7 @@ import { InvalidStationDataException } from '../exceptions/station.exceptions';
 /**
  * Location Value Object
  * Immutable, self-validating geographic coordinate
- * Aligns với BCNF: latitude, longitude columns trong stations
+ * Aligns with BCNF: latitude and longitude columns in stations table.
  */
 export class Location {
   readonly latitude: number;

@@ -1,6 +1,6 @@
 /**
- * Domain exceptions cho station-service
- * Error codes align với HTTP status conventions
+ * Domain exceptions for the station-service
+ * Error codes aligned with HTTP status conventions
  */
 
 export class StationNotFoundException extends Error {

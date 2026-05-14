@@ -10,6 +10,7 @@ export interface StationFilter {
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
+  search?: string;   // full-text search: name ILIKE OR address ILIKE
   limit?: number;
   offset?: number;
 }
@@ -29,7 +30,7 @@ export interface CityReadModel {
 }
 
 export interface IStationRepository {
-  /** Find by PK — trả null nếu không thấy */
+  /** Finds by primary key — returns null if not found */
   findById(id: string): Promise<Station | null>;
 
   /** Find with chargers loaded */
@@ -38,7 +39,7 @@ export interface IStationRepository {
   /** List + filter + pagination */
   findMany(filter: StationFilter): Promise<PaginatedResult<Station>>;
 
-  /** Check duplicate geo */
+  /** Checks for duplicate geographic coordinates */
   existsByGeo(latitude: number, longitude: number, excludeId?: string): Promise<boolean>;
 
   /** Persist (INSERT or UPDATE) */

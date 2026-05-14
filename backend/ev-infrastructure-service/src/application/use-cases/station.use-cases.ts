@@ -20,7 +20,7 @@ import { AddChargerDto, UpdateChargerStatusDto } from '../dtos/charger.dto';
 import { RedisAvailabilityCache } from '../../infrastructure/cache/redis-availability.cache';
 
 
-// ─── Response types ───────────────────────────────────────────────────────────
+
 
 export interface StationResponse {
   id: string;
@@ -53,7 +53,7 @@ export interface ChargerResponse {
   updatedAt: Date;
 }
 
-// ─── Mappers ─────────────────────────────────────────────────────────────────
+
 
 function toStationResponse(s: Station): StationResponse {
   return {
@@ -90,7 +90,7 @@ function toChargerResponse(c: Charger): ChargerResponse {
   };
 }
 
-// ─── Use Cases ────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class CreateStationUseCase {
@@ -131,7 +131,7 @@ export class CreateStationUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class UpdateStationUseCase {
@@ -162,7 +162,7 @@ export class UpdateStationUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetStationUseCase {
@@ -182,7 +182,7 @@ export class GetStationUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class ListStationsUseCase {
@@ -197,6 +197,7 @@ export class ListStationsUseCase {
       nearLat:  query.lat,
       nearLng:  query.lng,
       radiusKm: query.radiusKm,
+      search:   query.search,
       limit:    query.limit ?? 20,
       offset:   query.offset ?? 0,
     };
@@ -209,7 +210,7 @@ export class ListStationsUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetNearbyStationsUseCase {
@@ -230,7 +231,7 @@ export class GetNearbyStationsUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class AddChargerUseCase {
@@ -272,7 +273,7 @@ export class AddChargerUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class UpdateChargerStatusUseCase {
@@ -299,7 +300,7 @@ export class UpdateChargerStatusUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetChargersUseCase {
@@ -317,7 +318,7 @@ export class GetChargersUseCase {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetCitiesUseCase {
@@ -330,7 +331,7 @@ export class GetCitiesUseCase {
   }
 }
 
-// ─── Get Charger Availability (with Redis cache) ──────────────────────────────
+
 
 @Injectable()
 export class GetChargerAvailabilityUseCase {
@@ -354,7 +355,7 @@ export class GetChargerAvailabilityUseCase {
   }
 }
 
-// ─── SLA Monitoring (Cron Job) ────────────────────────────────────────────────
+
 
 @Injectable()
 export class SlaMonitoringUseCase {
@@ -367,8 +368,8 @@ export class SlaMonitoringUseCase {
   ) {}
 
   /**
-   * Gọi từ @Cron — tính uptime % cho từng station trong 24h qua
-   * Alert nếu uptime < 95%
+   * Called via @Cron — computes uptime % for each station over the last 24h.
+   * Alerts if uptime < 95%
    */
   async computeDailySla(): Promise<{ stationId: string; uptimePct: number; alert: boolean }[]> {
     const stations = await this.stationRepo.findMany({ limit: 500, offset: 0 });

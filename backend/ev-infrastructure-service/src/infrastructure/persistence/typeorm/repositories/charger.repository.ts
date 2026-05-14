@@ -93,7 +93,7 @@ export class ChargerRepository implements IChargerRepository {
     }
   }
 
-  // ─── Mapper ──────────────────────────────────────────────────────────────────
+  // Mapper
 
   private toDomain(cp: ChargingPointOrmEntity): Charger {
     return Charger.reconstitute({

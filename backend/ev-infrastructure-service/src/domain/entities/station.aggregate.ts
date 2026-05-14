@@ -8,8 +8,8 @@ import { Location } from '../value-objects/location.vo';
 import { Charger, ChargerStatus } from './charger.aggregate';
 
 /**
- * StationStatus — align với SQL ENUM station_status
- * closed thay vì COMING_SOON
+ * StationStatus — aligned with SQL ENUM station_status
+ * closed instead of COMING_SOON
  */
 export enum StationStatus {
   ACTIVE      = 'active',
@@ -66,10 +66,10 @@ export class Station {
     this._updatedAt = props.updatedAt ?? new Date();
   }
 
-  // ─── Factory Methods ─────────────────────────────────────────────────────────
+  // Factory Methods
 
   /**
-   * Tạo mới station — validate và emit StationCreatedEvent
+   * Creates a new station — validates and emits StationCreatedEvent
    * Location validation delegated to Location VO
    */
   static create(props: {
@@ -108,7 +108,7 @@ export class Station {
   }
 
   /**
-   * Reconstitute từ persistence — không phát domain events
+   * Reconstitutes from persistence — does not emit domain events
    */
   static reconstitute(props: {
     id: string;
@@ -129,7 +129,7 @@ export class Station {
     return station;
   }
 
-  // ─── Domain Behaviors ────────────────────────────────────────────────────────
+  // Domain Behaviors
 
   /**
    * Update station info — partial update, emits StationUpdatedEvent
@@ -152,7 +152,7 @@ export class Station {
   }
 
   /**
-   * Chuyển trạng thái station — emits StationStatusChangedEvent
+   * Changes station status — emits StationStatusChangedEvent
    */
   changeStatus(newStatus: StationStatus): void {
     this._status = newStatus;
@@ -161,8 +161,8 @@ export class Station {
   }
 
   /**
-   * Thêm charger vào station
-   * Invariant: station phải đang ACTIVE
+   * Adds a charger to the station
+   * Invariant: station must be ACTIVE
    */
   addCharger(charger: Charger): void {
     if (this._status !== StationStatus.ACTIVE) {
@@ -171,7 +171,7 @@ export class Station {
     this._chargers.push(charger);
   }
 
-  // ─── Query Methods ───────────────────────────────────────────────────────────
+  // Query Methods
 
   getAvailableChargerCount(): number {
     return this._chargers.filter((c) => c.isAvailable()).length;
@@ -184,7 +184,7 @@ export class Station {
 
   isActive(): boolean { return this._status === StationStatus.ACTIVE; }
 
-  // ─── Getters ─────────────────────────────────────────────────────────────────
+  // Getters
 
   get name(): string              { return this._name; }
   get address(): string | null    { return this._address; }

@@ -9,8 +9,8 @@ import {
 import { RedisAvailabilityCache } from '../../cache/redis-availability.cache';
 
 /**
- * Lắng nghe event từ charging-service khi trạng thái charger thay đổi
- * → Cập nhật DB + invalidate Redis cache
+ * Listens for events from charging-service when charger status changes
+ * → Updates database and invalidates Redis cache
  */
 @Injectable()
 export class ChargerStatusConsumer {
@@ -71,7 +71,7 @@ export class ChargerStatusConsumer {
       );
     } catch (err) {
       this.logger.error(`Failed processing charger status event: ${err}`);
-      throw err; // NACK — RabbitMQ sẽ retry
+      throw err; // NACK — RabbitMQ will retry
     }
   }
 

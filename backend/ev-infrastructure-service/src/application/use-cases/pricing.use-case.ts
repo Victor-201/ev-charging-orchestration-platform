@@ -8,12 +8,12 @@ import {
 } from '../../infrastructure/persistence/typeorm/entities/station.orm-entities';
 import { ChargerNotFoundException } from '../../domain/exceptions/station.exceptions';
 
-// ─── Constants: VinFast EV Charging Rate Standard (EVN TOU) ──────────────────
+// Constants: VinFast EV Charging Rate Standard (EVN TOU)
 
-/** Giờ thấp điểm: 22:00 – 06:00 hàng ngày */
+/** Off-peak hours: 22:00 – 06:00 daily */
 export const OFF_PEAK_HOURS = [22, 23, 0, 1, 2, 3, 4, 5] as const;
 
-/** Giờ cao điểm (EVN peak): 09:30–11:30, 17:00–20:00 */
+/** Peak hours (EVN peak): 09:30–11:30, 17:00–20:00 */
 function isPeakHour(hour: number): boolean {
   return (hour >= 9 && hour < 12) || (hour >= 17 && hour < 20);
 }
@@ -21,7 +21,7 @@ function isOffPeakHour(hour: number): boolean {
   return hour >= 22 || hour < 6;
 }
 
-/** Fallback VinFast giá mặc định (VND/kWh) khi không có pricing_rule */
+/** Fallback VinFast default rates (VND/kWh) when no pricing_rule is defined */
 const DEFAULT_RATE: Record<string, Record<string, number>> = {
   CCS:     { off_peak: 2_500, normal: 3_500, peak: 4_500 },
   'CCS2':  { off_peak: 2_500, normal: 3_500, peak: 4_500 },
@@ -31,22 +31,22 @@ const DEFAULT_RATE: Record<string, Record<string, number>> = {
   Other:   { off_peak: 2_000, normal: 2_800, peak: 3_800 },
 };
 
-/** Default idle fee khi không có pricing_rule (VinFast standard) */
+/** Default idle fee when no pricing_rule is defined (VinFast standard) */
 const DEFAULT_IDLE_GRACE_MINUTES = 20;
-const DEFAULT_IDLE_FEE_PER_MINUTE = 1_000; // 1.000 VND/phút
+const DEFAULT_IDLE_FEE_PER_MINUTE = 1_000; // 1,000 VND/minute
 
 export interface PricingQuote {
   stationId:             string;
   chargerId:             string;
   connectorType:         string;
-  pricePerKwhVnd:        number;    // giá hiện tại VND/kWh (TOU)
-  pricePerMinuteVnd:     number;    // phí time-based (nếu có)
-  idleGraceMinutes:      number;    // số phút miễn phí sau khi sạc đầy
-  idleFeePerMinuteVnd:   number;    // VND/phút sau grace period
+  pricePerKwhVnd:        number;    // current price in VND/kWh (TOU)
+  pricePerMinuteVnd:     number;    // time-based fee (if applicable)
+  idleGraceMinutes:      number;    // grace period minutes after full charge
+  idleFeePerMinuteVnd:   number;    // VND/minute after grace period
   isPeakHour:            boolean;
   isOffPeakHour:         boolean;
   estimatedTotalVnd:     number;
-  recommendedDepositVnd: number;    // ước tính × 1.20 (buffer idle fee)
+  recommendedDepositVnd: number;    // estimated × 1.20 (includes idle fee buffer)
   ruleId:                string | null;
   validFrom:             Date | null;
   validTo:               Date | null;
@@ -55,24 +55,24 @@ export interface PricingQuote {
 }
 
 export interface SessionFeeBreakdown {
-  energyFeeVnd:    number;   // tiền điện = kwhConsumed × pricePerKwh (TOU)
-  idleFeeVnd:      number;   // phí chiếm dụng = max(0, idleMinutes - grace) × idleFeePerMinute
+  energyFeeVnd:    number;   // energy fee = kwhConsumed × pricePerKwh (TOU)
+  idleFeeVnd:      number;   // occupancy fee = max(0, idleMinutes - grace) × idleFeePerMinute
   totalFeeVnd:     number;   // energyFee + idleFee
-  pricePerKwhVnd:  number;   // giá TOU được áp dụng
+  pricePerKwhVnd:  number;   // applied TOU rate
   idleGraceMinutes: number;
   idleFeePerMinuteVnd: number;
-  chargeableIdleMinutes: number;  // số phút bị tính phí (đã trừ grace)
+  chargeableIdleMinutes: number;  // chargeable minutes (grace period deducted)
   ruleId:          string | null;
   tier:            'peak' | 'off_peak' | 'normal';
 }
 
-// ─── GetPricingUseCase ────────────────────────────────────────────────────────
+// GetPricingUseCase
 
 /**
- * GetPricingUseCase — Tính giá sạc theo:
- *   - Loại connector (CCS, CHAdeMO, Type2, GB/T)
- *   - Khung giờ EVN TOU (cao điểm / thấp điểm / bình thường)
- *   - Ngày trong tuần (day_mask bitmask)
+ * GetPricingUseCase — Calculates charging price based on:
+ *   - Connector type (CCS, CHAdeMO, Type2, GB/T)
+ *   - EVN TOU time slots (peak / off-peak / normal)
+ *   - Day of the week (day_mask bitmask)
  *   - Admin-configurable idle fee (idle_grace_minutes, idle_fee_per_minute)
  */
 @Injectable()
@@ -81,7 +81,7 @@ export class GetPricingUseCase {
 
   static readonly MIN_DEPOSIT_VND   = 50_000;
   static readonly EFFICIENCY_FACTOR = 0.85;
-  static readonly DEPOSIT_BUFFER    = 1.20; // 20% buffer để cover idle fee
+  static readonly DEPOSIT_BUFFER    = 1.20; // 20% buffer to cover idle fee
 
   constructor(
     @InjectRepository(PricingRuleOrmEntity)
@@ -110,7 +110,7 @@ export class GetPricingUseCase {
     );
     if (!connector) {
       throw new Error(
-        `Charger ${opts.chargerId} không có connector type ${opts.connectorType}. ` +
+        `Charger ${opts.chargerId} does not have connector type ${opts.connectorType}. ` +
         `Available: ${charger.connectors?.map((c) => c.connectorType).join(', ')}`,
       );
     }
@@ -202,19 +202,19 @@ export class GetPricingUseCase {
   }
 }
 
-// ─── CalculateSessionFeeUseCase ───────────────────────────────────────────────
+// CalculateSessionFeeUseCase
 
 /**
- * Tính chi tiết hóa đơn thực tế sau khi kết thúc phiên sạc.
+ * Calculates actual invoice details after session completion.
  *
  * Billing logic:
- *   1. Lookup pricing rule tại thời điểm startTime (TOU — Time Of Use)
+ *   1. Look up pricing rule at startTime (TOU — Time Of Use)
  *   2. energyFee = kwhConsumed × pricePerKwh
  *   3. idleFee   = max(0, idleMinutes - idleGraceMinutes) × idleFeePerMinute
  *   4. totalFee  = energyFee + idleFee
  *
- * Chú ý: idle_grace_minutes và idle_fee_per_minute do Admin cấu hình trong
- * pricing_rules — không hardcode.
+ * Note: idle_grace_minutes and idle_fee_per_minute are configured by Admin in
+ * pricing_rules — not hardcoded.
  */
 @Injectable()
 export class CalculateSessionFeeUseCase {
@@ -231,9 +231,9 @@ export class CalculateSessionFeeUseCase {
     chargerId:     string;
     stationId:     string;
     connectorType: string;
-    startTime:     Date;   // thời điểm bắt đầu sạc (dùng để lookup TOU rule)
-    kwhConsumed:   number; // kWh thực tế tiêu thụ
-    idleMinutes:   number; // phút chiếm dụng sau khi sạc đầy (từ OCPP event)
+    startTime:     Date;   // charging start time (used for TOU rule lookup)
+    kwhConsumed:   number; // actual kWh consumed
+    idleMinutes:   number; // minutes of occupancy after full charge (from OCPP event)
   }): Promise<SessionFeeBreakdown> {
     const charger = await this.chargerRepo.findOne({
       where: { id: opts.chargerId, stationId: opts.stationId },
@@ -309,11 +309,11 @@ export class CalculateSessionFeeUseCase {
   }
 }
 
-// ─── UpsertPricingRuleUseCase (Admin) ─────────────────────────────────────────
+// UpsertPricingRuleUseCase (Admin)
 
 /**
- * Admin tạo hoặc cập nhật một pricing rule.
- * Không bao giờ xóa rule cũ — chỉ set valid_to để deactivate.
+ * Admin creates or updates a pricing rule.
+ * Never deletes old rules — only sets valid_to for deactivation.
  */
 @Injectable()
 export class UpsertPricingRuleUseCase {
@@ -323,7 +323,7 @@ export class UpsertPricingRuleUseCase {
   ) {}
 
   async execute(dto: {
-    id?:                string;   // nếu có → update, không → create
+    id?:                string;   // if present: update, otherwise: create
     stationId:          string;
     connectorType:      string;
     validFrom:          Date;
@@ -331,10 +331,10 @@ export class UpsertPricingRuleUseCase {
     hourStart?:         number;
     hourEnd?:           number;
     dayMask?:           number;
-    pricePerKwh:        number;   // VND/kWh (TOU giá mới)
+    pricePerKwh:        number;   // VND/kWh (new TOU rate)
     pricePerMinute?:    number;
-    idleGraceMinutes?:  number;   // phút miễn phí idle (default 20)
-    idleFeePerMinute?:  number;   // VND/phút idle (default 1000)
+    idleGraceMinutes?:  number;   // free idle minutes (default 20)
+    idleFeePerMinute?:  number;   // VND/minute idle (default 1,000)
     label?:             string;
     currency?:          string;
   }): Promise<PricingRuleOrmEntity> {
@@ -362,7 +362,7 @@ export class UpsertPricingRuleUseCase {
   }
 }
 
-// ─── DeactivatePricingRuleUseCase (Admin) ─────────────────────────────────────
+// DeactivatePricingRuleUseCase (Admin)
 
 @Injectable()
 export class DeactivatePricingRuleUseCase {
@@ -376,7 +376,7 @@ export class DeactivatePricingRuleUseCase {
   }
 }
 
-// ─── ListPricingRulesUseCase ──────────────────────────────────────────────────
+// ListPricingRulesUseCase
 
 @Injectable()
 export class ListPricingRulesUseCase {

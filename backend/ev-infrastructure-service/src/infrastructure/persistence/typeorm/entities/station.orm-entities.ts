@@ -3,8 +3,8 @@ import {
   ManyToOne, OneToMany, JoinColumn, Index, Check,
 } from 'typeorm';
 
-// â”€â”€â”€ cities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF fix: tÃ¡ch khá»i stations, FD: city_id â†’ {city_name, region, country_code}
+// cities
+// BCNF fix: separated from stations, FD: city_id -> {city_name, region, country_code}
 
 @Entity('cities')
 export class CityOrmEntity {
@@ -24,8 +24,8 @@ export class CityOrmEntity {
   stations: StationOrmEntity[];
 }
 
-// â”€â”€â”€ stations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: station_id â†’ {name, address, city_id, lat, lng, status, owner_id, owner_name}
+// stations
+// BCNF: station_id -> {name, address, city_id, lat, lng, status, owner_id, owner_name}
 
 @Entity('stations')
 @Index('idx_sta_city',   ['cityId'])
@@ -86,8 +86,8 @@ export class StationOrmEntity {
   pricingRules: PricingRuleOrmEntity[];
 }
 
-// â”€â”€â”€ charging_points â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: cp_id â†’ {station_id, name, external_id, max_power_kw, status}
+// charging_points
+// BCNF: cp_id -> {station_id, name, external_id, max_power_kw, status}
 
 @Entity('charging_points')
 @Index('idx_cp_station', ['stationId'])
@@ -129,8 +129,8 @@ export class ChargingPointOrmEntity {
   connectors: ConnectorOrmEntity[];
 }
 
-// â”€â”€â”€ connectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// BCNF: connector_id â†’ {cp_id, connector_type, max_power_kw}
+// connectors
+// BCNF: connector_id -> {cp_id, connector_type, max_power_kw}
 // (cp_id, connector_type) is candidate key
 
 @Entity('connectors')
@@ -157,7 +157,7 @@ export class ConnectorOrmEntity {
   chargingPoint: ChargingPointOrmEntity;
 }
 
-// â”€â”€â”€ pricing_rules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// pricing_rules
 // BCNF: price depends on (station, connector_type, time_window)
 // NOT per-charger
 
@@ -199,17 +199,17 @@ export class PricingRuleOrmEntity {
   pricePerMinute: number | null;
 
   /**
-   * Idle Fee (Phí chiếm dụng trụ sạc sau khi sạc đầy)
-   * VinFast standard: 15–30 phút miễn phí, sau đó phạt theo phút.
-   * Admin có thể thay đổi giá trị này bất kỳ lúc nào.
+   * Idle Fee (Occupancy fee after full charge)
+   * VinFast standard: 15–30 free minutes, then penalty per minute.
+   * Admin can change these values at any time.
    */
   @Column({ name: 'idle_grace_minutes', type: 'smallint', default: 20 })
-  idleGraceMinutes: number;   // Số phút miễn phí sau khi sạc đầy (default 20 phút)
+  idleGraceMinutes: number;   // Free minutes after full charge (default: 20 minutes)
 
   @Column({ name: 'idle_fee_per_minute', type: 'numeric', precision: 10, scale: 2, default: 1000 })
-  idleFeePerMinute: number;   // VND/phút khi vượt quá grace period (default 1.000 VND/phút)
+  idleFeePerMinute: number;   // VND/minute when grace period is exceeded (default: 1,000 VND/minute)
 
-  /** Label cho Admin UI (ví dụ: 'Cao điểm sáng', 'Thấp điểm đêm') */
+  /** Label for Admin UI (e.g., 'Morning Peak', 'Night Off-peak') */
   @Column({ type: 'varchar', length: 100, nullable: true })
   label: string | null;
 
@@ -224,7 +224,7 @@ export class PricingRuleOrmEntity {
   station: StationOrmEntity;
 }
 
-// â”€â”€â”€ station_maintenance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// station_maintenance
 
 @Entity('station_maintenance')
 @Index('idx_maint_station', ['stationId', 'startTime'])
@@ -256,7 +256,7 @@ export class MaintenanceOrmEntity {
   station: StationOrmEntity;
 }
 
-// â”€â”€â”€ station_incidents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// station_incidents
 
 @Entity('station_incidents')
 @Index('idx_inc_station', ['stationId', 'status'])
@@ -304,7 +304,7 @@ export class IncidentOrmEntity {
   station: StationOrmEntity;
 }
 
-// â”€â”€â”€ processed_events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
@@ -318,7 +318,7 @@ export class ProcessedEventOrmEntity {
   processedAt: Date;
 }
 
-// â”€â”€â”€ event_outbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// event_outbox
 
 @Entity('event_outbox')
 @Index('idx_outbox_pending', ['status', 'createdAt'], { where: `status = 'pending'` })

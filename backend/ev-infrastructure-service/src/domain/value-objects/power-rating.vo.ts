@@ -1,7 +1,7 @@
 import { InvalidChargerDataException } from '../exceptions/station.exceptions';
 
 /**
- * PowerRating Value Object — kW capacity của charger/connector
+ * PowerRating Value Object — kW capacity of the charger/connector
  * Invariant: value MUST be > 0
  */
 export class PowerRating {

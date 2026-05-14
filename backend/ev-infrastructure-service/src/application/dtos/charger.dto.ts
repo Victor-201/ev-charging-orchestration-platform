@@ -5,7 +5,7 @@ import {
 import { Type } from 'class-transformer';
 import { ConnectorType, ChargerStatus } from '../../domain/entities/charger.aggregate';
 
-// ─── Connector Spec (nested trong AddChargerDto) ──────────────────────────────
+// Connector Spec (nested within AddChargerDto)
 
 export class ConnectorSpecDto {
   @IsEnum(ConnectorType)
@@ -18,7 +18,7 @@ export class ConnectorSpecDto {
   maxPowerKw?: number;
 }
 
-// ─── Add Charger ──────────────────────────────────────────────────────────────
+// Add Charger
 
 export class AddChargerDto {
   @IsString()
@@ -44,7 +44,7 @@ export class AddChargerDto {
   connectors?: ConnectorSpecDto[];
 }
 
-// ─── Update Charger Status ────────────────────────────────────────────────────
+// Update Charger Status
 
 export class UpdateChargerStatusDto {
   @IsEnum(ChargerStatus)

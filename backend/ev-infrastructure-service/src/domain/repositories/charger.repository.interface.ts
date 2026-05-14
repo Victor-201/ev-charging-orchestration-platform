@@ -11,21 +11,21 @@ export interface ChargerFilter {
 }
 
 export interface IChargerRepository {
-  /** Find by PK với connectors loaded */
+  /** Finds by primary key with connectors loaded */
   findById(id: string): Promise<Charger | null>;
 
-  /** Find all chargers của một station */
+  /** Finds all chargers associated with a specific station */
   findByStationId(stationId: string): Promise<Charger[]>;
 
-  /** Check externalId tồn tại (OCPP chargepoint_id) */
+  /** Checks if an externalId (OCPP chargepoint_id) already exists */
   existsByExternalId(externalId: string, excludeId?: string): Promise<boolean>;
 
-  /** Count active chargers (không offline/faulted) */
+  /** Counts active chargers (excluding offline/faulted states) */
   countByStation(stationId: string): Promise<number>;
 
-  /** Save (INSERT hoặc UPDATE) */
+  /** Saves the charger (INSERT or UPDATE) */
   save(charger: Charger, manager?: EntityManager): Promise<void>;
 
-  /** Soft update status — ghi status + updatedAt */
+  /** Soft update of status — updates status and updatedAt timestamp */
   updateStatus(chargerId: string, status: ChargerStatus, manager?: EntityManager): Promise<void>;
 }

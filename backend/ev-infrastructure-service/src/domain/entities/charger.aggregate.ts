@@ -7,7 +7,7 @@ import {
 import { PowerRating } from '../value-objects/power-rating.vo';
 
 /**
- * ConnectorType — align CHÍNH XÁC với SQL ENUM connector_type
+ * ConnectorType — EXACTLY aligned with SQL ENUM connector_type
  * DO NOT change — these values are stored in DB
  */
 export enum ConnectorType {
@@ -19,8 +19,8 @@ export enum ConnectorType {
 }
 
 /**
- * ChargerStatus — align với SQL ENUM charger_status
- * DO NOT add MAINTENANCE — không có trong SQL
+ * ChargerStatus — aligned with SQL ENUM charger_status
+ * DO NOT add MAINTENANCE — not present in SQL
  */
 export enum ChargerStatus {
   AVAILABLE = 'available',
@@ -31,8 +31,8 @@ export enum ChargerStatus {
 }
 
 /**
- * Connector Value — ports của một ChargePoint
- * Mỗi charging_point có thể có nhiều connector types
+ * Connector Value — ports of a ChargePoint
+ * Each charging_point can have multiple connector types
  */
 export interface ConnectorProps {
   id: string;
@@ -48,7 +48,7 @@ export interface ConnectorProps {
  * - maxPowerKw > 0
  * - status transitions follow FSM
  * - belongs to exactly ONE station
- * Aligned với: charging_points table in station_db.sql
+ * Aligned with: charging_points table in station_db.sql
  */
 export class Charger {
   readonly id: string;
@@ -62,7 +62,7 @@ export class Charger {
   private _connectors: ConnectorProps[];
   private _domainEvents: DomainEvent[] = [];
 
-  // ─── Status FSM ──────────────────────────────────────────────────────────────
+  // Status FSM
   // available → in_use, reserved, offline, faulted
   // in_use    → available, faulted, offline
   // reserved  → available, in_use, offline
@@ -98,10 +98,10 @@ export class Charger {
     this._updatedAt = props.updatedAt ?? new Date();
   }
 
-  // ─── Factory Methods ─────────────────────────────────────────────────────────
+  // Factory Methods
 
   /**
-   * Tạo mới charger — validate và emit ChargerAddedEvent
+   * Creates a new charger — validates and emits ChargerAddedEvent
    */
   static create(props: {
     stationId: string;
@@ -141,7 +141,7 @@ export class Charger {
   }
 
   /**
-   * Reconstitute từ persistence — không phát domain events
+   * Reconstitutes from persistence — does not emit domain events
    */
   static reconstitute(props: {
     id: string;
@@ -157,7 +157,7 @@ export class Charger {
     return new Charger(props);
   }
 
-  // ─── Domain Behaviors ────────────────────────────────────────────────────────
+  // Domain Behaviors
 
   /**
    * FSM-validated status transition
@@ -177,7 +177,7 @@ export class Charger {
 
   isAvailable(): boolean { return this._status === ChargerStatus.AVAILABLE; }
 
-  // ─── Getters ─────────────────────────────────────────────────────────────────
+  // Getters
 
   get status(): ChargerStatus      { return this._status; }
   get updatedAt(): Date            { return this._updatedAt; }

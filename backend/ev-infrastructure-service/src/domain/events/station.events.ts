@@ -14,7 +14,7 @@ export abstract class DomainEvent {
   }
 }
 
-// ─── Station Events ───────────────────────────────────────────────────────────
+// Station Events
 
 export class StationCreatedEvent extends DomainEvent {
   readonly eventType = 'station.created';
@@ -56,7 +56,7 @@ export class StationMaintenanceScheduledEvent extends DomainEvent {
   ) { super(); }
 }
 
-// ─── Charger Events ───────────────────────────────────────────────────────────
+// Charger Events
 
 export class ChargerAddedEvent extends DomainEvent {
   readonly eventType = 'charger.added';

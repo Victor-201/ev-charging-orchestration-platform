@@ -1,4 +1,16 @@
-﻿import { LoggerModule }     from 'nestjs-pino';
+/**
+ * EV Infrastructure Service - Management of Charging Stations and Assets
+ *
+ * Responsibility:
+ * - Inventory of charging stations, points, and connectors
+ * - Real-time status tracking of infrastructure assets
+ * - Pricing rules and maintenance scheduling
+ * - Geographic data management (Cities, Regions)
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Events), Redis (Caching)
+ */
+import { LoggerModule }     from 'nestjs-pino';
 import { Module }           from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -44,6 +56,9 @@ import { StationModule }   from './modules/station/station.module';
           PricingRuleOrmEntity, MaintenanceOrmEntity, IncidentOrmEntity,
           ProcessedEventOrmEntity, OutboxOrmEntity,
         ],
+        migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
+        migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    15,

@@ -11,9 +11,17 @@ import {
   AddChargerUseCase, UpdateChargerStatusUseCase,
   GetChargersUseCase, GetCitiesUseCase,
 } from '../../application/use-cases/station.use-cases';
-import { GetPricingUseCase, CalculateSessionFeeUseCase, UpsertPricingRuleUseCase, DeactivatePricingRuleUseCase, ListPricingRulesUseCase } from '../../application/use-cases/pricing.use-case';
-import { CreateStationDto, UpdateStationDto, ListStationsQueryDto } from '../../application/dtos/station.dto';
-import { AddChargerDto, UpdateChargerStatusDto } from '../../application/dtos/charger.dto';
+import {
+  GetPricingUseCase, CalculateSessionFeeUseCase,
+  UpsertPricingRuleUseCase, DeactivatePricingRuleUseCase,
+  ListPricingRulesUseCase
+} from '../../application/use-cases/pricing.use-case';
+import {
+  CreateStationDto, UpdateStationDto, ListStationsQueryDto
+} from '../../application/dtos/station.dto';
+import {
+  AddChargerDto, UpdateChargerStatusDto
+} from '../../application/dtos/charger.dto';
 import {
   StationNotFoundException, ChargerNotFoundException, CityNotFoundException,
   DuplicateGeoLocationException, DuplicateExternalIdException,
@@ -27,18 +35,18 @@ import { Roles, Public } from '../../shared/decorators/roles.decorator';
 import type { AuthenticatedUser }   from '../../shared/guards/jwt-auth.guard';
 
 /**
- * StationController Ã¢â‚¬â€ Auth policy:
+ * StationController — Auth policy:
  *
- *   GET  /stations            Ã¢â€ â€™ @Public  (ai cÃ…Â©ng xem Ã„â€˜Ã†Â°Ã¡Â»Â£c)
- *   GET  /stations/nearby     Ã¢â€ â€™ @Public
- *   GET  /stations/cities     Ã¢â€ â€™ @Public
- *   GET  /stations/:id        Ã¢â€ â€™ @Public
- *   GET  /:id/chargers        Ã¢â€ â€™ @Public
+ *   GET  /stations            → @Public  (Accessible to everyone)
+ *   GET  /stations/nearby     → @Public
+ *   GET  /stations/cities     → @Public
+ *   GET  /stations/:id        → @Public
+ *   GET  /:id/chargers        → @Public
  *
- *   POST /stations            Ã¢â€ â€™ @Roles('admin')          (chÃ¡Â»â€° admin tÃ¡ÂºÂ¡o trÃ¡ÂºÂ¡m)
- *   PATCH /stations/:id       Ã¢â€ â€™ @Roles('admin')          (chÃ¡Â»â€° admin sÃ¡Â»Â­a trÃ¡ÂºÂ¡m)
- *   POST /:id/chargers        Ã¢â€ â€™ @Roles('admin', 'staff') (thÃƒÂªm charger)
- *   PATCH /:id/chargers/status Ã¢â€ â€™ @Roles('admin','staff') (thay Ã„â€˜Ã¡Â»â€¢i status charger)
+ *   POST /stations            → @Roles('admin')          (Admin only: station creation)
+ *   PATCH /stations/:id       → @Roles('admin')          (Admin only: station modification)
+ *   POST /:id/chargers        → @Roles('admin', 'staff') (Admin/Staff: add charger)
+ *   PATCH /:id/chargers/status → @Roles('admin','staff') (Admin/Staff: update charger status)
  */
 @Controller('stations')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -59,8 +67,6 @@ export class StationController {
     private readonly deactivateRule:      DeactivatePricingRuleUseCase,
     private readonly listPricingRules:    ListPricingRulesUseCase,
   ) {}
-
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Public Read Endpoints Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   @Get()
   @Public()
@@ -99,12 +105,10 @@ export class StationController {
     return this.handleDomainErrors(() => this.getChargers.execute(stationId));
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Admin/Staff Write Endpoints Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
   /**
    * POST /api/v1/stations
-   * ChÃ¡Â»â€° admin Ã„â€˜Ã†Â°Ã¡Â»Â£c tÃ¡ÂºÂ¡o trÃ¡ÂºÂ¡m mÃ¡Â»â€ºi.
-   * ownerId inject tÃ¡Â»Â« JWT Ã¢â‚¬â€ khÃƒÂ´ng trust body.
+   * Admin only: Creates a new charging station.
+   * ownerId is verified from JWT token.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -119,7 +123,7 @@ export class StationController {
 
   /**
    * PATCH /api/v1/stations/:id
-   * ChÃ¡Â»â€° admin Ã„â€˜Ã†Â°Ã¡Â»Â£c sÃ¡Â»Â­a thÃƒÂ´ng tin trÃ¡ÂºÂ¡m.
+   * Admin only: Updates existing station details.
    */
   @Patch(':id')
   @Roles('admin')
@@ -132,7 +136,7 @@ export class StationController {
 
   /**
    * POST /api/v1/stations/:stationId/chargers
-   * Admin/staff thÃƒÂªm charger vÃƒÂ o trÃ¡ÂºÂ¡m.
+   * Admin/Staff: Adds a charger to a station.
    */
   @Post(':stationId/chargers')
   @HttpCode(HttpStatus.CREATED)
@@ -146,7 +150,7 @@ export class StationController {
 
   /**
    * PATCH /api/v1/stations/:stationId/chargers/:chargerId/status
-   * Admin/staff cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t trÃ¡ÂºÂ¡ng thÃƒÂ¡i charger.
+   * Admin/Staff: Updates the operational status of a charger.
    */
   @Patch(':stationId/chargers/:chargerId/status')
   @Roles('admin', 'staff')
@@ -157,18 +161,16 @@ export class StationController {
     return this.handleDomainErrors(() => this.updateChargerStatus.execute(chargerId, body));
   }
 
-  // â”€â”€â”€ Pricing Endpoint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   /**
    * GET /api/v1/stations/:stationId/chargers/:chargerId/pricing
-   * @Public â€” booking-service vÃ  frontend Ä‘á»u cÃ³ thá»ƒ gá»i
+   * Public: Provides pricing quotes for sessions.
    *
    * Query:
-   *   connectorType  : string (required) â€” CCS | CHAdeMO | Type2 | GB/T
-   *   startTime      : ISO string (required)
-   *   endTime        : ISO string (required)
+   *   connectorType : string (required) — e.g., CCS, Type2
+   *   startTime     : ISO string (required)
+   *   endTime       : ISO string (required)
    *
-   * Response: PricingQuote (giÃ¡, tiá»n cá»c Ä‘á» xuáº¥t, isPeakHour)
+   * Response: PricingQuote including estimated fees and peak hour status.
    */
   @Get(':stationId/chargers/:chargerId/pricing')
   @Public()
@@ -180,12 +182,12 @@ export class StationController {
     @Query('endTime')       endTimeStr:    string,
   ) {
     if (!connectorType || !startTimeStr || !endTimeStr) {
-      throw new BadRequestException('connectorType, startTime, endTime Ä‘á»u báº¯t buá»™c');
+      throw new BadRequestException('connectorType, startTime, and endTime are required');
     }
     const startTime = new Date(startTimeStr);
     const endTime   = new Date(endTimeStr);
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-      throw new BadRequestException('startTime / endTime khÃ´ng há»£p lá»‡ (pháº£i Ä‘Ãºng ISO 8601)');
+      throw new BadRequestException('Invalid startTime/endTime format (must be ISO 8601)');
     }
     return this.handleDomainErrors(() =>
       this.getPricing.execute({ stationId, chargerId, connectorType, startTime, endTime }),
@@ -194,9 +196,8 @@ export class StationController {
 
   /**
    * POST /api/v1/stations/:stationId/chargers/:chargerId/pricing/calculate-session-fee
-   * Internal endpoint â€” billing-service gá»i sau khi session káº¿t thÃºc.
-   * TÃ­nh energyFeeVnd + idleFeeVnd tá»« kWh vÃ  idleMinutes thá»±c táº¿.
-   * @Public vÃ¬ billing-service khÃ´ng cÃ³ JWT user context khi consume event
+   * Internal: Used by billing-service to calculate final session costs.
+   * Computes energyFeeVnd and idleFeeVnd based on actual consumption.
    */
   @Post(':stationId/chargers/:chargerId/pricing/calculate-session-fee')
   @HttpCode(HttpStatus.OK)
@@ -206,16 +207,16 @@ export class StationController {
     @Param('chargerId',  ParseUUIDPipe) chargerId:  string,
     @Body() body: {
       connectorType: string;
-      startTime:     string;   // ISO â€” dÃ¹ng Ä‘á»ƒ lookup TOU rule
+      startTime:     string;   // ISO string used for TOU rule lookup
       kwhConsumed:   number;
-      idleMinutes:   number;   // phÃºt chiáº¿m dá»¥ng sau khi sáº¡c Ä‘áº§y (0 náº¿u khÃ´ng cÃ³)
+      idleMinutes:   number;   // Minutes spent occupying the stall after full charge
     },
   ) {
     if (!body.connectorType || !body.startTime) {
-      throw new BadRequestException('connectorType vÃ  startTime báº¯t buá»™c');
+      throw new BadRequestException('connectorType and startTime are required');
     }
     const startTime = new Date(body.startTime);
-    if (isNaN(startTime.getTime())) throw new BadRequestException('startTime khÃ´ng há»£p lá»‡');
+    if (isNaN(startTime.getTime())) throw new BadRequestException('Invalid startTime format');
     return this.calcSessionFee.execute({
       chargerId,
       stationId,
@@ -226,11 +227,9 @@ export class StationController {
     });
   }
 
-  // â”€â”€â”€ Admin: Pricing Rules CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   /**
    * GET /api/v1/stations/pricing-rules?stationId=&activeOnly=true
-   * Admin xem toÃ n bá»™ pricing rules (TOU + idle fee).
+   * Admin/Staff: Lists configured pricing rules (TOU + Idle fees).
    */
   @Get('pricing-rules')
   @Roles('admin', 'staff')
@@ -246,8 +245,7 @@ export class StationController {
 
   /**
    * POST /api/v1/stations/pricing-rules
-   * Admin táº¡o pricing rule má»›i (TOU tier má»›i hoáº·c thay Ä‘á»•i idle fee).
-   * Body cho phÃ©p thay Ä‘á»•i pricePerKwh, idleGraceMinutes, idleFeePerMinute tá»± do.
+   * Admin: Creates or updates pricing rules (TOU tiers or idle fee changes).
    */
   @Post('pricing-rules')
   @HttpCode(HttpStatus.CREATED)
@@ -275,7 +273,7 @@ export class StationController {
 
   /**
    * Patch /api/v1/stations/pricing-rules/:ruleId
-   * Admin cáº­p nháº­t pricing rule (thay Ä‘á»•i giÃ¡, idle fee, grace period).
+   * Admin: Updates existing pricing rule parameters.
    */
   @Patch('pricing-rules/:ruleId')
   @Roles('admin')
@@ -305,9 +303,9 @@ export class StationController {
   }
 
   /**
-   * DELETE /api/v1/stations/pricing-rules/:ruleId
-   * Admin vÃ´ hiá»‡u hÃ³a pricing rule (set valid_to = NOW()).
-   * KhÃ´ng xÃ³a váº­t lÃ½ Ä‘á»ƒ giá»¯ lá»‹ch sá»­.
+   * DELETE /api/v1/stations/pricing-rules/:ruleId/deactivate
+   * Admin: Deactivates a pricing rule by setting expiration to current time.
+   * Soft-deactivation only to preserve audit trail.
    */
   @Patch('pricing-rules/:ruleId/deactivate')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -315,8 +313,6 @@ export class StationController {
   async deactivateRuleEndpoint(@Param('ruleId', ParseUUIDPipe) ruleId: string) {
     await this.deactivateRule.execute(ruleId);
   }
-
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Error Mapper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   private async handleDomainErrors<T>(fn: () => Promise<T>): Promise<T> {
     try {
@@ -335,4 +331,3 @@ export class StationController {
     }
   }
 }
-

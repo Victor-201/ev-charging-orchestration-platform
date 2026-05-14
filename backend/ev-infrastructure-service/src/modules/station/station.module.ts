@@ -28,7 +28,7 @@ import { ChargerStatusConsumer } from '../../infrastructure/messaging/consumers/
 import { Cron } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
 
-// ─── SLA Cron Scheduler ───────────────────────────────────────────────────────
+// SLA Cron Scheduler
 
 @Injectable()
 class SlaScheduler {
@@ -42,7 +42,7 @@ class SlaScheduler {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Module({
   imports: [

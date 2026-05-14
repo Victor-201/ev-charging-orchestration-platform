@@ -1,11 +1,11 @@
 import {
   IsString, IsNotEmpty, IsUUID, IsNumber, IsOptional,
-  Min, Max, MinLength, MaxLength, IsEnum,
+  Min, Max, MinLength, MaxLength, IsEnum, Allow,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Expose } from 'class-transformer';
 import { StationStatus } from '../../domain/entities/station.aggregate';
 
-// ─── Create Station ───────────────────────────────────────────────────────────
+// Create Station
 
 export class CreateStationDto {
   @IsString()
@@ -44,7 +44,7 @@ export class CreateStationDto {
   ownerName?: string;
 }
 
-// ─── Update Station ───────────────────────────────────────────────────────────
+// Update Station
 
 export class UpdateStationDto {
   @IsOptional()
@@ -63,7 +63,7 @@ export class UpdateStationDto {
   status?: StationStatus;
 }
 
-// ─── List Stations Query ──────────────────────────────────────────────────────
+// List Stations Query
 
 export class ListStationsQueryDto {
   @IsOptional()
@@ -96,15 +96,22 @@ export class ListStationsQueryDto {
   radiusKm?: number;
 
   @IsOptional()
+  @Allow()
+  @Expose()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(100)
   @Type(() => Number)
-  limit?: number = 20;
+  limit?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  offset?: number = 0;
+  offset?: number;
 }
