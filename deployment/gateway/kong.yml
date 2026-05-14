@@ -38,6 +38,7 @@ plugins:
         - X-Request-ID
         - X-Correlation-ID
         - Idempotency-Key
+        - ngrok-skip-browser-warning
       exposed_headers:
         - X-Correlation-ID
         - X-Request-ID
