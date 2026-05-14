@@ -8,11 +8,11 @@ import { CreatePaymentUseCase } from '../../../application/use-cases/payment.use
 /**
  * BookingConfirmedConsumer
  *
- * Lắng nghe event booking.confirmed → tự động tạo payment intent (transaction pending).
- * Idempotent: dựa vào processed_events để ngăn double-processing.
+ * Listens for booking.confirmed events — automatically prepares the payment intent (pending transaction).
+ * Idempotent: utilizes processed_events to prevent double-processing.
  *
- * Lưu ý: KHÔNG tạo payment URL ở đây — user phải gọi POST /payments/create
- * với bookingId để lấy VNPay URL. Consumer chỉ pre-create transaction record.
+ * Note: Does NOT generate the payment URL here — the user must invoke POST /payments/create
+ * with a bookingId to obtain the VNPay URL. This consumer only pre-creates the transaction record.
  */
 @Injectable()
 export class BookingConfirmedConsumer {
@@ -39,7 +39,7 @@ export class BookingConfirmedConsumer {
   }): Promise<void> {
     const eventId = payload.eventId ?? `booking.confirmed:${payload.bookingId}`;
 
-    // ── Idempotency guard ─────────────────────────────────────────────────────
+    // Idempotency guard
     const exists = await this.processedRepo.existsBy({ eventId });
     if (exists) {
       this.logger.debug(`Duplicate booking.confirmed event ${eventId}, skipping`);

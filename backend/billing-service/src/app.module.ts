@@ -1,4 +1,16 @@
-﻿import { LoggerModule } from 'nestjs-pino';
+/**
+ * Billing Service - Financial Transactions and Invoicing
+ *
+ * Responsibility:
+ * - Wallet management (Balance, Top-up)
+ * - Transaction processing and ledgering
+ * - Invoice generation for charging sessions
+ * - Subscription and plan management
+ *
+ * Architecture: NestJS with TypeORM (PostgreSQL)
+ * Communication: REST API, RabbitMQ (Events), Redis (Caching)
+ */
+import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 // @ts-ignore from '@nestjs/common';
@@ -34,6 +46,9 @@ import { PaymentModule } from './modules/payment/payment.module';
           InvoiceOrmEntity, ProcessedEventOrmEntity, OutboxOrmEntity,
           UserReadModelOrmEntity, SubscriptionOrmEntity, PlanOrmEntity,
         ],
+        migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
+        migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
+        migrationsTableName: 'typeorm_migrations',
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    20,

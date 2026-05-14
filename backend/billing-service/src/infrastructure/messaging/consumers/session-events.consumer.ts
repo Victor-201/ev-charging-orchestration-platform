@@ -33,18 +33,18 @@ import {
 } from '../../persistence/typeorm/entities/payment.orm-entities';
 import { Inject } from '@nestjs/common';
 
-// ─── SessionReservedConsumer ──────────────────────────────────────────
+// SessionReservedConsumer
 
 /**
- * Lắng nghe booking.deposit_requested từ Booking Service.
+ * Listens for booking.deposit_requested from the Booking Service.
  *
- * Tự động trừ tiền cọc từ Ví của user:
- * 1. Kiểm tra số dư ví ≥ depositAmount
- * 2. Nếu đủ → trừ ví, tạo Transaction completed → emit PaymentCompletedEvent
- * 3. Nếu không đủ → emit PaymentFailedEvent → Booking Service sẽ expire booking
+ * Automatically deducts the deposit from the User's Wallet:
+ * 1. Verifies that the wallet balance is greater than or equal to the depositAmount.
+ * 2. If sufficient funds exist: deducts from the wallet, creates a completed Transaction, and emits a PaymentCompletedEvent.
+ * 3. If funds are insufficient: emits a PaymentFailedEvent, which triggers the Booking Service to expire the booking.
  *
- * PaymentCompletedEvent có relatedType='booking' → Booking Service lắng nghe
- * → tự động confirmWithPayment() → sinh QR Token.
+ * PaymentCompletedEvent with relatedType='booking' is consumed by the Booking Service.
+ * Triggers automatic confirmWithPayment() and generates a QR Token.
  */
 @Injectable()
 export class SessionReservedConsumer {
@@ -128,14 +128,14 @@ export class SessionReservedConsumer {
   }
 }
 
-// ─── BookingCancelledConsumer ─────────────────────────────────────────────────
+// BookingCancelledConsumer
 
 /**
- * Lắng nghe booking.cancelled từ Booking Service.
+ * Listens for booking.cancelled from the Booking Service.
  *
- * Hoàn trả 100% tiền cọc trực tiếp vào ví (không phải về VNPay):
- * - Dù user ban đầu thanh toán qua VNPay hay ví → luôn hoàn về ví
- * - Giữ tiền trong hệ sinh thái app
+ * Refunds 100% of the deposit directly to the wallet:
+ * - Whether the initial payment was made via VNPay or the wallet, the refund is always credited to the wallet.
+ * - Keeps funds within the application's ecosystem.
  */
 @Injectable()
 export class BookingCancelledConsumer {
@@ -179,7 +179,6 @@ export class BookingCancelledConsumer {
         return;
       }
 
-      // Tạo Transaction refund
       const refundTxn = Transaction.create({
         userId:      payload.userId,
         type:        'refund',
@@ -191,7 +190,6 @@ export class BookingCancelledConsumer {
       });
       await this.txRepo.save(refundTxn, manager);
 
-      // Hoàn tiền vào ví
       await this.walletRepo.credit(wallet.id, refundTxn.id, payload.refundAmount, manager);
       refundTxn.complete();
       await this.txRepo.save(refundTxn, manager);
@@ -212,14 +210,14 @@ export class BookingCancelledConsumer {
   }
 }
 
-// ─── BookingNoShowConsumer ────────────────────────────────────────────────────
+// BookingNoShowConsumer
 
 /**
- * Lắng nghe booking.no_show từ Booking Service.
+ * Listens for booking.no_show from the Booking Service.
  *
- * Xử lý phạt No-Show:
- * 1. Trừ phí phạt (đã được tính trong aggregate = 20% deposit)
- * 2. Hoàn phần còn lại (80%) vào ví
+ * Processes No-Show penalties:
+ * 1. Deducts the penalty fee (pre-calculated in the aggregate as 20% of the deposit).
+ * 2. Refunds the remaining 80% to the wallet.
  */
 @Injectable()
 export class BookingNoShowConsumer {
@@ -260,7 +258,6 @@ export class BookingNoShowConsumer {
       const wallet = await this.walletRepo.findByUserId(payload.userId);
       if (!wallet) return;
 
-      // Hoàn phần refund vào ví (penalty đã bị trừ trong deposit)
       if (payload.refundAmount > 0) {
         const refundTxn = Transaction.create({
           userId:      payload.userId,
@@ -298,29 +295,24 @@ export class BookingNoShowConsumer {
   }
 }
 
-// ─── SessionCompletedBillingConsumer (Billing Reconciliation) ───────────────────────
+// SessionCompletedBillingConsumer (Billing Reconciliation)
 
 /**
- * Lắng nghe session.completed từ session-service (sau khi OCPP gửi StopTransaction).
+ * Listens for session.completed from the session-service (after OCPP transmits StopTransaction).
  *
  * Flow:
- *   1. Gọi ev-infrastructure-service để tính phí chính xác (TOU + Idle Fee)
- *   2. So sánh với tiền cọc đã giữ
- *   3. Case 1: totalFee < deposit → Hoàn phần dư vào ví + emit RefundIssuedEvent
- *   4. Case 2: totalFee > deposit → Trừ thêm từ ví + emit ExtraChargeDebitedEvent
- *      Nếu ví không đủ → ghi nợ (arrears) + khóa tài khoản
- *   5. Nếu idleFeeVnd > 0 → emit IdleFeeChargedEvent (notification riêng)
- *   6. Tạo Invoice tổng hóa đơn
- *
- * Pricing self-computed tại billing-service (không tin upstream):
- *   - Gọi POST /api/v1/stations/:stationId/chargers/:chargerId/pricing/calculate-session-fee
- *   - Nhận: { energyFeeVnd, idleFeeVnd, totalFeeVnd, ... }
+ *   1. Calls the ev-infrastructure-service to calculate the exact fees (TOU + Idle Fee).
+ *   2. Compares the total fee with the held deposit.
+ *   3. Case 1: totalFee < deposit — Refunds the surplus to the wallet and emits a RefundIssuedEvent.
+ *   4. Case 2: totalFee > deposit — Deducts additional funds from the wallet and emits an ExtraChargeDebitedEvent.
+ *      If the wallet balance is insufficient: records the debt (arrears) and suspends the account.
+ *   5. If idleFeeVnd > 0: emits an IdleFeeChargedEvent (separate notification).
+ *   6. Generates the final invoice.
  */
 @Injectable()
 export class SessionCompletedBillingConsumer {
   private readonly logger = new Logger(SessionCompletedBillingConsumer.name);
 
-  /** URL nội bộ đến ev-infrastructure-service */
   private readonly infraBaseUrl: string;
 
   constructor(
@@ -335,7 +327,6 @@ export class SessionCompletedBillingConsumer {
     private readonly walletOrmRepo: Repository<WalletOrmEntity>,
     private readonly dataSource: DataSource,
   ) {
-    // Mặc định container network alias; ghi đè bằng EV_INFRA_BASE_URL
     this.infraBaseUrl = process.env['EV_INFRA_BASE_URL'] ?? 'http://ev-infrastructure:3003';
   }
 
@@ -354,8 +345,8 @@ export class SessionCompletedBillingConsumer {
     connectorType: string;
     bookingId?:   string;
     kwhConsumed:  number;
-    idleMinutes:  number;    // phút chiếm dụng sau khi sạc đầy (từ OCPP telemetry)
-    startTime:    string;    // ISO — dùng để lookup TOU pricing rule
+    idleMinutes:  number;
+    startTime:    string;
     depositAmount?: number;
     depositTransactionId?: string;
     durationMinutes: number;
@@ -365,7 +356,6 @@ export class SessionCompletedBillingConsumer {
     if (exists) return;
     await this.peRepo.save({ eventId, eventType: 'session.completed' });
 
-    // ── STEP 1: Tính phí thực tế từ pricing service ──────────────────────────
     let energyFeeVnd = 0;
     let idleFeeVnd   = 0;
     let totalFeeVnd  = 0;
@@ -389,16 +379,15 @@ export class SessionCompletedBillingConsumer {
         `energy=${energyFeeVnd} idle=${idleFeeVnd} total=${totalFeeVnd} rule=${ruleId}`,
       );
     } catch (err) {
-      // Fallback: dùng giá trị upstream nếu pricing service không phản hồi
       this.logger.error(`Pricing API failed — using upstream values: ${err}`);
-      energyFeeVnd = Math.ceil((payload.kwhConsumed ?? 0) * 3_500); // fallback 3.500 VND/kWh
+      energyFeeVnd = Math.ceil((payload.kwhConsumed ?? 0) * 3_500);
       idleFeeVnd   = Math.ceil(Math.max(0, (payload.idleMinutes ?? 0) - 20) * 1_000);
       totalFeeVnd  = energyFeeVnd + idleFeeVnd;
       chargeableIdleMinutes = Math.max(0, (payload.idleMinutes ?? 0) - 20);
     }
 
     const depositAmt = payload.depositAmount ?? 0;
-    const diff       = totalFeeVnd - depositAmt; // + = cần thu thêm, - = hoàn trả
+    const diff       = totalFeeVnd - depositAmt;
 
     this.logger.log(
       `Reconcile session=${payload.sessionId} totalFee=${totalFeeVnd} deposit=${depositAmt} diff=${diff}`,
@@ -413,9 +402,7 @@ export class SessionCompletedBillingConsumer {
 
       const eventsToEmit: any[] = [];
 
-      // ── Xử lý idle fee notification (luôn emit nếu có idle) ──────────────
       if (idleFeeVnd > 0) {
-        // Tạo transaction riêng cho idle fee (để hóa đơn rõ ràng)
         const idleTxn = Transaction.create({
           userId:      payload.userId,
           type:        'payment',
@@ -442,9 +429,7 @@ export class SessionCompletedBillingConsumer {
         ));
       }
 
-      // ── Đối soát tiền cọc vs tổng phí ────────────────────────────────────
       if (diff < -1) {
-        // Hoàn phần dư thừa vào ví
         const refundAmt = Math.abs(diff);
         const refundTxn = Transaction.create({
           userId:      payload.userId,
@@ -465,10 +450,9 @@ export class SessionCompletedBillingConsumer {
           refundAmt, depositAmt, totalFeeVnd, refundTxn.id,
         ));
 
-        this.logger.log(`Hoàn dư: ${refundAmt}VND → ví user=${payload.userId}`);
+        this.logger.log(`Refunded surplus: ${refundAmt}VND to wallet of user=${payload.userId}`);
 
       } else if (diff > 1) {
-        // Thu thêm phần thiếu từ ví
         const balance = await this.walletRepo.getBalance(wallet.id, manager);
 
         if (balance >= diff) {
@@ -492,12 +476,11 @@ export class SessionCompletedBillingConsumer {
             diff, depositAmt, totalFeeVnd, chargeTxn.id,
           ));
 
-          this.logger.log(`Thu thêm: ${diff}VND từ ví user=${payload.userId}`);
+          this.logger.log(`Deducted extra: ${diff}VND from wallet of user=${payload.userId}`);
         } else {
-          // Ví không đủ → ghi nợ, khóa tài khoản
           const arrearsAmount = diff - balance;
           this.logger.error(
-            `Ví không đủ: user=${payload.userId} thiếu=${diff}VND có=${balance}VND — ghi nợ ${arrearsAmount}VND`,
+            `Insufficient funds: user=${payload.userId}, deficit=${diff}VND, balance=${balance}VND — recorded arrears: ${arrearsAmount}VND`,
           );
 
           if (balance > 1) {
@@ -520,14 +503,12 @@ export class SessionCompletedBillingConsumer {
             payload.userId, wallet.id, arrearsAmount, payload.sessionId,
           ));
 
-          // Notify user về nợ
           eventsToEmit.push(new ExtraChargeDebitedEvent(
             payload.sessionId, payload.userId,
             diff, depositAmt, totalFeeVnd, 'arrears',
           ));
         }
       }
-      // Tạo Invoice tổng hóa đơn (nếu chưa có)
       try {
         const invoice2 = manager.create(InvoiceOrmEntity, {
           id:            uuidv4(),
@@ -539,20 +520,16 @@ export class SessionCompletedBillingConsumer {
         });
         await manager.save(invoice2);
       } catch {
-        // unique constraint nếu đã tồn tại — bỏ qua
+        // Ignores unique constraint violations if the invoice already exists.
       }
 
-      // ── Publish tất cả events ─────────────────────────────────────────────
+      // Publish all events.
       if (eventsToEmit.length > 0) {
         await this.eventBus.publishAll(eventsToEmit, manager);
       }
     });
   }
 
-  /**
-   * Gọi ev-infrastructure-service để tính phí thực tế.
-   * Sử dụng native fetch (Node 18+) — không cần thêm dependency.
-   */
   private async fetchSessionFee(payload: {
     chargerId: string;
     stationId: string;
@@ -580,7 +557,7 @@ export class SessionCompletedBillingConsumer {
         kwhConsumed:   payload.kwhConsumed,
         idleMinutes:   payload.idleMinutes,
       }),
-      signal: AbortSignal.timeout(5_000), // 5s timeout
+      signal: AbortSignal.timeout(5_000),
     });
 
     if (!response.ok) {
@@ -591,12 +568,12 @@ export class SessionCompletedBillingConsumer {
   }
 }
 
-// ─── WalletTopupConsumer (tự động cấn trừ nợ) ────────────────────────────────
+// WalletTopupConsumer (automatic debt settlement)
 
 /**
- * Khi user nạp tiền thành công:
- * 1. Nếu user đang có nợ → tự động cấn trừ
- * 2. Nếu nợ = 0 → mở khóa tài khoản (emit WalletArrearsClearedEvent)
+ * When a user successfully tops up:
+ * 1. If the user has outstanding debt: automatically settles it.
+ * 2. If debt is 0: unlocks the account (emits WalletArrearsClearedEvent).
  */
 @Injectable()
 export class WalletTopupArrearsClearConsumer {
@@ -628,28 +605,14 @@ export class WalletTopupArrearsClearConsumer {
     if (exists) return;
     await this.peRepo.save({ eventId, eventType: 'wallet.topup.arrears.check' });
 
-    /**
-     * Kiến trúc đúng:
-     * - Payment service KHÔNG biết user có nợ hay không (arrears nằm ở user_debt_read_models
-     *   của user-service, charging-service, booking-service).
-     * - Payment service chỉ biết: topup thành công + balance hiện tại.
-     * - Emit WalletArrearsClearedEvent để User Service / Booking Service / Charging Service
-     *   tự check xem user có nợ không và unlock nếu balance đủ.
-     *
-     * Flow:
-     *   wallet.topup.completed → [Payment] → WalletArrearsClearedEvent
-     *                          → [User Service] check arrears → unlock nếu đủ tiền
-     *                          → [Booking Service] unblock ArrearsGuard
-     *                          → [Charging Service] unblock ChargingArrearsGuard
-     */
     await this.dataSource.transaction(async (manager) => {
       const wallet = await this.walletRepo.findByUserId(payload.userId);
       if (!wallet) return;
 
       const currentBalance = await this.walletRepo.getBalance(wallet.id, manager);
 
-      // Emit event cho các service khác kiểm tra arrears
-      // Chỉ emit nếu topup có giá trị đáng kể (> 1000 VND)
+      // Emits event for other services to check for arrears.
+      // Only emitted if the top-up amount is significant (> 1000 VND).
       if (payload.amount > 1000) {
         const clearEvent = new WalletArrearsClearedEvent(payload.userId, wallet.id);
         await this.eventBus.publishAll([clearEvent], manager);

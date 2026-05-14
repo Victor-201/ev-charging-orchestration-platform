@@ -24,7 +24,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-// ─── CreatePaymentUseCase ─────────────────────────────────────────────────────
+
 
 /**
  * Creates a pending Transaction and returns a VNPay payment URL.
@@ -68,7 +68,7 @@ export class CreatePaymentUseCase {
 
     // Generate unique txn ref for VNPay (max 100 chars)
     const txnRef = `EV${txn.id.replace(/-/g, '').substring(0, 16).toUpperCase()}`;
-    const orderInfo = `Thanh toan dat san EV ${cmd.bookingId.substring(0, 8)}`;
+    const orderInfo = `EV booking payment ${cmd.bookingId.substring(0, 8)}`;
 
     const paymentUrl = this.vnpay.buildPaymentUrl({
       amount:    cmd.amount,
@@ -89,7 +89,7 @@ export class CreatePaymentUseCase {
   }
 }
 
-// ─── HandleVNPayCallbackUseCase ───────────────────────────────────────────────
+
 
 /**
  * Processes VNPay return/IPN callback.
@@ -186,7 +186,7 @@ export class HandleVNPayCallbackUseCase {
   }
 }
 
-// ─── WalletTopupUseCase ───────────────────────────────────────────────────────
+
 
 /**
  * Initiate VNPay payment to top up wallet balance.
@@ -229,7 +229,7 @@ export class WalletTopupInitUseCase {
 
     const paymentUrl = this.vnpay.buildPaymentUrl({
       amount:    cmd.amount,
-      orderInfo: `Nap tien vi EV user ${cmd.userId.substring(0, 8)}`,
+      orderInfo: `EV wallet topup user ${cmd.userId.substring(0, 8)}`,
       orderType: 'topup',
       txnRef,
       returnUrl,
@@ -244,7 +244,7 @@ export class WalletTopupInitUseCase {
   }
 }
 
-// ─── WalletPayUseCase (wallet direct payment) ─────────────────────────────────
+
 
 @Injectable()
 export class WalletPayUseCase {
@@ -314,7 +314,7 @@ export class WalletPayUseCase {
   }
 }
 
-// ─── GetWalletBalanceUseCase ──────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetWalletBalanceUseCase {
@@ -330,7 +330,7 @@ export class GetWalletBalanceUseCase {
   }
 }
 
-// ─── GetTransactionHistoryUseCase ─────────────────────────────────────────────
+
 
 @Injectable()
 export class GetTransactionHistoryUseCase {
@@ -343,7 +343,7 @@ export class GetTransactionHistoryUseCase {
   }
 }
 
-// ─── GetPaymentUseCase ────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class GetPaymentUseCase {
@@ -356,7 +356,7 @@ export class GetPaymentUseCase {
   }
 }
 
-// ─── PaymentOrchestratorUseCase ───────────────────────────────────────────────
+
 // Strategy: try wallet first, fallback to VNPay gateway
 // Idempotency: if idempotencyKey already processed → return cached result
 
@@ -446,7 +446,7 @@ export class PaymentOrchestratorUseCase {
   }
 }
 
-// ─── RefundUseCase ────────────────────────────────────────────────────────────
+
 
 @Injectable()
 export class RefundUseCase {
@@ -509,7 +509,7 @@ export class RefundUseCase {
   }
 }
 
-// ─── TransactionReconciliationJob ─────────────────────────────────────────────
+
 
 @Injectable()
 export class TransactionReconciliationJob {
@@ -524,13 +524,13 @@ export class TransactionReconciliationJob {
     this.logger.log('Running transaction reconciliation...');
 
     /**
-     * Booking PAYMENT_HOLD_MINUTES = 5 phút.
-     * Giao dịch cọc của booking phải hoàn tất trong 5 phút.
-     * Timeout = 7 phút = 5 phút hold + 2 phút xử lý buffer.
-     * Các giao dịch khác (topup, refund) không bị ảnh hưởng vì chúng
-     * hoàn thành gần như tức thì qua wallet hoặc VNPay IPN.
+     * Booking PAYMENT_HOLD_MINUTES = 5 minutes.
+     * Booking deposit transactions must complete within 5 minutes.
+     * Timeout = 7 minutes = 5-min hold + 2-min processing buffer.
+     * Other transactions (topup, refund) are not affected as they
+     * complete almost instantly via wallet or VNPay IPN.
      */
-    const BOOKING_DEPOSIT_TIMEOUT_MS = 7 * 60_000; // 7 phút
+    const BOOKING_DEPOSIT_TIMEOUT_MS = 7 * 60_000; // 7 minutes
     const cutoff = new Date(Date.now() - BOOKING_DEPOSIT_TIMEOUT_MS);
     const stuckTxns = await this.txRepo.findPendingBefore(cutoff);
 

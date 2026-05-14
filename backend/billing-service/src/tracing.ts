@@ -1,19 +1,19 @@
 /**
  * OpenTelemetry Distributed Tracing Bootstrap (Item 4.4)
  *
- * PHẢI được import TRƯỚC reflect-metadata trong main.ts:
+ * MUST be imported BEFORE reflect-metadata in main.ts:
  *   import './tracing';
  *   import 'reflect-metadata';
  *
- * Biến môi trường:
- *   OTEL_ENABLED=true           — Bật tracing (default false khi dev)
- *   OTEL_SERVICE_NAME           — Tên service
- *   OTEL_EXPORTER_OTLP_ENDPOINT — URL collector (default: http://localhost:4318)
+ * Environment Variables:
+ *   OTEL_ENABLED=true           — Enables tracing (default: false in development)
+ *   OTEL_SERVICE_NAME           — Service identifier
+ *   OTEL_EXPORTER_OTLP_ENDPOINT — OTLP collector endpoint (default: http://localhost:4318)
  *
- * Xem trace tại: http://localhost:16686 (Jaeger UI nếu có)
+ * View traces at: http://localhost:16686 (Jaeger UI if configured)
  */
 
-// Chỉ khởi động khi được bật tường minh — tránh overhead khi dev/test
+// Only initializes if explicitly enabled — prevents performance overhead during development/testing.
 if (process.env.OTEL_ENABLED === 'true') {
   void (async () => {
     try {

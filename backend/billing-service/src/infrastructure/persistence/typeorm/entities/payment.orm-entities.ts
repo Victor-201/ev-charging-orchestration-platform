@@ -1,9 +1,9 @@
-﻿import {
+import {
   Entity, Column, PrimaryColumn, PrimaryGeneratedColumn,
   CreateDateColumn, UpdateDateColumn, Index,
 } from 'typeorm';
 
-// â”€â”€â”€ user_read_models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// user_read_models
 
 @Entity('user_read_models')
 export class UserReadModelOrmEntity {
@@ -23,7 +23,7 @@ export class UserReadModelOrmEntity {
   syncedAt: Date;
 }
 
-// â”€â”€â”€ plans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// plans
 
 @Entity('plans')
 export class PlanOrmEntity {
@@ -63,7 +63,7 @@ export class PlanOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// subscriptions
 
 @Entity('subscriptions')
 @Index('idx_sub_user_st', ['userId', 'status'])
@@ -101,8 +101,8 @@ export class SubscriptionOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ wallets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Balance NOT stored here â€” computed from wallet_ledger (O(1) via MAX(balance_after))
+// wallets
+// Balance NOT stored here — computed from wallet_ledger (O(1) via MAX(balance_after))
 
 @Entity('wallets')
 export class WalletOrmEntity {
@@ -129,7 +129,7 @@ export class WalletOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ transactions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// transactions
 
 @Entity('transactions')
 @Index('idx_tx_user_date',  ['userId', 'createdAt'])
@@ -184,7 +184,7 @@ export class TransactionOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ wallet_ledger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// wallet_ledger
 // IMMUTABLE append-only ledger. balance_after denormalized for O(1) lookup.
 // REVOKE UPDATE/DELETE in production.
 
@@ -210,7 +210,7 @@ export class WalletLedgerOrmEntity {
   createdAt: Date;
 }
 
-// â”€â”€â”€ invoices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// invoices
 
 @Entity('invoices')
 @Index('idx_inv_user_st', ['userId', 'status'])
@@ -242,7 +242,7 @@ export class InvoiceOrmEntity {
   updatedAt: Date;
 }
 
-// â”€â”€â”€ processed_events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// processed_events
 
 @Entity('processed_events')
 export class ProcessedEventOrmEntity {
@@ -256,7 +256,7 @@ export class ProcessedEventOrmEntity {
   processedAt: Date;
 }
 
-// â”€â”€â”€ event_outbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// event_outbox
 
 @Entity('event_outbox')
 @Index('idx_outbox_pending', ['status', 'createdAt'], { where: `status = 'pending'` })

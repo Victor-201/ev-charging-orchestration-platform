@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 /**
  * Wallet Aggregate Root
  *

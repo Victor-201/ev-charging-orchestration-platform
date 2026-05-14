@@ -1,11 +1,12 @@
 /**
- * Tests: VNPay Checksum Verification (Unit tests cho VNPayService)
+ * Tests: VNPay Checksum Verification (Unit tests for VNPayService)
  *
- * Không cần NestJS context — test thuần túy crypto logic.
+ * No NestJS context required — pure crypto logic testing.
  */
 import * as crypto from 'crypto';
 import { VNPayService } from '../../src/infrastructure/vnpay/vnpay.service';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
 function makeConfig(overrides?: Record<string, string>): ConfigService {
   const map: Record<string, string> = {
@@ -27,10 +28,18 @@ describe('VNPayService', () => {
 
   beforeEach(() => {
     service = new VNPayService(makeConfig());
+    // Forcefully mock the internal logger to be silent
+    (service as any).logger = {
+      log:   jest.fn(),
+      warn:  jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    };
   });
 
   describe('buildPaymentUrl', () => {
-    it('tạo URL với vnp_SecureHash hợp lệ', () => {
+    it('creates a URL with a valid vnp_SecureHash', () => {
       const url = service.buildPaymentUrl({
         amount:    100000,
         orderInfo: 'test order',
@@ -46,7 +55,7 @@ describe('VNPayService', () => {
       expect(url).toContain('vnp_TmnCode=EVCHARGE01');
     });
 
-    it('không include params rỗng trong signature', () => {
+    it('does not include empty parameters in the signature', () => {
       const url = service.buildPaymentUrl({
         amount:    50000,
         orderInfo: 'test',
@@ -85,7 +94,7 @@ describe('VNPayService', () => {
       return { ...raw, vnp_SecureHash: hash };
     }
 
-    it('SUCCESS: callback hợp lệ → parse đúng amount và txnRef', () => {
+    it('SUCCESS: valid callback — correctly parses amount and txnRef', () => {
       const params = buildCallbackParams('EVTEST001', '00');
       const result = service.verifyCallback(params as any);
 
@@ -103,7 +112,7 @@ describe('VNPayService', () => {
       expect(result.responseCode).toBe('51');
     });
 
-    it('SECURITY: checksum sai → throw INVALID_CHECKSUM', () => {
+    it('SECURITY: invalid checksum — throws INVALID_CHECKSUM', () => {
       const params = buildCallbackParams('EVTEST003');
       // Tamper the hash
       params.vnp_SecureHash = params.vnp_SecureHash.replace('a', 'b').replace('1', '9');
@@ -119,10 +128,13 @@ describe('VNPayService', () => {
       expect(() => service.verifyCallback(params as any)).toThrow('INVALID_CHECKSUM');
     });
 
-    it('SECURITY: collision-resistant — khác secret → fail', () => {
+    it('SECURITY: collision-resistant — different secret — fails validation', () => {
       const otherService = new VNPayService(
         makeConfig({ VNPAY_HASH_SECRET: 'DIFFERENT_SECRET_KEY_32_CHARS_XX' }),
       );
+      // Also mock this manual instance
+      (otherService as any).logger = { warn: jest.fn(), log: jest.fn() };
+
       const params = buildCallbackParams('EVTEST005');
 
       expect(() => otherService.verifyCallback(params as any)).toThrow('INVALID_CHECKSUM');

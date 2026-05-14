@@ -1,8 +1,8 @@
 /**
  * Tests: VNPay Callback Verification + Idempotency
  *
- * Không cần DB — mock tất cả dependencies.
- * Test focus: domain logic và security invariants.
+ * No database required — mocks all dependencies.
+ * Test focus: domain logic and security invariants.
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -18,7 +18,7 @@ import {
 } from '../../src/infrastructure/persistence/typeorm/entities/payment.orm-entities';
 import { Transaction } from '../../src/domain/entities/transaction.aggregate';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// Helpers
 
 function makePendingTransaction(overrides?: Partial<any>): Transaction {
   return Transaction.reconstitute({
@@ -58,9 +58,22 @@ function makeValidReturnParams(overrides?: Record<string, string>) {
   };
 }
 
-// ─── Test Suite ───────────────────────────────────────────────────────────────
+import { Logger } from '@nestjs/common';
+
+// Helpers
 
 describe('HandleVNPayCallbackUseCase', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   let useCase: HandleVNPayCallbackUseCase;
   let vnpayService: jest.Mocked<VNPayService>;
   let txRepo: any;
@@ -128,8 +141,8 @@ describe('HandleVNPayCallbackUseCase', () => {
     useCase = module.get(HandleVNPayCallbackUseCase);
   });
 
-  // ── Test 1: Checksum invalid → throw, không process ────────────────────────
-  it('SECURITY: từ chối callback với checksum không hợp lệ', async () => {
+  // Test 1: Checksum invalid — throws and aborts processing.
+  it('SECURITY: rejects callback with invalid checksum', async () => {
     vnpayService.verifyCallback.mockImplementation(() => {
       throw new Error('INVALID_CHECKSUM');
     });
@@ -137,13 +150,13 @@ describe('HandleVNPayCallbackUseCase', () => {
     await expect(useCase.execute(makeValidReturnParams() as any))
       .rejects.toThrow('INVALID_CHECKSUM');
 
-    // Không được gọi processedRepo hoặc txRepo
+    // Should not invoke processedRepo or txRepo
     expect(processedRepo.existsBy).not.toHaveBeenCalled();
     expect(txRepo.findByReferenceCode).not.toHaveBeenCalled();
   });
 
-  // ── Test 2: Happy path — callback hợp lệ, transaction completed ─────────────
-  it('SUCCESS: callback hợp lệ → transaction completed, invoice created, event published', async () => {
+  // Test 2: Happy path — valid callback, transaction completed.
+  it('SUCCESS: valid callback — transaction completed, invoice created, event published', async () => {
     const tx = makePendingTransaction();
     vnpayService.verifyCallback.mockReturnValue({
       isSuccess:     true,
@@ -162,13 +175,13 @@ describe('HandleVNPayCallbackUseCase', () => {
     expect(result.status).toBe('success');
     expect(result.transactionId).toBe('tx-001');
     expect(eventBus.publishAll).toHaveBeenCalledTimes(1);
-    // Invoice được tạo
+    // Invoice created
     const managerSaveCall = dataSource.transaction.mock.calls[0];
     expect(dataSource.transaction).toHaveBeenCalled();
   });
 
-  // ── Test 3: Payment failed (VNPay response != '00') ─────────────────────────
-  it('FAILURE: callback với responseCode != 00 → transaction failed, PaymentFailedEvent', async () => {
+  // Test 3: Payment failed (VNPay response != '00')
+  it('FAILURE: callback with responseCode != 00 — transaction failed, emits PaymentFailedEvent', async () => {
     const tx = makePendingTransaction();
     vnpayService.verifyCallback.mockReturnValue({
       isSuccess:     false,
@@ -186,13 +199,13 @@ describe('HandleVNPayCallbackUseCase', () => {
 
     expect(result.status).toBe('failed');
     expect(eventBus.publishAll).toHaveBeenCalled();
-    // Verify event type là PaymentFailedEvent
+    // Verifies event type as PaymentFailedEvent
     const [events] = eventBus.publishAll.mock.calls[0];
     expect(events[0].eventType).toBe('payment.failed');
   });
 
-  // ── Test 4: Idempotency — duplicate callback ─────────────────────────────────
-  it('IDEMPOTENCY: duplicate callback → return cached result, không process lại', async () => {
+  // Test 4: Idempotency — duplicate callback
+  it('IDEMPOTENCY: duplicate callback — returns cached result without reprocessing', async () => {
     const tx = makePendingTransaction({ status: 'completed' });
     vnpayService.verifyCallback.mockReturnValue({
       isSuccess:     true,
@@ -204,20 +217,20 @@ describe('HandleVNPayCallbackUseCase', () => {
       orderInfo:     'test',
       payDate:       '20260412143000',
     });
-    processedRepo.existsBy.mockResolvedValue(true); // Đã xử lý rồi
+    processedRepo.existsBy.mockResolvedValue(true); // Already processed
     txRepo.findByReferenceCode.mockResolvedValue(tx);
 
     const result = await useCase.execute(makeValidReturnParams() as any);
 
     // Return cached result
     expect(result.status).toBe('success');
-    // KHÔNG gọi dataSource.transaction (không process lại)
+    // Does NOT invoke dataSource.transaction (prevents reprocessing)
     expect(dataSource.transaction).not.toHaveBeenCalled();
     expect(eventBus.publishAll).not.toHaveBeenCalled();
   });
 
-  // ── Test 5: Transaction not found ────────────────────────────────────────────
-  it('ERROR: transaction không tồn tại → throw error', async () => {
+  // Test 5: Transaction not found
+  it('ERROR: transaction does not exist — throws error', async () => {
     vnpayService.verifyCallback.mockReturnValue({
       isSuccess:     true,
       responseCode:  '00',

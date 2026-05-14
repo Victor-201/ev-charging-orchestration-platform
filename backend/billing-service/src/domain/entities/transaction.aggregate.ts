@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 export type TxType   = 'topup' | 'payment' | 'refund';
 export type TxMethod = 'wallet' | 'bank_transfer' | 'cash';
 export type TxStatus = 'pending' | 'completed' | 'failed' | 'cancelled';

@@ -62,7 +62,7 @@ export class WalletArrearsClearedEvent extends PaymentDomainEvent {
   ) { super(); }
 }
 
-// ─── SAGA Choreography Events ────────────────────────────────────────────────
+// SAGA Choreography Events
 
 /** Emitted by billing-service when wallet deduction succeeds (session.reserved consumed). */
 export class BillingDeductedEvent extends PaymentDomainEvent {
@@ -87,11 +87,11 @@ export class BillingDeductionFailedEvent extends PaymentDomainEvent {
   ) { super(); }
 }
 
-// ─── Billing Notification Events ─────────────────────────────────────────────
+// Billing Notification Events
 
 /**
- * Phát khi billing tính idle fee > 0 — notification-service gửi push cho user.
- * Cho phép user biết mình đang bị phạt tiền chiếm dụng trụ sạc.
+ * Emitted when idle fees exceed 0 — notification-service sends a push notification to the user.
+ * Informs the user about penalties for occupying the charger beyond the allowed time.
  */
 export class IdleFeeChargedEvent extends PaymentDomainEvent {
   readonly eventType = 'billing.idle_fee_charged_v1';
@@ -107,8 +107,8 @@ export class IdleFeeChargedEvent extends PaymentDomainEvent {
 }
 
 /**
- * Phát khi tiền sạc thực tế > tiền cọc → trừ thêm từ ví.
- * Notification-service thông báo để user không bất ngờ khi bị trừ thêm.
+ * Emitted when actual charging costs exceed the deposit — additional funds are deducted from the wallet.
+ * Notification-service informs the user to ensure transparency regarding the extra deduction.
  */
 export class ExtraChargeDebitedEvent extends PaymentDomainEvent {
   readonly eventType = 'billing.extra_charge_v1';
@@ -123,8 +123,8 @@ export class ExtraChargeDebitedEvent extends PaymentDomainEvent {
 }
 
 /**
- * Phát khi tiền sạc thực tế < tiền cọc → hoàn phần dư vào ví.
- * Notification-service thông báo số tiền được hoàn.
+ * Emitted when actual charging costs are less than the deposit — the surplus is refunded to the wallet.
+ * Notification-service informs the user about the refunded amount.
  */
 export class RefundIssuedEvent extends PaymentDomainEvent {
   readonly eventType = 'billing.refund_issued_v1';

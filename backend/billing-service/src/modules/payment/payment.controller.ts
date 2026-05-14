@@ -30,8 +30,8 @@ import type { AuthenticatedUser }   from '../../shared/guards/jwt-auth.guard';
  *
  *   POST /payments/create          → @JwtAuthGuard  (any auth user)
  *   POST /payments/pay             → @JwtAuthGuard  (wallet-first orchestrator)
- *   GET  /payments/vnpay-return    → @Public        (VNPay callback, không có JWT)
- *   GET  /payments/:id             → @JwtAuthGuard  (owner xem payment của mình)
+ *   GET  /payments/vnpay-return    → @Public        (VNPay callback, no JWT)
+ *   GET  /payments/:id             → @JwtAuthGuard  (owner views their own payment)
  *   POST /payments/:id/refund      → @Roles('admin','staff')
  *   GET  /wallet/balance           → @JwtAuthGuard
  *   POST /wallet/topup             → @JwtAuthGuard
@@ -57,8 +57,8 @@ export class PaymentController {
 
   /**
    * POST /api/v1/payments/create
-   * Tạo VNPay payment URL cho booking.
-   * userId từ JWT — không trust body.
+   * Generates a VNPay payment URL for a booking.
+   * Uses userId from JWT for verification.
    */
   @Post('payments/create')
   @HttpCode(HttpStatus.CREATED)
@@ -78,7 +78,7 @@ export class PaymentController {
 
   /**
    * POST /api/v1/payments/pay
-   * Wallet-first orchestrator: thử ví trước, fallback VNPay.
+   * Wallet-first orchestrator: attempt wallet payment first, fallback to VNPay.
    * Supports Idempotency-Key header to prevent duplicate charges.
    */
   @Post('payments/pay')
@@ -104,7 +104,7 @@ export class PaymentController {
 
   /**
    * GET /api/v1/payments/vnpay-return
-   * VNPay redirect — PHẢI public (không có Authorization header).
+   * VNPay redirect — MUST be public (no Authorization header).
    */
   @Get('payments/vnpay-return')
   @Public()
@@ -121,7 +121,7 @@ export class PaymentController {
 
   /**
    * GET /api/v1/payments/:id
-   * User xem chi tiết payment.
+   * User views payment details.
    */
   @Get('payments/:id')
   async getPaymentById(
@@ -129,13 +129,13 @@ export class PaymentController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const tx = await this.getPayment.execute(id);
-    if (!tx) throw new NotFoundException('Transaction không tồn tại');
+    if (!tx) throw new NotFoundException('Transaction not found');
     return tx;
   }
 
   /**
    * POST /api/v1/payments/:id/refund
-   * Admin/staff hoàn tiền giao dịch đã completed.
+   * Allows admin/staff to refund a completed transaction.
    */
   @Post('payments/:id/refund')
   @HttpCode(HttpStatus.OK)
@@ -145,7 +145,7 @@ export class PaymentController {
     @Body('reason') reason: string,
     @CurrentUser() admin: AuthenticatedUser,
   ) {
-    if (!reason) throw new BadRequestException('reason là bắt buộc');
+    if (!reason) throw new BadRequestException('Reason is required');
     return this.refund.execute({
       originalTransactionId: id,
       reason,

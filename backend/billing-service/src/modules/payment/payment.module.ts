@@ -37,7 +37,7 @@ import { WALLET_REPOSITORY } from '../../domain/repositories/wallet.repository.i
 import { TRANSACTION_REPOSITORY } from '../../domain/repositories/transaction.repository.interface';
 import { Logger } from '@nestjs/common';
 
-// ─── Reconciliation Cron Scheduler ───────────────────────────────────────────
+// Reconciliation Cron Scheduler
 
 @Injectable()
 class PaymentReconciliationScheduler {
@@ -51,7 +51,7 @@ class PaymentReconciliationScheduler {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Module({
   imports: [
@@ -84,13 +84,13 @@ class PaymentReconciliationScheduler {
     // Infrastructure
     VNPayService,
     OutboxPublisher,
-    // ─── Booking Event Consumers (TỰ ĐỘNG HÓA) ───────────────────────────────
-    SessionReservedConsumer,   // deposit khi tạo booking → tự động trừ ví
-    BookingCancelledConsumer,          // hủy booking → hoàn 100% về ví
-    BookingNoShowConsumer,             // no-show → phạt 20%, hoàn 80%
-    SessionCompletedBillingConsumer,   // đối soát deposit vs tiền sạc thực tế
-    WalletTopupArrearsClearConsumer,   // nạp tiền → tự động cấn trừ nợ
-    // ─── Use Cases ────────────────────────────────────────────────────────────
+    // Booking Event Consumers (Automation)
+    SessionReservedConsumer,           // deposit during booking creation → automatic wallet deduction
+    BookingCancelledConsumer,          // booking cancellation → 100% refund to wallet
+    BookingNoShowConsumer,             // no-show → 20% penalty, 80% refund
+    SessionCompletedBillingConsumer,   // reconcile deposit against actual charging fees
+    WalletTopupArrearsClearConsumer,   // top-up → automatic debt settlement
+    // Use Cases
     CreatePaymentUseCase,
     HandleVNPayCallbackUseCase,
     WalletTopupInitUseCase,

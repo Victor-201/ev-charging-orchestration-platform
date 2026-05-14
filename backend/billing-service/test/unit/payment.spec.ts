@@ -2,8 +2,14 @@ import { Wallet, WalletDomainException, InsufficientBalanceException, WalletClos
 import { Transaction, TransactionException } from '../../src/domain/entities/transaction.aggregate';
 import { VNPayService } from '../../src/infrastructure/vnpay/vnpay.service';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
-// ─── Wallet Aggregate ─────────────────────────────────────────────────────────
+// Global Log Suppression (Fallback)
+jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+
+// Wallet Aggregate
 
 describe('Wallet Aggregate', () => {
   const makeWallet = (status: 'active' | 'suspended' | 'closed' = 'active') =>
@@ -75,7 +81,7 @@ describe('Wallet Aggregate', () => {
   });
 });
 
-// ─── Transaction Aggregate ────────────────────────────────────────────────────
+// Transaction Aggregate
 
 describe('Transaction Aggregate', () => {
   const makeTx = () => Transaction.create({
@@ -145,7 +151,7 @@ describe('Transaction Aggregate', () => {
   });
 });
 
-// ─── VNPayService ─────────────────────────────────────────────────────────────
+// VNPayService
 
 describe('VNPayService', () => {
   const config = {
@@ -163,6 +169,13 @@ describe('VNPayService', () => {
 
   beforeEach(() => {
     service = new VNPayService(config);
+    // Silent internal logger
+    (service as any).logger = {
+      log:   jest.fn(),
+      warn:  jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
   });
 
   it('should generate a valid HTTPS payment URL', () => {
@@ -215,7 +228,7 @@ describe('VNPayService', () => {
 
   it('should include amount multiplied by 100 in URL', () => {
     const url = service.buildPaymentUrl({
-      amount: 250000, orderInfo: 'Nap tien', orderType: 'topup',
+      amount: 250000, orderInfo: 'Top up', orderType: 'topup',
       txnRef: 'TOPUP001', returnUrl: 'http://localhost/return',
     });
     expect(url).toContain('vnp_Amount=25000000'); // 250000 × 100
