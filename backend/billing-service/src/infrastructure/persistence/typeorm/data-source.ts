@@ -25,7 +25,7 @@ export default new DataSource({
     WalletOrmEntity,
     WalletLedgerOrmEntity,
   ],
-  migrations: [],
+  migrations: [__dirname + '/migrations/*.ts'],
   synchronize: false,
   logging: false,
 });
