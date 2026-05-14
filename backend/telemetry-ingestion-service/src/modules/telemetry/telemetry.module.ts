@@ -14,7 +14,7 @@ import {
 import { ClickHouseTelemetryService } from '../../application/use-cases/clickhouse-telemetry.service';
 
 /**
- * BufferFlushScheduler — Periodic flush of accumulated telemetry buffer.
+ * BufferFlushScheduler - Periodic flush of accumulated telemetry buffer.
  *
  * Ensures buffered readings are published even when batches don't fill up.
  * Runs every 30 seconds.

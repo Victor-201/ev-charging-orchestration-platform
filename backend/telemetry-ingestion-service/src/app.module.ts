@@ -1,4 +1,15 @@
-﻿import { LoggerModule } from 'nestjs-pino';
+/**
+ * Telemetry Ingestion Service - High-Throughput Sensor Data Processing
+ *
+ * Responsibility:
+ * - Receiving real-time telemetry from chargers (Voltage, Current, Temp, SoC)
+ * - Ingesting data into high-performance time-series database (ClickHouse)
+ * - Exposing real-time metrics for monitoring and alerting
+ *
+ * Architecture: NestJS with ClickHouse integration
+ * Communication: HTTP/gRPC (Ingestion), ClickHouse (Storage)
+ */
+import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 // @ts-ignore from '@nestjs/common';

@@ -1,19 +1,19 @@
 /**
  * OpenTelemetry Distributed Tracing Bootstrap (Item 4.4)
  *
- * PHẢI được import TRƯỚC reflect-metadata trong main.ts:
+ * MUST be imported BEFORE reflect-metadata in main.ts:
  *   import './tracing';
  *   import 'reflect-metadata';
  *
- * Biến môi trường:
- *   OTEL_ENABLED=true           — Bật tracing (default false khi dev)
- *   OTEL_SERVICE_NAME           — Tên service
- *   OTEL_EXPORTER_OTLP_ENDPOINT — URL collector (default: http://localhost:4318)
+ * Environment variables:
+ *   OTEL_ENABLED=true           - Enable tracing (default false in dev)
+ *   OTEL_SERVICE_NAME           - Service name
+ *   OTEL_EXPORTER_OTLP_ENDPOINT - Collector URL (default: http://localhost:4318)
  *
- * Xem trace tại: http://localhost:16686 (Jaeger UI nếu có)
+ * View traces at: http://localhost:16686 (Jaeger UI if available)
  */
 
-// Chỉ khởi động khi được bật tường minh — tránh overhead khi dev/test
+// Only start when explicitly enabled - avoid overhead in dev/test
 if (process.env.OTEL_ENABLED === 'true') {
   void (async () => {
     try {
@@ -28,7 +28,7 @@ if (process.env.OTEL_ENABLED === 'true') {
       const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318';
 
       const sdk = new NodeSDK({
-        // Dùng string key trực tiếp để tương thích mọi phiên bản OTel
+        // Use string keys directly for compatibility across OTel versions
         serviceName,
         traceExporter: new OTLPTraceExporter({
           url: `${endpoint}/v1/traces`,
@@ -39,11 +39,11 @@ if (process.env.OTEL_ENABLED === 'true') {
         instrumentations: [
           getNodeAutoInstrumentations({
             '@opentelemetry/instrumentation-http': {
-              // Bỏ qua health check để giảm noise
+              // Ignore health checks to reduce noise
               ignoreIncomingRequestHook: (req: any): boolean =>
                 Boolean(req.url?.includes('/health')),
             },
-            // Tắt fs instrumentation — quá nhiều noise
+            // Disable fs instrumentation - too much noise
             '@opentelemetry/instrumentation-fs': { enabled: false },
           }),
         ],
@@ -51,7 +51,7 @@ if (process.env.OTEL_ENABLED === 'true') {
 
       sdk.start();
 
-      // Flush và shutdown khi process tắt (Graceful Shutdown)
+      // Flush and shutdown on process exit (Graceful Shutdown)
       process.on('SIGTERM', async () => {
         try {
           await sdk.shutdown();
@@ -60,9 +60,9 @@ if (process.env.OTEL_ENABLED === 'true') {
         }
       });
 
-      console.log(`[OTel] Distributed Tracing enabled: ${serviceName} → ${endpoint}`);
+      console.log(`[OTel] Distributed Tracing enabled: ${serviceName} -> ${endpoint}`);
     } catch (err) {
-      // Không làm crash app nếu OTel gặp lỗi
+      // Do not crash app if OTel encounters an error
       console.warn('[OTel] Failed to initialize tracing:', err);
     }
   })();

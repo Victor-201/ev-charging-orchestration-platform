@@ -1,5 +1,5 @@
 /**
- * TelemetryReading — Domain Value Object
+ * TelemetryReading - Domain Value Object
  *
  * Represents a single validated telemetry reading from a charger.
  * Immutable after construction.

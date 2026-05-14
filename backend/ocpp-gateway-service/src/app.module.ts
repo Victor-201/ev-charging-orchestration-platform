@@ -1,3 +1,15 @@
+/**
+ * OCPP Gateway Service - Charging Station Protocol Adapter
+ *
+ * Responsibility:
+ * - Handling WebSocket connections from physical charging stations
+ * - Translating OCPP (Open Charge Point Protocol) messages to internal events
+ * - Sending commands from internal services to physical hardware
+ * - Buffering and routing telemetry data
+ *
+ * Architecture: NestJS with WebSockets (ws/socket.io)
+ * Communication: WebSocket (Hardware), RabbitMQ (Internal Bus)
+ */
 import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';

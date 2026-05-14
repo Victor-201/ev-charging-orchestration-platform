@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import {
   ClickHouseTelemetryService,
   TelemetryRow,
@@ -41,7 +42,10 @@ function buildRow(overrides: Partial<TelemetryRow> = {}): TelemetryRow {
   };
 }
 
-function buildService(overrides: Record<string, string> = {}): Promise<ClickHouseTelemetryService> {
+// Track instances to destroy them
+const activeServices: ClickHouseTelemetryService[] = [];
+
+async function buildService(overrides: Record<string, string> = {}): Promise<ClickHouseTelemetryService> {
   const configValues: Record<string, string> = {
     CLICKHOUSE_URL:      'http://localhost:8123',
     CLICKHOUSE_DATABASE: 'ev_telemetry',
@@ -50,7 +54,7 @@ function buildService(overrides: Record<string, string> = {}): Promise<ClickHous
     ...overrides,
   };
 
-  return Test.createTestingModule({
+  const module: TestingModule = await Test.createTestingModule({
     providers: [
       ClickHouseTelemetryService,
       {
@@ -58,17 +62,39 @@ function buildService(overrides: Record<string, string> = {}): Promise<ClickHous
         useValue: { get: (key: string, def?: string) => configValues[key] ?? def },
       },
     ],
-  })
-    .compile()
-    .then((m) => m.get(ClickHouseTelemetryService));
+  }).compile();
+
+  const svc = module.get(ClickHouseTelemetryService);
+  activeServices.push(svc);
+  return svc;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('ClickHouseTelemetryService – Unit Tests', () => {
 
+  beforeAll(() => {
+    // Suppress logs during tests
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    // Cleanup any leaked timers
+    while (activeServices.length > 0) {
+      const svc = activeServices.pop();
+      if (svc) await svc.onModuleDestroy();
+    }
   });
 
   // ── onModuleInit ────────────────────────────────────────────────────────────

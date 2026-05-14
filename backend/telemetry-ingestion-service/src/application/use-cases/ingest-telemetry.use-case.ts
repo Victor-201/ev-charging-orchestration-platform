@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ClickHouseTelemetryService } from './clickhouse-telemetry.service';
 
 /**
- * TelemetryBuffer — in-memory sliding buffer per charger.
+ * TelemetryBuffer - in-memory sliding buffer per charger.
  *
  * Purpose: accumulate readings before flushing to downstream services.
  * Flush triggers: batch size >= BATCH_SIZE or timer (handled by IngestUseCase).
@@ -60,17 +60,17 @@ export class TelemetryBuffer {
   }
 }
 
-// ─── IngestTelemetryUseCase ───────────────────────────────────────────────────
+
 
 /**
  * IngestTelemetryUseCase
  *
- * Scope §9 responsibilities:
+ * Scope responsibilities:
  *  1. Receive raw telemetry from charger (HTTP or MQTT bridge)
  *  2. Validate & normalize readings via TelemetryReadingVO
  *  3. Buffer data in-memory (TelemetryBuffer)
  *  4. Publish normalized event to RabbitMQ (routing key: telemetry.ingested)
- *     → consumed by charging-service (session update) and analytics-service (metrics)
+ *     -> consumed by charging-service (session update) and analytics-service (metrics)
  */
 @Injectable()
 export class IngestTelemetryUseCase {
@@ -92,7 +92,7 @@ export class IngestTelemetryUseCase {
     socPercent?:       number;
     temperatureC?:     number;
     errorCode?:        string;
-    hardwareTimestamp?: string;   // ISO string từ phần cứng (Task 5.1 Offline Resilience)
+    hardwareTimestamp?: string;   // ISO string from hardware (Task 5.1 Offline Resilience)
   }): Promise<{ accepted: boolean; eventId: string; errors: string[] }> {
 
     // Step 1: Create VO (structure validation)
@@ -125,7 +125,7 @@ export class IngestTelemetryUseCase {
       await this.publishSingle(normalized, eventId, raw.hardwareTimestamp);
     }
 
-    // Task 3.2: Ghi vào ClickHouse song song (non-blocking)
+    // Task 3.2: Async ingest to ClickHouse (non-blocking)
     this.clickHouse.ingest({
       eventId,
       chargerId:         normalized.chargerId,

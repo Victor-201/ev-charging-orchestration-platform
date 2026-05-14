@@ -1,12 +1,12 @@
 /**
- * Tests: OcppGatewayService — State Management & Command Logic
+ * Tests: OcppGatewayService - State Management & Command Logic
  *
- * Pure unit tests — không cần WebSocket server thật, không cần RabbitMQ.
+ * Pure unit tests - no real WebSocket server needed, no RabbitMQ needed.
  * Test: connection registry, pendingCalls map, isConnected(), getConnectedChargers().
  */
 import { OcppGatewayService } from '../../src/ocpp/ocpp-gateway.service';
 
-// ─── Mock AmqpConnection ──────────────────────────────────────────────────────
+// Mock AmqpConnection
 
 function makeService() {
   const mockAmqp = {
@@ -20,12 +20,12 @@ function makeService() {
     }),
   };
 
-  // OcppGatewayService cần AmqpConnection và ConfigService
+  // OcppGatewayService needs AmqpConnection and ConfigService
   const svc = new OcppGatewayService(mockAmqp as any, mockConfig as any);
   return { svc, mockAmqp };
 }
 
-// ─── Mock WebSocket helper ─────────────────────────────────────────────────────
+// Mock WebSocket helper
 
 function makeSocket(readyState: number = 1 /* OPEN */) {
   return {
@@ -36,26 +36,38 @@ function makeSocket(readyState: number = 1 /* OPEN */) {
   };
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+import { Logger } from '@nestjs/common';
+
+// Tests
 
 describe('OcppGatewayService', () => {
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
   describe('Connection Registry', () => {
-    it('isConnected() → false cho charger chưa kết nối', () => {
+    it('isConnected() -> false for disconnected charger', () => {
       const { svc } = makeService();
       expect(svc.isConnected('charger-001')).toBe(false);
     });
 
-    it('getConnectedChargers() → empty khi chưa có kết nối', () => {
+    it('getConnectedChargers() -> empty when not connected', () => {
       const { svc } = makeService();
       expect(svc.getConnectedChargers()).toHaveLength(0);
     });
 
-    it('isConnected() → true sau khi registerCharger()', () => {
+    it('isConnected() -> true after registerCharger()', () => {
       const { svc } = makeService();
       const socket = makeSocket(1);  // readyState = OPEN
 
-      // Inject charger trực tiếp vào internal map (test private state)
+      // Inject charger directly into internal map (test private state)
       (svc as any).chargers.set('charger-001', {
         chargerId: 'charger-001',
         socket,
@@ -66,7 +78,7 @@ describe('OcppGatewayService', () => {
       expect(svc.isConnected('charger-001')).toBe(true);
     });
 
-    it('isConnected() → false khi socket đã đóng (readyState = 3 CLOSED)', () => {
+    it('isConnected() -> false when socket is closed (readyState = 3 CLOSED)', () => {
       const { svc } = makeService();
       const socket = makeSocket(3);  // CLOSED
 
@@ -80,7 +92,7 @@ describe('OcppGatewayService', () => {
       expect(svc.isConnected('charger-002')).toBe(false);
     });
 
-    it('getConnectedChargers() trả về tất cả kết nối hiện tại', () => {
+    it('getConnectedChargers() returns all current connections', () => {
       const { svc } = makeService();
       const s1 = makeSocket(1);
       const s2 = makeSocket(1);
@@ -96,11 +108,11 @@ describe('OcppGatewayService', () => {
   });
 
   describe('RemoteStartTransaction', () => {
-    it('trả về false sau timeout nếu charger không connected', async () => {
+    it('returns false after timeout if charger not connected', async () => {
       const { svc } = makeService();
 
-      // Charger không có trong registry → timeout ngay
-      // Override timeout để test không bị chậm (mock internal)
+      // Charger not in registry -> timeout immediately
+      // Override timeout to avoid slow tests (mock internal)
       jest.useFakeTimers();
       const promise = svc.remoteStartTransaction('charger-999', {
         connectorId: 1,
@@ -113,7 +125,7 @@ describe('OcppGatewayService', () => {
       expect(result).toBe(false);
     }, 10_000);
 
-    it('trả về false sau timeout nếu charger socket đã đóng', async () => {
+    it('returns false after timeout if charger socket is closed', async () => {
       const { svc } = makeService();
       const closedSocket = makeSocket(3);  // CLOSED
 
@@ -136,7 +148,7 @@ describe('OcppGatewayService', () => {
       expect(result).toBe(false);
     }, 10_000);
 
-    it('resolves true khi charger reply Accepted trong pendingCalls', async () => {
+    it('resolves true when charger replies Accepted in pendingCalls', async () => {
       const { svc } = makeService();
       const socket = makeSocket(1);
 
@@ -152,7 +164,7 @@ describe('OcppGatewayService', () => {
         idTag: 'RFID-OK',
       });
 
-      // Giả lập charger phản hồi Accepted
+      // Mock charger responding with Accepted
       const [sentMsg] = socket.send.mock.calls;
       const parsed: any[] = JSON.parse(sentMsg[0]);
       const messageId = parsed[1];  // [2, messageId, action, payload]
@@ -168,7 +180,7 @@ describe('OcppGatewayService', () => {
   });
 
   describe('RemoteStopTransaction', () => {
-    it('resolves true khi charger reply Accepted', async () => {
+    it('resolves true when charger replies Accepted', async () => {
       const { svc } = makeService();
       const socket = makeSocket(1);
 
@@ -191,7 +203,7 @@ describe('OcppGatewayService', () => {
       expect(await promise).toBe(true);
     });
 
-    it('resolves false khi charger reply Rejected', async () => {
+    it('resolves false when charger replies Rejected', async () => {
       const { svc } = makeService();
       const socket = makeSocket(1);
 

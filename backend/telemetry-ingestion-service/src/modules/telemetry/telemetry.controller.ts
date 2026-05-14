@@ -30,7 +30,7 @@ class TelemetryDto {
 }
 
 /**
- * TelemetryController — Scope §9 HTTP Ingestion endpoint
+ * TelemetryController - Scope HTTP Ingestion endpoint
  *
  * POST /api/v1/telemetry/ingest
  *   - Receives telemetry from charger hardware / MQTT bridge
