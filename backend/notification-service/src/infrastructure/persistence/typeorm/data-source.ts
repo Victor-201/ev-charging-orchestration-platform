@@ -4,7 +4,6 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { NotificationOrmEntity, ProcessedEventOrmEntity } from './entities/notification.orm-entities';
-import { InitialSchema1712500000000 } from './migrations/1712500000000-InitialSchema';
 
 export default new DataSource({
   type: 'postgres',
@@ -14,7 +13,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD ?? 'ev_secret',
   database: process.env.DB_NAME ?? 'ev_notification_db',
   entities: [NotificationOrmEntity, ProcessedEventOrmEntity],
-  migrations: [InitialSchema1712500000000],
+  migrations: [__dirname + '/migrations/*.ts'],
   synchronize: false,
   logging: true,
 });

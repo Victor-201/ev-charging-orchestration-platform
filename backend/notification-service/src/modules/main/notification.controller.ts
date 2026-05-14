@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, Req,
+  Body, Param, Query,
   ParseUUIDPipe, DefaultValuePipe, ParseIntPipe, ParseBoolPipe,
   HttpCode, HttpStatus, Logger, UseGuards,
 } from '@nestjs/common';
@@ -14,8 +14,6 @@ import { JwtAuthGuard }             from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard }               from '../../shared/guards/roles.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser }   from '../../shared/guards/jwt-auth.guard';
-
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DTOs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class RegisterDeviceDto {
   platform:   DevicePlatform;
@@ -32,20 +30,17 @@ class UpdatePreferenceDto {
   quietHoursEnd?:   number | null;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ NotificationController Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
 /**
  * Notification REST API
  *
  * Routes (prefix: /api/v1/notifications):
  *
- *   GET  /                         Ã¢â€ â€™ list notifications (paginated)
- *   GET  /unread                   Ã¢â€ â€™ unread notifications + count
- *   PATCH /:id/read                Ã¢â€ â€™ mark one notification as read
- *   PATCH /read-all                Ã¢â€ â€™ mark all as read
+ *   GET  /                         → list notifications (paginated)
+ *   GET  /unread                   → unread notifications + count
+ *   PATCH /:id/read                → mark one notification as read
+ *   PATCH /read-all                → mark all as read
  *
- * Auth: userId lÃ¡ÂºÂ¥y tÃ¡Â»Â« Gateway header 'x-user-id' (Kong inject sau JWT verify).
- *       Development: fallback to query param ?userId=
+ * Auth: userId is retrieved from the JWT token via JwtAuthGuard.
  */
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -86,14 +81,12 @@ export class NotificationController {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ DeviceController Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
 /**
  * Device Management API
  *
- *   POST   /api/v1/devices/register Ã¢â€ â€™ register FCM token
- *   DELETE /api/v1/devices/:id      Ã¢â€ â€™ unregister device (logout / revoke)
- *   GET    /api/v1/devices          Ã¢â€ â€™ list user's devices
+ *   POST   /api/v1/devices/register → register FCM token
+ *   DELETE /api/v1/devices/:id      → unregister device (logout / revoke)
+ *   GET    /api/v1/devices          → list user's devices
  */
 @Controller('devices')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -109,10 +102,10 @@ export class DeviceController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!['ios', 'android', 'web'].includes(body.platform)) {
-      return { error: "platform phÃ¡ÂºÂ£i lÃƒÂ  'ios', 'android', hoÃ¡ÂºÂ·c 'web'" };
+      return { error: "Platform must be 'ios', 'android', or 'web'" };
     }
     if (!body.pushToken) {
-      return { error: 'pushToken (FCM token) lÃƒÂ  bÃ¡ÂºÂ¯t buÃ¡Â»â„¢c' };
+      return { error: 'Push token (FCM token) is required' };
     }
     const device = await this.deviceUC.register({
       userId:     user.id,
@@ -146,8 +139,6 @@ export class DeviceController {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ PreferenceController Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
 /**
  * Notification Preferences API
  *
@@ -172,4 +163,3 @@ export class PreferenceController {
     return this.prefUC.update(user.id, body);
   }
 }
-

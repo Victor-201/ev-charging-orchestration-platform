@@ -6,10 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import { FcmPushService } from '../../infrastructure/push/fcm-push.service';
 
 /**
- * FcmTestController â€” Internal endpoint Ä‘á»ƒ test push notification.
+ * FcmTestController — Internal endpoint for testing push notifications.
  *
- * Protected bá»Ÿi INTERNAL_API_KEY header Ä‘á»ƒ trÃ¡nh expose public.
- * Chá»‰ dÃ¹ng cho development / QA validation.
+ * Protected by INTERNAL_API_KEY header to prevent public exposure.
+ * Used exclusively for development and QA validation.
  *
  * Usage:
  *   POST /api/v1/internal/fcm-test
@@ -17,7 +17,7 @@ import { FcmPushService } from '../../infrastructure/push/fcm-push.service';
  *   Body: { "token": "<FCM_device_token>", "title": "Test", "body": "Hello" }
  *
  * Response:
- *   { "success": true, "messageId": "..." }
+ *   { "success": true, "message": "..." }
  *   { "success": false, "error": "..." }
  */
 @Controller('internal/fcm-test')
@@ -35,7 +35,6 @@ export class FcmTestController {
     @Headers('x-internal-key') apiKey: string,
     @Body() body: { token: string; title?: string; body?: string },
   ) {
-    // â”€â”€ Guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const expectedKey = this.cfg.get<string>('FCM_TEST_API_KEY') ?? 'ev-internal-test-key';
     if (!apiKey || apiKey !== expectedKey) {
       throw new UnauthorizedException('Invalid x-internal-key');
@@ -49,7 +48,7 @@ export class FcmTestController {
 
     const result = await this.fcm.sendToToken({
       token: body.token,
-      title: body.title ?? 'ðŸ”” EV Platform Test',
+      title: body.title ?? 'EV Platform Test',
       body:  body.body  ?? 'Push notification is working!',
       data:  { source: 'fcm-test-endpoint', timestamp: Date.now().toString() },
     });

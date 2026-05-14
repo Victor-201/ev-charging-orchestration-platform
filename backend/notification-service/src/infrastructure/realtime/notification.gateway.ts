@@ -17,21 +17,21 @@ import { Injectable, Logger } from '@nestjs/common';
  * Namespace: /notifications
  *
  * Room strategy:
- *   client join room 'user:{userId}' sau khi authenticate.
- *   Server emit đến room này khi có notification mới.
+ *   client joins room 'user:{userId}' after authentication.
+ *   Server emits to this room when a new notification arrives.
  *
  * Events emitted TO client:
- *   - 'notification'      → new notification object (bất kỳ type)
- *   - 'booking_update'    → booking status change
- *   - 'queue_update'      → queue position change
- *   - 'charging_update'   → session status change
+ *   - 'notification'      -> new notification object (any type)
+ *   - 'booking_update'    -> booking status change
+ *   - 'queue_update'      -> queue position change
+ *   - 'charging_update'   -> session status change
  *
  * Events received FROM client:
- *   - 'subscribe'         → { userId } — join user room
- *   - 'mark_read'         → { notificationId }
+ *   - 'subscribe'         -> { userId } - join user room
+ *   - 'mark_read'         -> { notificationId }
  *
- * Auth: userId lấy từ socket handshake auth hoặc query param.
- *       Production: verify JWT token từ auth header.
+ * Auth: userId extracted from socket handshake auth or query param.
+ *       Production: verify JWT token from auth header.
  */
 @WebSocketGateway({
   cors:       { origin: '*' },
@@ -47,7 +47,7 @@ export class NotificationGateway
 
   private readonly logger = new Logger(NotificationGateway.name);
 
-  // Track connected users: socketId → userId
+  // Track connected users: socketId -> userId
   private readonly connectedUsers = new Map<string, string>();
 
   afterInit(server: Server) {
@@ -55,7 +55,7 @@ export class NotificationGateway
   }
 
   handleConnection(client: Socket) {
-    // Extract userId từ handshake (Gateway nên validate JWT ở đây)
+    // Extract userId from handshake (Gateway should validate JWT here)
     const userId =
       client.handshake.auth?.userId ||
       client.handshake.query?.userId as string;
@@ -63,7 +63,7 @@ export class NotificationGateway
     if (userId) {
       client.join(`user:${userId}`);
       this.connectedUsers.set(client.id, userId);
-      this.logger.debug(`Client ${client.id} connected → room user:${userId}`);
+      this.logger.debug(`Client ${client.id} connected -> room user:${userId}`);
       // Confirm subscription
       client.emit('subscribed', { userId, roomId: `user:${userId}` });
     } else {
@@ -77,8 +77,8 @@ export class NotificationGateway
   }
 
   /**
-   * Client explicit subscribe — gửi userId sau khi login.
-   * Dùng khi client cần join sau connection (lazy auth).
+   * Client explicit subscribe - sends userId after login.
+   * Used when client needs to join after connection (lazy auth).
    */
   @SubscribeMessage('subscribe')
   handleSubscribe(
@@ -88,14 +88,14 @@ export class NotificationGateway
     if (!data?.userId) return;
     client.join(`user:${data.userId}`);
     this.connectedUsers.set(client.id, data.userId);
-    this.logger.debug(`Client ${client.id} subscribed → user:${data.userId}`);
+    this.logger.debug(`Client ${client.id} subscribed -> user:${data.userId}`);
     client.emit('subscribed', { userId: data.userId });
   }
 
-  // ─── Emit Methods (called by DeliveryEngine) ─────────────────────────────
+  // Emit Methods (called by DeliveryEngine)
 
   /**
-   * Push generic notification đến user room.
+   * Push generic notification to user room.
    * Payload: { id, type, title, body, metadata, createdAt }
    */
   emitToUser(userId: string, notification: object): void {
@@ -104,7 +104,7 @@ export class NotificationGateway
   }
 
   /**
-   * Booking update — emitted khi booking.confirmed, booking.cancelled, etc.
+   * Booking update - emitted on booking.confirmed, booking.cancelled, etc.
    */
   emitBookingUpdate(userId: string, payload: {
     bookingId: string;
@@ -117,7 +117,7 @@ export class NotificationGateway
   }
 
   /**
-   * Queue update — emitted khi queue.updated.
+   * Queue update - emitted on queue.updated.
    */
   emitQueueUpdate(userId: string, payload: {
     queueId:               string;
@@ -131,7 +131,7 @@ export class NotificationGateway
   }
 
   /**
-   * Charging update — emitted khi session.started, session.completed.
+   * Charging update - emitted on session.started, session.completed.
    */
   emitChargingUpdate(userId: string, payload: {
     sessionId?:   string;
@@ -144,7 +144,7 @@ export class NotificationGateway
     this.logger.debug(`Emitted 'charging_update' to user:${userId} type=${payload.eventType}`);
   }
 
-  /** Số lượng clients đang kết nối */
+  /** Number of connected clients */
   get connectedCount(): number {
     return this.connectedUsers.size;
   }
