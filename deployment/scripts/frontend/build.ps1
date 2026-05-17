@@ -1,13 +1,9 @@
 #!/usr/bin/env pwsh
-# ==============================================================================
-# build.ps1 - Build APK / AAB cho EV Charging Flutter App
-#
 # Usage:
-#   .\build.ps1                                       # APK debug (dev)
+#   .\build.ps1                                        # APK debug (dev)
 #   .\build.ps1 -Target apk -Flavor staging -Release
 #   .\build.ps1 -Target appbundle -Flavor prod -Release
 #   .\build.ps1 -Target apk -Flavor dev -Analyze
-# ==============================================================================
 
 param(
     [ValidateSet('apk','appbundle','ipa')]
@@ -27,7 +23,6 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $AppDir    = Join-Path $ScriptDir "..\..\..\frontend\mobile-app"
 $EnvFile   = Join-Path $AppDir ".env"
 
-# Doc bien tu .env
 $EnvVars = @{}
 if (Test-Path $EnvFile) {
     Get-Content $EnvFile | Where-Object { $_ -match '^\s*[A-Z_]+=.+' -and $_ -notmatch '^\s*#' } | ForEach-Object {
@@ -36,42 +31,40 @@ if (Test-Path $EnvFile) {
     }
 }
 
-# Uu tien: tham so CLI > .env > mac dinh
+# CLI flags take precedence over .env values.
 if ($Flavor -eq 'dev' -and $EnvVars.ContainsKey('FLAVOR')) {
     $Flavor = $EnvVars['FLAVOR']
 }
 
 Write-Host "======================================================"
-Write-Host "  EV Charging - Flutter Build [$Flavor | $Target]" -ForegroundColor Cyan
+Write-Host "  EV Charging — Flutter Build [$Flavor | $Target]" -ForegroundColor Cyan
 Write-Host "======================================================"
 
 if (-not (Get-Command "flutter" -ErrorAction SilentlyContinue)) {
-    Write-Host "[FAIL] Khong tim thay Flutter SDK!" -ForegroundColor Red; exit 1
+    Write-Host "[FAIL] Flutter SDK not found in PATH." -ForegroundColor Red; exit 1
 }
 if (-not (Test-Path $AppDir)) {
-    Write-Host "[FAIL] Khong tim thay: $AppDir" -ForegroundColor Red; exit 1
+    Write-Host "[FAIL] App directory not found: $AppDir" -ForegroundColor Red; exit 1
 }
 
 Set-Location $AppDir
 
-# Clean
 if ($Clean) {
-    Write-Host "[CLEAN] Xoa build cache..." -ForegroundColor Yellow
+    Write-Host "[CLEAN] Clearing build cache..." -ForegroundColor Yellow
     & flutter clean
     & flutter pub get
 }
 
-# Analyze
 if ($Analyze) {
-    Write-Host "[ANALYZE] Kiem tra code..." -ForegroundColor Cyan
+    Write-Host "[ANALYZE] Running static analysis..." -ForegroundColor Cyan
     & flutter analyze --no-fatal-infos
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[FAIL] Co loi phan tich. Build bi huy." -ForegroundColor Red; exit 1
+        Write-Host "[FAIL] Analysis errors found. Build aborted." -ForegroundColor Red; exit 1
     }
-    Write-Host "[OK] Analyze hoan tat." -ForegroundColor Green
+    Write-Host "[OK] Analysis passed." -ForegroundColor Green
 }
 
-# Xac dinh API URL: uu tien .env > mac dinh theo flavor
+# Resolve API URL: CLI arg > .env > per-flavor default.
 if ($ApiUrl -eq '') {
     if ($EnvVars.ContainsKey('API_BASE_URL')) {
         $ApiUrl = $EnvVars['API_BASE_URL']
@@ -84,15 +77,13 @@ if ($ApiUrl -eq '') {
     }
 }
 
-# Dart defines
 $DartDefines    = @("FLAVOR=$Flavor", "API_BASE_URL=$ApiUrl")
 $DartDefineArgs = $DartDefines | ForEach-Object { "--dart-define=$_" }
 $ModeFlag       = if ($Release) { "--release" } else { "--debug" }
 
-# Build args
 $BuildArgs = @("build", $Target, "--flavor", $Flavor, $ModeFlag) + $DartDefineArgs
 
-# Obfuscate cho release
+# Obfuscation requires a debug-info directory to allow crash symbolication.
 if ($Release) {
     $DebugInfoDir = "build\debug-info\$Flavor"
     New-Item -ItemType Directory -Force -Path $DebugInfoDir | Out-Null
@@ -109,7 +100,7 @@ $StartTime = Get-Date
 & flutter @BuildArgs
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[FAIL] Build that bai (Exit $LASTEXITCODE)." -ForegroundColor Red; exit 1
+    Write-Host "[FAIL] Build failed (Exit $LASTEXITCODE)." -ForegroundColor Red; exit 1
 }
 
 $Duration = [math]::Round(((Get-Date) - $StartTime).TotalSeconds)
@@ -122,13 +113,13 @@ $OutputPath = switch ($Target) {
 
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Green
-Write-Host "  Build hoan tat trong $Duration giay!" -ForegroundColor Green
+Write-Host "  Build complete in ${Duration}s" -ForegroundColor Green
 Write-Host "  Artifact: $AppDir\$OutputPath" -ForegroundColor Green
 Write-Host "======================================================"
 
 if ($Release -and $Target -eq 'appbundle') {
     Write-Host ""
-    Write-Host "  Buoc tiep theo - Upload AAB len Google Play Console:" -ForegroundColor Cyan
+    Write-Host "  Upload AAB to Google Play Console:" -ForegroundColor Cyan
     Write-Host "  https://play.google.com/console" -ForegroundColor DarkGray
     Write-Host "  Debug symbols: $AppDir\build\debug-info\$Flavor\" -ForegroundColor DarkGray
     Write-Host ""
