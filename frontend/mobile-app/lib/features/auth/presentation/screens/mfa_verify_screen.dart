@@ -8,8 +8,8 @@ import '../../../../core/design_system/app_theme.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 
-/// Màn hình xác thực MFA — S-03
-/// 6-box OTP input, tự động chuyển focus
+/// High-Fidelity 6-Digit MFA Verification Screen
+/// Integrated 6-box OTP verification fields with auto-focus shifting
 /// APIs: [13] POST /auth/mfa/verify
 class MFAVerifyScreen extends StatefulWidget {
   const MFAVerifyScreen({super.key});
@@ -66,7 +66,7 @@ class _MFAVerifyScreenState extends State<MFAVerifyScreen> {
                 backgroundColor: AppColors.error,
               ),
             );
-            // Xóa OTP khi sai
+            // Discard OTP input buffers on failure
             for (final c in _controllers) {
               c.clear();
             }
@@ -111,7 +111,7 @@ class _MFAVerifyScreenState extends State<MFAVerifyScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xxxl),
 
-                // 6 ô nhập OTP
+                // Render 6 adjacent OTP fields
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (index) => _buildOtpBox(index)),

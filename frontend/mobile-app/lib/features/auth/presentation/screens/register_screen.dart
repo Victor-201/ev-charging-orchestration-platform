@@ -9,7 +9,7 @@ import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình đăng ký — S-02
+/// High-Fidelity User Registration Screen
 /// APIs: [01] POST /auth/register
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -138,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: AppSpacing.xl),
 
 
-                  // Họ và tên
+                  // Full name input form
                   TextFormField(
                     controller: _fullNameController,
                     textInputAction: TextInputAction.next,
@@ -172,7 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  // Mật khẩu
+                  // Password credentials form
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -203,7 +203,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   const SizedBox(height: AppSpacing.md),
 
-                  // Ngày sinh
+                  // Birthdate selector input
                   GestureDetector(
                     onTap: _pickDateOfBirth,
                     child: AbsorbPointer(

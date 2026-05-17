@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/user_entity.dart';
 
-/// Sự kiện AuthBloc
+/// Base auth bloc event triggers
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
   @override
@@ -79,24 +79,24 @@ class AuthResendVerificationRequested extends AuthEvent {
   List<Object?> get props => [email];
 }
 
-/// Trạng thái AuthBloc
+/// Base auth bloc states
 abstract class AuthState extends Equatable {
   const AuthState();
   @override
   List<Object?> get props => [];
 }
 
-/// Trạng thái khởi tạo
+/// Initial authentication loading state
 class AuthInitial extends AuthState {
   const AuthInitial();
 }
 
-/// Đang xử lý
+/// General async processing state
 class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
-/// Đã xác thực — lưu trữ thông tin người dùng và cờ nợ tồn đọng
+/// Authenticated session state storing identity models and arrears flags
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
   final bool hasArrears;
@@ -105,12 +105,12 @@ class AuthAuthenticated extends AuthState {
   List<Object?> get props => [user, hasArrears];
 }
 
-/// Chưa xác thực
+/// Anonymous state representing logged out profiles
 class AuthUnauthenticated extends AuthState {
   const AuthUnauthenticated();
 }
 
-/// Yêu cầu xác thực email — sau khi đăng ký
+/// Guard state indicating registration completed but verification is required
 class AuthEmailVerificationRequired extends AuthState {
   final String email;
   const AuthEmailVerificationRequired({required this.email});
@@ -118,12 +118,12 @@ class AuthEmailVerificationRequired extends AuthState {
   List<Object?> get props => [email];
 }
 
-/// Email xác thực thành công
+/// Verified state signifying email registration complete
 class AuthEmailVerified extends AuthState {
   const AuthEmailVerified();
 }
 
-/// Yêu cầu xác thực MFA
+/// Guard state prompting for 6-digit MFA confirmation
 class AuthMfaRequired extends AuthState {
   final String email;
   const AuthMfaRequired({required this.email});
@@ -131,7 +131,7 @@ class AuthMfaRequired extends AuthState {
   List<Object?> get props => [email];
 }
 
-/// Lỗi xác thực
+/// Faulted auth state containing the mapped failure
 class AuthError extends AuthState {
   final String message;
   final DateTime? lockedUntil;

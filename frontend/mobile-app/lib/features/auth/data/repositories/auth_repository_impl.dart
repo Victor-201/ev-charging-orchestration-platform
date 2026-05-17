@@ -8,7 +8,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../data/local/secure_storage_service.dart';
 
-/// Model dữ liệu người dùng từ API
+/// Remote data schema representing authenticated users
 class UserModel extends UserEntity {
   const UserModel({
     required super.id,

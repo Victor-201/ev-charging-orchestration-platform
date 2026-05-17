@@ -9,8 +9,8 @@ import '../../../../core/design_system/app_theme.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 
-/// Màn hình xác thực email — S-04
-/// Hiển thị sau khi đăng ký thành công
+/// Email Verification Code Screen
+/// Displayed immediately post user registration to trigger token checks
 /// APIs: GET /auth/verify-email?token=... | POST /auth/resend-verification
 class EmailVerificationScreen extends StatefulWidget {
   final String email;

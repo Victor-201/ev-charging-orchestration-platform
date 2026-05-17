@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Entity người dùng từ IAM Service
+/// Core domain user entity containing IAM attributes
 class UserEntity extends Equatable {
   final String id;
   final String email;

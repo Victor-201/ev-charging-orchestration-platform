@@ -9,7 +9,7 @@ import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình đăng nhập — S-01
+/// User Identity Portal Login Screen
 /// APIs: [02] POST /auth/login
 class LoginScreen extends StatefulWidget {
   final String? redirectUrl;
@@ -110,11 +110,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Lỗi tài khoản bị khóa
+                    // Display security ban errors
                     if (state is AuthError && state.lockedUntil != null)
                       _buildLockoutBanner(state),
 
-                    // Lỗi thông thường
+                    // Display authentication failures
                     if (state is AuthError && state.lockedUntil == null)
                       _buildErrorBanner(state.message),
 
@@ -132,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (v == null || v.isEmpty) {
                           return 'Vui lòng nhập email';
                         }
-                        // RFC5322 đơn giản
+                        // Simplified RFC5322 regex validation
                         final emailRegex = RegExp(
                             r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$');
                         if (!emailRegex.hasMatch(v.trim())) {
@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    // Mật khẩu
+                    // Password field layout
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
 
-                    // Quên mật khẩu
+                    // Forgot password action trigger
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
-                    // Nút đăng nhập
+                    // Login action button
                     EVButton(
                       label: 'Đăng nhập',
                       onPressed: _submit,
@@ -197,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Đăng ký
+                    // Registration action link
                   Wrap(
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,

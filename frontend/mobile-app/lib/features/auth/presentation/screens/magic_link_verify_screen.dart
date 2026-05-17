@@ -20,7 +20,7 @@ class _MagicLinkVerifyScreenState extends State<MagicLinkVerifyScreen> {
   @override
   void initState() {
     super.initState();
-    // Tự động trigger verify magic link khi mở màn hình
+    // Automatically triggers token validation when view mounts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AuthBloc>().add(AuthVerifyMagicLinkRequested(token: widget.token));
     });

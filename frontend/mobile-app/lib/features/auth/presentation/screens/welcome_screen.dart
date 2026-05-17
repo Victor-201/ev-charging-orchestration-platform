@@ -4,7 +4,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/app_theme.dart';
 
-/// Màn hình chào mừng — điểm bắt đầu trước khi xác thực
+/// Application Welcome Portal Screen
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
