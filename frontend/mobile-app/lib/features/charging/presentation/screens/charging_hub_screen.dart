@@ -9,8 +9,10 @@ import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 
-/// Màn hình hub sạc điện — Tab 2
-/// Gồm 2 tab: Sạc nhanh (QR) + Lịch sử phiên sạc
+/// Unified Charging Hub Main Dashboard Screen
+///
+/// Integrates two primary view states: camera-based Quick QR charging activation
+/// and chronological session billing logs.
 class ChargingHubScreen extends StatelessWidget {
   const ChargingHubScreen({super.key});
 
@@ -39,7 +41,7 @@ class ChargingHubScreen extends StatelessWidget {
   }
 }
 
-/// Tab quét QR / phiên sạc đang hoạt động
+/// QR Quick Charge activation state panel.
 class _QuickChargeTab extends StatelessWidget {
   const _QuickChargeTab();
 
@@ -48,10 +50,8 @@ class _QuickChargeTab extends StatelessWidget {
     return BlocBuilder<ChargingSessionBloc, ChargingState>(
       builder: (context, state) {
         if (state is ChargingActive) {
-          // Có phiên đang sạc → hiển thị card phiên
           return _ActiveSessionCard(session: state.session);
         }
-        // Chưa sạc → hiển thị nút QR scan
         return Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(children: [
@@ -147,7 +147,7 @@ class _QuickStat extends StatelessWidget {
   ]);
 }
 
-/// Tab lịch sử phiên sạc — [53] GET /charging/history
+/// Charging history list mapping previous session details.
 class _ChargingHistoryTab extends StatelessWidget {
   const _ChargingHistoryTab();
 

@@ -9,7 +9,10 @@ import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình tóm tắt phiên sạc — S-12
+/// Charging Session Transaction Summary Screen
+///
+/// Displays final energy telemetry counts, duration metrics, and settlement costs
+/// at the end of a successful vehicle charging session.
 class SessionSummaryScreen extends StatefulWidget {
   final ChargingSessionEntity session;
   const SessionSummaryScreen({super.key, required this.session});
@@ -52,7 +55,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
             child: Column(children: [
               const SizedBox(height: AppSpacing.xxxl),
 
-              // Success icon
               Container(
                 width: 88, height: 88,
                 decoration: BoxDecoration(
@@ -72,7 +74,6 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
                   style: AppTypography.bodyMd.copyWith(color: AppColors.grey600)),
               const SizedBox(height: AppSpacing.xxxl),
 
-              // Summary card
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(

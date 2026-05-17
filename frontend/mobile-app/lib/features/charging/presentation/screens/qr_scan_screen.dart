@@ -5,8 +5,10 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/utils/qr_validator.dart';
 
-/// Màn hình quét QR — S-10
-/// Sử dụng mobile_scanner với QrValidator (window: startTime-15m → endTime+5m)
+/// QR Scanning Camera Screen for Session Activation
+///
+/// Integrates the mobile_scanner camera pipeline with strict temporal validation rules
+/// (valid activation window: reservation startTime -15m to endTime +5m).
 class QRScanScreen extends StatefulWidget {
   const QRScanScreen({super.key});
 
@@ -47,7 +49,6 @@ class _QRScanScreenState extends State<QRScanScreen>
     final code = capture.barcodes.firstOrNull?.rawValue;
     if (code == null) return;
 
-    // Validate QR format
     if (!QrValidator.isValidFormat(code)) {
       _showError('Mã QR không đúng định dạng EV-XXXXXXXX-XXXXXXXXXXXXXXXX');
       return;
@@ -55,7 +56,7 @@ class _QRScanScreenState extends State<QRScanScreen>
 
     setState(() => _scanned = true);
     _cameraController.stop();
-    // Extract bookingId from QR: EV-{bookingId}-{random}
+    // Extract bookingId from QR code pattern: EV-{bookingId}-{random}
     final parts = code.split('-');
     final bookingId = parts.length >= 2 ? parts[1] : code;
     _showSuccessAndNavigate(code, bookingId);
@@ -69,7 +70,6 @@ class _QRScanScreenState extends State<QRScanScreen>
         duration: Duration(seconds: 2),
       ),
     );
-    // Chuyển đến màn hình active session với bookingId + qrToken
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         context.go('/charging/session/new',
@@ -119,13 +119,11 @@ class _QRScanScreenState extends State<QRScanScreen>
       ),
       body: Stack(
         children: [
-          // Camera view
           MobileScanner(
             controller: _cameraController,
             onDetect: _onBarcodeDetected,
           ),
 
-          // Overlay tối
           ColorFiltered(
             colorFilter: ColorFilter.mode(
               Colors.black.withValues(alpha: 0.4),
@@ -139,7 +137,6 @@ class _QRScanScreenState extends State<QRScanScreen>
                     backgroundBlendMode: BlendMode.dstOut,
                   ),
                 ),
-                // Vùng quét trong suốt
                 Center(
                   child: Container(
                     width: 260,
@@ -154,16 +151,13 @@ class _QRScanScreenState extends State<QRScanScreen>
             ),
           ),
 
-          // Khung và đường quét animation
           Center(
             child: SizedBox(
               width: 260,
               height: 260,
               child: Stack(
                 children: [
-                  // Góc khung
                   ..._buildCorners(),
-                  // Đường quét
                   AnimatedBuilder(
                     animation: _scanAnimation,
                     builder: (_, __) => Positioned(
@@ -189,7 +183,6 @@ class _QRScanScreenState extends State<QRScanScreen>
             ),
           ),
 
-          // Hướng dẫn
           Positioned(
             bottom: 100,
             left: 0,
@@ -213,7 +206,6 @@ class _QRScanScreenState extends State<QRScanScreen>
     const color = AppColors.secondary;
 
     return [
-      // Góc trên trái
       Positioned(
         top: 0,
         left: 0,
@@ -228,7 +220,6 @@ class _QRScanScreenState extends State<QRScanScreen>
           ),
         ),
       ),
-      // Góc trên phải
       Positioned(
         top: 0,
         right: 0,
@@ -243,7 +234,6 @@ class _QRScanScreenState extends State<QRScanScreen>
           ),
         ),
       ),
-      // Góc dưới trái
       Positioned(
         bottom: 0,
         left: 0,
@@ -258,7 +248,6 @@ class _QRScanScreenState extends State<QRScanScreen>
           ),
         ),
       ),
-      // Góc dưới phải
       Positioned(
         bottom: 0,
         right: 0,

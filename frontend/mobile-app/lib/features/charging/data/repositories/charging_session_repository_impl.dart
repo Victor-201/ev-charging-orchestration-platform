@@ -132,7 +132,7 @@ class ChargingSessionRepositoryImpl
     _wsChannel = IOWebSocketChannel.connect(wsUrl);
     _wsSubscription = _wsChannel!.stream.listen((raw) {
       try {
-        // Dữ liệu OCPP real-time theo §3.5 WebSocket
+        // Stream raw real-time OCPP energy counts based on §3.5 standards
         final json = raw as Map<String, dynamic>;
         onData(TelemetryData(
           chargerId: json['chargerId']?.toString() ?? chargerId,

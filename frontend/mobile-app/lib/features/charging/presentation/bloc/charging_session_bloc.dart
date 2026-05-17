@@ -4,7 +4,11 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import '../../domain/entities/charging_session_entity.dart';
 import '../../domain/repositories/i_charging_session_repository.dart';
 
-// ── Events ────────────────────────────────────────────────────────────
+/// Charging Session Control and Telemetry Business Logic Component (BLoC)
+///
+/// Coordinates all states and operations related to starting, running, and terminating
+/// EV charging sessions, utilizing HydratedBloc to persist active session state across app
+/// launches and WebSocket tunnels for real-time OCPP telemetry streams.
 abstract class ChargingEvent extends Equatable {
   const ChargingEvent();
   @override
@@ -45,7 +49,6 @@ class ChargingReset extends ChargingEvent {
   const ChargingReset();
 }
 
-// ── States ────────────────────────────────────────────────────────────
 abstract class ChargingState extends Equatable {
   const ChargingState();
   @override
@@ -105,7 +108,6 @@ class ChargingError extends ChargingState {
   List<Object?> get props => [message];
 }
 
-// ── BLoC ─────────────────────────────────────────────────────────────
 class ChargingSessionBloc
     extends HydratedBloc<ChargingEvent, ChargingState> {
   final IChargingSessionRepository _repository;
@@ -131,7 +133,6 @@ class ChargingSessionBloc
       (f) => emit(ChargingError(message: f.message)),
       (session) {
         emit(ChargingActive(session: session));
-        // Kết nối WebSocket telemetry OCPP
         _repository.connectTelemetry(
           chargerId: session.chargerId,
           onData: (data) => add(ChargingTelemetryReceived(data: data)),
@@ -172,7 +173,6 @@ class ChargingSessionBloc
     emit(const ChargingInitial());
   }
 
-  // ── HydratedBloc serialization ─────────────────────────────────────
   @override
   ChargingState? fromJson(Map<String, dynamic> json) {
     try {

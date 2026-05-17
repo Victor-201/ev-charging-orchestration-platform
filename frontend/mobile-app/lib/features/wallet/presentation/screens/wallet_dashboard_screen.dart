@@ -11,8 +11,10 @@ import '../../../../core/design_system/alert_banner.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình ví điện tử — S-14
-/// Hiển thị số dư, lịch sử giao dịch, nút nạp tiền, cảnh báo nợ tồn đọng
+/// Wallet Dashboard Screen
+///
+/// Displays the customer's active wallet balance, aggregates chronological transaction
+/// logs, issues arrears warnings, and initiates payment gateway workflows.
 class WalletDashboardScreen extends StatefulWidget {
   const WalletDashboardScreen({super.key});
 
@@ -79,7 +81,6 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Header ví
           Container(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.xl,
@@ -141,14 +142,13 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
             ),
           ),
 
-          // Cảnh báo nợ tồn đọng
           if (state.wallet.hasArrears)
             Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 children: [
                   ArrearsAlertBanner(
-                    amount: 'Nợ tồn đọ: ${VndFormatter.format(state.wallet.arrearsAmount ?? 0)}',
+                    amount: 'Nợ tồn đọng: ${VndFormatter.format(state.wallet.arrearsAmount ?? 0)}',
                     onTap: null,
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -164,7 +164,6 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
               ),
             ),
 
-          // Lịch sử giao dịch
           Padding(
             padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),

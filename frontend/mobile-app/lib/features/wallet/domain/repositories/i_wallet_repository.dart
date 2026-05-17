@@ -2,22 +2,26 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/wallet_entity.dart';
 
+/// Wallet Operations Repository Interface
+///
+/// Defines the data-layer contract for retrieving balances, executing payment checkouts,
+/// processing top-up flows, and pulling paginated transaction logs.
 abstract class IWalletRepository {
-  // [60] Số dư ví
+  /// Retrieves the current wallet balance and dynamic arrears status indicators.
   Future<Either<Failure, WalletEntity>> getBalance();
 
-  // [61] Nạp tiền VNPay
+  /// Initiates a payment gateway top-up session for a specific monetary amount.
   Future<Either<Failure, TopUpResultEntity>> topUp(double amount);
 
-  // [62] Thanh toán bằng ví
+  /// Settles an outstanding charging session invoice using the wallet balance.
   Future<Either<Failure, TransactionEntity>> walletPay(String transactionId);
 
-  // [63] Lịch sử giao dịch
+  /// Queries a paginated list of chronological wallet transaction records.
   Future<Either<Failure, List<TransactionEntity>>> getTransactions({
     int page = 1,
     int limit = 20,
   });
 
-  // [68] Thanh toán nợ tồn đọng
+  /// Settles accumulated platform arrears using the current wallet balance.
   Future<Either<Failure, void>> payArrears();
 }

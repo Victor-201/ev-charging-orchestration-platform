@@ -7,9 +7,10 @@ import '../../../../core/design_system/app_theme.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 
-/// Màn hình xử lý VNPay — S-15
-/// Đọc deep link ev://app/wallet/topup/processing?vnp_TxnRef=&vnp_ResponseCode=
-/// Gọi [56] GET /payments/vnpay-return để verify HMAC-SHA512
+/// VNPay Payment Processing Screen
+///
+/// Parses deep-link redirection parameters from VNPay gateway integrations,
+/// triggers payment state verification, and updates local wallet indicator components.
 class VNPayProcessingScreen extends StatefulWidget {
   final String? txnRef;
   final String? responseCode;
@@ -40,7 +41,7 @@ class _VNPayProcessingScreenState extends State<VNPayProcessingScreen>
   }
 
   Future<void> _verifyPayment() async {
-    // responseCode '00' = success per VNPay spec
+    // A response code of '00' indicates a successful transaction cycle according to VNPay specifications.
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
@@ -54,7 +55,6 @@ class _VNPayProcessingScreenState extends State<VNPayProcessingScreen>
 
     if (isSuccess) {
       _spinController.stop();
-      // Reload wallet balance
       context.read<WalletBloc>().add(const WalletLoad());
     }
   }

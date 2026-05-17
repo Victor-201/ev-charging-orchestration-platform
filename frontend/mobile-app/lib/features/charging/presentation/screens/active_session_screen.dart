@@ -11,8 +11,10 @@ import '../../../../core/design_system/alert_banner.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình phiên sạc đang hoạt động — S-11
-/// Long-press 1.5s để dừng, 6-metric grid, idle fee countdown
+/// Active Charging Session Real-Time Telemetry Screen
+///
+/// Monitors live energy flow, battery state-of-charge (SOC) percentages, voltage levels,
+/// and handles session termination triggers with a secure 1.5-second long press gesture.
 class ActiveSessionScreen extends StatefulWidget {
   final String sessionId;
   final String? bookingId;
@@ -174,12 +176,14 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           )
         else
           const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Spacer(),
             SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2)),
             SizedBox(width: 12),
             Text('Đang dừng phiên sạc...'),
+            Spacer(),
           ]),
 
         const SizedBox(height: AppSpacing.xl),

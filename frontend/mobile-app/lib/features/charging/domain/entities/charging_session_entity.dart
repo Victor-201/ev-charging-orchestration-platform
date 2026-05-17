@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Entity phiên sạc từ ChargerSession FSM
+/// Domain entity representing charging transactions
 /// States: INITIATED → AUTHORIZED → CHARGING → STOPPING → COMPLETED/ERROR
 class ChargingSessionEntity extends Equatable {
   final String id;
@@ -49,7 +49,7 @@ class ChargingSessionEntity extends Equatable {
       ];
 }
 
-/// Dữ liệu telemetry từ WebSocket OCPP
+/// Core ocpp socket telemetry state model
 class TelemetryData extends Equatable {
   final String chargerId;
   final double powerW;

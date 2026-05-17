@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/wallet_entity.dart';
 import '../../domain/repositories/i_wallet_repository.dart';
 
-// ── Events ─────────────────────────────────────────────────────────
+/// Wallet Management Business Logic Component (BLoC)
+///
+/// Coordinates all states and operations related to user wallets, including balance checks,
+/// top-up gateway redirections, transaction log paginations, and arrears payments.
 abstract class WalletEvent extends Equatable {
   const WalletEvent();
   @override
@@ -32,7 +35,6 @@ class WalletPayArrears extends WalletEvent {
   const WalletPayArrears();
 }
 
-// ── States ─────────────────────────────────────────────────────────
 abstract class WalletState extends Equatable {
   const WalletState();
   @override
@@ -76,7 +78,6 @@ class WalletError extends WalletState {
   List<Object?> get props => [message];
 }
 
-// ── BLoC ───────────────────────────────────────────────────────────
 class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final IWalletRepository _repository;
 
@@ -100,7 +101,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       (f) => emit(WalletError(message: f.message)),
       (wallet) {
         txResult.fold(
-          (f) => emit(WalletLoaded(wallet: wallet, transactions: [])),
+          (f) => emit(WalletLoaded(wallet: wallet, transactions: const [])),
           (txs) => emit(WalletLoaded(
             wallet: wallet,
             transactions: txs,
@@ -129,7 +130,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     final result = await _repository.getTransactions(
         page: event.page, limit: 20);
     result.fold(
-      (f) {}, // giữ state
+      (f) {},
       (txs) {
         final current = state;
         if (current is WalletLoaded) {
