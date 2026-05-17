@@ -1,93 +1,122 @@
 # Huong Dan Su Dung Scripts Trien Khai (Deployment Scripts)
 
-Tai lieu nay huong dan toan bo bo cong cu tu dong hoa PowerShell (`.ps1`) trong thu muc `deployment/scripts/` de quan ly **backend microservices** (Docker) va **frontend Flutter mobile app**.
+Tai lieu nay huong dan toan bo bo cong cu tu dong hoa (Bash cho Backend va PowerShell cho Frontend) trong thu muc `deployment/scripts/` de quan ly **backend microservices** (Docker) va **frontend Flutter mobile app**.
 
 > **Yeu cau chung:**
 >
-> - PowerShell 5.1+ (Windows) hoac PowerShell 7+ (`pwsh`)
-> - Neu bi chan boi Execution Policy, chay mot lan: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+> - **Backend:** Ubuntu (WSL) voi Docker Engine duoc cai dat truc tiep ben trong (Native WSL - **Khong can Docker Desktop**).
+> - **Frontend:** PowerShell 5.1+ (Windows) hoac PowerShell 7+ (`pwsh`)
 > - Tat ca lenh chay tu **thu muc goc du an** (`ev-charging-orchestration-platform/`)
+> - **Tien ich Auto-WSL:** Cac script backend co the chay truc tiep tu Git Bash/PowerShell tren Windows, he thong se tu dong chuyen huong vao WSL.
 
 ---
 
 ## PHAN 1 - BACKEND (Docker Microservices)
 
-> **Yeu cau them:** Docker Desktop dang chay.
+> **Yeu cau them:** Docker dang chay trong WSL (Ubuntu).
 
 ### Tong Quan
 
-| Script                  | Muc dich                              | Tham so chinh                  |
-| ----------------------- | ------------------------------------- | ------------------------------ |
-| `start.ps1`             | Khoi chay he thong Docker Compose     | `-Rebuild`, `-Ngrok`           |
-| `stop.ps1`              | Dung he thong + dung ngrok            | `-Clean`                       |
-| `reset.ps1`             | Xoa sach + restart tu dau             | `-Force`, `-Ngrok`             |
-| `health-check.ps1`      | Kiem tra trang thai services + ngrok  | _(khong co)_                   |
-| `logs.ps1`              | Xem log container linh hoat           | `-Service`, `-All`, `-AllApps` |
-| `smoke-test.ps1`        | Test tich hop qua API Gateway         | `-Gateway <URL>`               |
-| `tests.ps1`             | Chay Unit Test 8 microservices        | `-Coverage`, `-Pattern`        |
-| `validate-rabbitmq.ps1` | Kiem tra Zero-Loss RabbitMQ DLQ       | _(khong co)_                   |
-| `clickhouse-check.ps1`  | Kiem tra nhanh ClickHouse + telemetry | `-Detail`                      |
+> 🌟 **Khuyen Nghi (Moi):** Ban nen su dung **Menu Tuong Tac** tai `deployment/scripts/menu.ps1` lam trung tam dieu khien chinh de thao tac 1-cham. Menu da duoc tich hop Auto-WSL va tu dong goi tat ca cac scripts ben duoi.
+
+| Script                 | Muc dich                              | Tham so chinh          |
+| ---------------------- | ------------------------------------- | ---------------------- |
+| `menu.ps1`             | Menu tuong tac quan ly toan bo he thong| _(Chay tren PowerShell)_|
+| `backend/start.sh`     | Khoi chay he thong Docker Compose     | `--rebuild`, `--ngrok` |
+| `backend/stop.sh`      | Dung he thong + dung ngrok            | `--clean`              |
+| `backend/reset.sh`     | Xoa sach + restart tu dau             | `--force`, `--ngrok`   |
+| `backend/health-check.sh` | Kiem tra trang thai (Parallel Fast) | _(khong co)_           |
+| `backend/logs.sh`      | Xem log container linh hoat           | `--service`, `--tail`  |
+| `backend/tests.sh`     | Chay Unit & Parallel Smoke Test       | `--smoke`, `--all`     |
+| `backend/validate-rabbitmq.sh` | Kiem tra Zero-Loss RabbitMQ DLQ | _(khong co)_           |
+| `backend/clickhouse-check.sh`  | Kiem tra nhanh ClickHouse (Multi-Query) | _(khong co)_   |
+| `database/seed-up.sh`          | Nap du lieu (Seed) vao Database         | `<service-name>`       |
+| `database/seed-down.sh`        | Xoa du lieu (Clean) khoi Database       | `<service-name>`       |
 
 ---
 
-### 1.1. Khoi Chay He Thong (`start.ps1`)
+### 1.0. Huong Dan Thiet Lap Docker Native WSL (No Docker Desktop)
+
+De he thong chay on dinh ma khong phu thuoc vao Docker Desktop (giup tiet kiem RAM va CPU), ban can cai dat Docker Engine truc tiep vao WSL:
+
+1.  **Cai dat Docker Engine (trong WSL):**
+
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y docker.io docker-compose-v2
+    sudo usermod -aG docker $USER
+    ```
+
+    _(Tat va mo lai terminal WSL sau khi chay lenh nay)_
+
+2.  **Ngat ket noi voi Windows Docker:**
+
+    ```bash
+    docker context use default
+    ```
+
+3.  **Tien ich Auto-WSL Redirection:**
+    Ban co the chay script backend truc tiep tu **Git Bash, CMD hoac PowerShell** tren Windows. Script se tu dong:
+    - Nhan dien moi truong Windows.
+    - Dich duong dan hien tai sang WSL chuẩn.
+    - Tu khoi dong Docker service (`sudo service docker start`) neu can.
+    - Thuc thi toan bo logic ben trong WSL va tra ket qua ve terminal Windows.
+
+---
+
+---
+
+### 1.1. Khoi Chay He Thong (`start.sh`)
 
 Khoi chay toan bo ha tang (Docker containers, Volumes, Networks) va cho 18 containers chuyen sang trang thai `healthy`.
-Mac dinh khong chay ngrok. Them `-Ngrok` de bat tunnel.
+Mac dinh khong chay ngrok. Them `--ngrok` de bat tunnel.
 
-**Ngrok static domain:** `https://impeditive-incredible-jordy.ngrok-free.dev`
-
-```powershell
-.\deployment\scripts\backend\start.ps1              # Khoi dong binh thuong (khong ngrok)
-.\deployment\scripts\backend\start.ps1 -Rebuild     # Force rebuild toan bo image
-.\deployment\scripts\backend\start.ps1 -Ngrok       # Khoi dong + chay ngrok tunnel
-.\deployment\scripts\backend\start.ps1 -Rebuild -Ngrok  # Rebuild va chay ngrok
+```bash
+# Chay tu WSL Terminal
+./deployment/scripts/backend/start.sh              # Khoi dong binh thuong
+./deployment/scripts/backend/start.sh --rebuild     # Force rebuild toan bo image
+./deployment/scripts/backend/start.sh --ngrok       # Khoi dong + chay ngrok tunnel
 ```
 
-**Quy trinh start.ps1:**
+**Quy trinh start.sh:**
 
 1. Tat container cu (giai phong port)
-2. Build image (neu `-Rebuild`)
+2. Build image (neu `--rebuild`)
 3. Khoi dong Docker Compose
-4. _(Tuy chon - neu co `-Ngrok`)_ Kill ngrok cu → khoi dong ngrok → xac nhan tunnel qua `localhost:4040`
+4. _(Tuy chon - neu co `--ngrok`)_ Kill ngrok cu → khoi dong ngrok → xac nhan tunnel qua `localhost:4040`
 5. Poll health check tung container, timeout 120 giay/container
 
-> **Yeu cau ngrok (chi khi dung `-Ngrok`):** Cai dat ngrok va dang nhap: `ngrok config add-authtoken <token>`
+> **Yeu cau ngrok (chi khi dung `--ngrok`):** Cai dat ngrok va dang nhap: `ngrok config add-authtoken <token>`
 > Tai ve tai: https://ngrok.com/download
 
 ---
 
-### 1.2. Dung He Thong (`stop.ps1`)
+### 1.2. Dung He Thong (`stop.sh`)
 
-```powershell
-.\deployment\scripts\backend\stop.ps1          # Dung containers + dung ngrok, giu volumes
-.\deployment\scripts\backend\stop.ps1 -Clean   # Dung + XOA VINH VIEN tat ca Volumes
+```bash
+./deployment/scripts/backend/stop.sh          # Dung containers + dung ngrok
+./deployment/scripts/backend/stop.sh --clean   # Dung + XOA VINH VIEN tat ca Volumes
 ```
 
 Script tu dong tat process `ngrok` neu dang chay.
 
 ---
 
-### 1.3. Reset Toan He Thong (`reset.ps1`)
+### 1.3. Reset Toan He Thong (`reset.sh`)
 
-"Nut hat nhan" - xoa sach + build lai + chay lai tu dau. Tuong duong `stop.ps1 -Clean -> start.ps1 -Rebuild`.
-Ho tro `-Ngrok` de forward sang `start.ps1 -Rebuild -Ngrok` sau khi reset.
-
-```powershell
-.\deployment\scripts\backend\reset.ps1               # Hoi xac nhan [y/N] (khong ngrok)
-.\deployment\scripts\backend\reset.ps1 -Force        # Khong hoi, thuc thi ngay
-.\deployment\scripts\backend\reset.ps1 -Ngrok        # Reset + bat ngrok sau khi chay lai
-.\deployment\scripts\backend\reset.ps1 -Force -Ngrok # Khong hoi + bat ngrok
+```bash
+./deployment/scripts/backend/reset.sh               # Hoi xac nhan [y/N]
+./deployment/scripts/backend/reset.sh --force        # Khong hoi, thuc thi ngay
+./deployment/scripts/backend/reset.sh --ngrok        # Reset + bat ngrok
+./deployment/scripts/backend/reset.sh --force --ngrok  # Reset + bat ngrok khong hoi xac nhan
 ```
 
 ---
 
-### 1.4. Kiem Tra Suc Khoe (`health-check.ps1`)
+### 1.4. Kiem Tra Suc Khoe (`health-check.sh`)
 
-Danh gia trang thai o 2 cap: Docker Container Status + HTTP API Status. Kiem tra them ngrok tunnel.
-
-```powershell
-.\deployment\scripts\backend\health-check.ps1
+```bash
+./deployment/scripts/backend/health-check.sh
 ```
 
 **Ket qua:**
@@ -99,69 +128,51 @@ Danh gia trang thai o 2 cap: Docker Container Status + HTTP API Status. Kiem tra
 
 ---
 
-### 1.5. Xem Log He Thong (`logs.ps1`)
+### 1.5. Xem Log Hệ Thống (`logs.sh`)
 
-```powershell
-.\deployment\scripts\backend\logs.ps1 -Service ev-iam            # 1 service, terminal hien tai
-.\deployment\scripts\backend\logs.ps1 -Service ev-iam,ev-pg-iam  # Nhieu services -> nhieu cua so
-.\deployment\scripts\backend\logs.ps1 -AllApps                   # 8 cua so cho 8 app services
-.\deployment\scripts\backend\logs.ps1 -AllInfra                  # 4 cua so (kong, redis, rmq, ch)
-.\deployment\scripts\backend\logs.ps1 -AllDb                     # 6 cua so PostgreSQL
-.\deployment\scripts\backend\logs.ps1 -AllSystemSplit            # 18 cua so toan bo he thong
-.\deployment\scripts\backend\logs.ps1 -All                       # Gop tat ca vao 1 man hinh
-.\deployment\scripts\backend\logs.ps1 -Service ev-iam -NoFollow  # In roi dung
-.\deployment\scripts\backend\logs.ps1 -Service ev-iam -Tail 500  # 500 dong cuoi
+Script này hỗ trợ xem log từ Docker Compose một cách linh hoạt, cho phép lọc theo service, nhóm service (PG/Infra) hoặc giới hạn số dòng.
+
+```bash
+./deployment/scripts/backend/logs.sh                                  # Xem log toàn bộ hệ thống
+./deployment/scripts/backend/logs.sh --pg                            # Xem log tất cả 6 database PostgreSQL
+./deployment/scripts/backend/logs.sh --infra                         # Xem log hạ tầng (Redis, RMQ, CH, Kong)
+./deployment/scripts/backend/logs.sh --app                           # Xem log tất cả microservices
+./deployment/scripts/backend/logs.sh --service iam-service            # Xem log 1 service cụ thể
+./deployment/scripts/backend/logs.sh --tail 500                       # Xem 500 dòng cuối của tất cả
 ```
 
-**18 Container ho tro:**
+**18 Container hỗ trợ:**
 
-- **App (8):** `ev-iam`, `ev-analytics`, `ev-infrastructure`, `ev-session`, `ev-billing`, `ev-notify`, `ev-telemetry`, `ev-ocpp-gw`
+- **App (8):** `iam-service`, `analytics-service`, `ev-infrastructure-service`, `session-service`, `billing-service`, `notification-service`, `telemetry-ingestion-service`, `ocpp-gateway-service`
 - **Infra (4):** `ev-kong`, `ev-redis`, `ev-rabbitmq`, `ev-clickhouse`
 - **DB (6):** `ev-pg-iam`, `ev-pg-infra`, `ev-pg-session`, `ev-pg-billing`, `ev-pg-notify`, `ev-pg-analytics`
 
 ---
 
-### 1.6. Smoke Test (`smoke-test.ps1`)
+### 1.6. Hệ Thống Kiểm Thử (`tests.sh`)
 
-Dong vai client ben ngoai, gui HTTP qua API Gateway (Kong) de kiem tra routing va auth guard.
+Script này gộp chung cả Unit Test (kiểm tra code) và Smoke Test (kiểm tra API thực tế).
 
-```powershell
-.\deployment\scripts\backend\smoke-test.ps1                                # Gateway mac dinh localhost:8000
-.\deployment\scripts\backend\smoke-test.ps1 -Gateway "http://staging:8000" # Gateway tuy chinh
-# Test qua ngrok (thiet bi that)
-.\deployment\scripts\backend\smoke-test.ps1 -Gateway "https://impeditive-incredible-jordy.ngrok-free.dev"
+```bash
+./deployment/scripts/backend/tests.sh                                  # Mặc định chạy toàn bộ Unit Test
+./deployment/scripts/backend/tests.sh --unit --service iam-service     # Chỉ chạy Unit Test cho 1 service
+./deployment/scripts/backend/tests.sh --smoke                          # Chạy Smoke Test kiểm tra API qua Gateway
+./deployment/scripts/backend/tests.sh --all                            # Chạy cả Unit Test và Smoke Test
+./deployment/scripts/backend/tests.sh --smoke --gateway "http://alt:8000" # Smoke test với gateway khác
 ```
 
-**Endpoints duoc test:**
+**Chi tiết Smoke Test Endpoints:**
 
-| Service        | Endpoint                                       | Expected |
-| -------------- | ---------------------------------------------- | -------- |
-| IAM            | `POST /api/v1/auth/register` (missing body)    | `400`    |
-| IAM            | `POST /api/v1/auth/login` (missing creds)      | `400`    |
-| IAM            | `GET /api/v1/users/me` (no token)              | `401`    |
-| Infrastructure | `GET /api/v1/stations` (public)                | `200`    |
-| Session        | `POST /api/v1/bookings` (no token)             | `401`    |
-| Session        | `POST /api/v1/charging/start` (no token)       | `401`    |
-| Billing        | `GET /api/v1/wallets/balance` (no token)       | `401`    |
-| Billing        | `POST /api/v1/payments/pay` (no token)         | `401`    |
-| Notification   | `GET /api/v1/notifications` (no token)         | `401`    |
-| Analytics      | `GET /api/v1/analytics/dashboard` (no token)   | `401`    |
-| Telemetry      | `POST /api/v1/telemetry/ingest` (missing body) | `400`    |
-| OCPP Gateway   | `GET /api/v1/ocpp/health`                      | `200`    |
-| Kong Admin     | `GET http://localhost:8001`                    | `200`    |
-| RabbitMQ UI    | `GET http://localhost:15672`                   | `200`    |
-
----
-
-### 1.7. Unit Test (`tests.ps1`)
-
-Duyet qua 8 thu muc backend, chay `jest`, tong hop Pass/Fail.
-
-```powershell
-.\deployment\scripts\backend\tests.ps1                     # Toan bo test suite
-.\deployment\scripts\backend\tests.ps1 -Coverage           # Kem bao cao code coverage
-.\deployment\scripts\backend\tests.ps1 -Pattern "booking"  # Chi test file khop pattern
-```
+| Dịch vụ        | Endpoint                                       | Kết quả |
+| -------------- | ---------------------------------------------- | ------- |
+| IAM            | `POST /api/v1/auth/register` (thiếu body)      | `400`   |
+| Infrastructure | `GET /api/v1/stations` (công cộng)             | `200`   |
+| Session        | `POST /api/v1/bookings` (không token)          | `401`   |
+| Billing        | `GET /api/v1/wallets/balance` (không token)    | `401`   |
+| Notification   | `GET /api/v1/notifications` (không token)      | `401`   |
+| Analytics      | `GET /api/v1/analytics/dashboard` (không token)| `401`   |
+| Telemetry      | `POST /api/v1/telemetry/ingest` (thiếu body)   | `400`   |
+| OCPP Gateway   | `GET /api/v1/ocpp/health`                      | `200`   |
 
 > Script bo qua (`SKIP`) service chua co `node_modules` hoac chua co file `*.spec.ts`.
 
@@ -169,12 +180,10 @@ Duyet qua 8 thu muc backend, chay `jest`, tong hop Pass/Fail.
 
 ---
 
-### 1.8. Validate RabbitMQ (`validate-rabbitmq.ps1`)
+### 1.8. Validate RabbitMQ (`validate-rabbitmq.sh`)
 
-Truy van RabbitMQ Management API - dam bao khong co message bi mat, DLQ rong.
-
-```powershell
-.\deployment\scripts\backend\validate-rabbitmq.ps1
+```bash
+./deployment/scripts/backend/validate-rabbitmq.sh
 ```
 
 | Trang thai                | Y nghia                                           |
@@ -187,19 +196,13 @@ Truy van RabbitMQ Management API - dam bao khong co message bi mat, DLQ rong.
 
 ---
 
-### 1.9. Kiem Tra ClickHouse (`clickhouse-check.ps1`)
+### 1.9. Kiem Tra ClickHouse (`clickhouse-check.sh`)
 
-Kiem tra nhanh toan bo stack ClickHouse: ket noi, database, table, row count, partition, TTL, container health, va trang thai ket noi tu `telemetry-service`.
-
-```powershell
-# Kiem tra nhanh (mac dinh)
-.\deployment\scripts\backend\clickhouse-check.ps1
-
-# Hien thi them schema cot cua bang telemetry_logs
-.\deployment\scripts\backend\clickhouse-check.ps1 -Detail
+```bash
+./deployment/scripts/backend/clickhouse-check.sh
 ```
 
-> Yeu cau: Docker Desktop dang chay va container `ev-clickhouse` ton tai.
+> Yeu cau: Docker daemon dang chay (Native WSL) va container `ev-clickhouse` ton tai.
 > Script chay qua `docker exec clickhouse-client` (khong dung HTTP port).
 
 **Cac muc kiem tra:**
@@ -217,6 +220,28 @@ Kiem tra nhanh toan bo stack ClickHouse: ket noi, database, table, row count, pa
 
 - `exit 0` - Tat ca OK (co the co CANH BAO)
 - `exit 1` - Co loi nghiem trong (container down, service loi)
+
+---
+
+### 1.10. Quan Ly Du Lieu Mau (Seed Data)
+
+Hai script `seed-up.sh` va `seed-down.sh` giup tu dong hoa qua trinh nap va xoa du lieu mau cho cac dich vu. Scripts se chay theo thu tu phu thuoc (IAM -> Infra -> Billing -> Session -> Analytics -> Notification).
+
+```bash
+# Nap du lieu mau cho toan bo he thong
+./deployment/scripts/database/seed-up.sh
+
+# Nap du lieu mau cho 1 dich vu cu the
+./deployment/scripts/database/seed-up.sh iam-service
+
+# Xoa toan bo du lieu mau (Rollback)
+./deployment/scripts/database/seed-down.sh
+
+# Xoa du lieu mau cho 1 dich vu cu the
+./deployment/scripts/database/seed-down.sh iam-service
+```
+
+> **Luu y:** Database Container phai dang chay truoc khi thuc hien nap du lieu. Du lieu se duoc chen truc tiep thong qua `psql` ben trong container.
 
 ---
 
@@ -351,58 +376,58 @@ Script **tu dong phat hien ngrok URL** (uu tien dung ngrok khi chay dev) thay ch
 ### Khoi dong du an lan dau (Full Stack)
 
 ```powershell
-# 1. Setup moi truong Flutter
+# 1. Setup moi truong Flutter (PowerShell)
 .\deployment\scripts\frontend\setup.ps1 -GenKeystore
 
-# 2. Khoi dong backend (khong ngrok)
-.\deployment\scripts\backend\start.ps1
+# 2. Khoi dong backend (WSL Terminal)
+./deployment/scripts/backend/start.sh
 
-# 3. Xac nhan backend healthy
-.\deployment\scripts\backend\health-check.ps1
+# 3. Xac nhan backend healthy (WSL Terminal)
+./deployment/scripts/backend/health-check.sh
 
-# 4. Chay app Flutter (localhost hoac emulator)
+# 4. Chay app Flutter (PowerShell)
 .\deployment\scripts\frontend\run.ps1
 ```
 
 ### Khoi dong voi Ngrok (thiet bi that)
 
 ```powershell
-# Khoi dong backend + bat ngrok tunnel
-.\deployment\scripts\backend\start.ps1 -Ngrok
+# Khoi dong backend + bat ngrok tunnel (WSL Terminal)
+./deployment/scripts/backend/start.sh --ngrok
 
-# Chay app Flutter - tu dong dung ngrok URL
+# Chay app Flutter - tu dong dung ngrok URL (PowerShell)
 .\deployment\scripts\frontend\run.ps1
 ```
 
 ### Truoc khi demo / submit
 
 ```powershell
-# Reset backend sach, build lai
-.\deployment\scripts\backend\reset.ps1 -Force
+# Reset backend sach, build lai (WSL Terminal)
+./deployment/scripts/backend/reset.sh --force
 
-# Kiem tra khong mat event
-.\deployment\scripts\backend\validate-rabbitmq.ps1
+# Kiem tra khong mat event (WSL Terminal)
+./deployment/scripts/backend/validate-rabbitmq.sh
 
-# Chay backend test
-.\deployment\scripts\backend\tests.ps1
+# Chay backend test (WSL Terminal)
+./deployment/scripts/backend/tests.sh
 
-# Chay frontend test
+# Chay frontend test (PowerShell)
 .\deployment\scripts\frontend\test.ps1 -Coverage
 
-# Build AAB production
+# Build AAB production (PowerShell)
 .\deployment\scripts\frontend\build.ps1 -Target appbundle -Flavor prod -Release -Analyze
 
-# Test qua ngrok (can chay start.ps1 -Ngrok truoc)
-.\deployment\scripts\backend\smoke-test.ps1 -Gateway "https://impeditive-incredible-jordy.ngrok-free.dev"
+# Test qua ngrok (WSL Terminal)
+./deployment/scripts/backend/tests.sh --smoke --gateway "https://impeditive-incredible-jordy.ngrok-free.dev"
 ```
 
-### Debug backend loi
+### Debug backend loi (WSL Terminal)
 
-```powershell
-.\deployment\scripts\backend\health-check.ps1          # Kiem tra container + HTTP + ngrok
-.\deployment\scripts\backend\logs.ps1 -Service ev-iam  # Xem log service loi
-.\deployment\scripts\backend\smoke-test.ps1            # Test routing qua Kong
-.\deployment\scripts\backend\reset.ps1                 # Reset neu khong fix duoc
+```bash
+./deployment/scripts/backend/health-check.sh          # Kiem tra container + HTTP
+./deployment/scripts/backend/logs.sh --service ev-iam  # Xem log service loi
+./deployment/scripts/backend/tests.sh --smoke         # Test routing qua Kong
+./deployment/scripts/backend/reset.sh --force         # Reset neu khong fix duoc
 ```
 
 ### Debug frontend loi
