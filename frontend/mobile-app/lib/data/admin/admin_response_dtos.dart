@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 // ─── DTOs cho Admin/System endpoints — TASK-196 ───────────────────────────────
-// Tương ứng với response schema từ backend microservices
+// Mapped according to response schemas of backend microservices
 
 /// [10][11] Role assignment/revoke response
 class RoleOperationDto extends Equatable {

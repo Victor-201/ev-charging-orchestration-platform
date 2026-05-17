@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/constants/storage_keys.dart';
 
-/// Dịch vụ lưu trữ bảo mật — AES-256 Android Keystore / iOS Keychain
+/// Encrypted client storage mapping Android Keystore and iOS Keychain interfaces
 class SecureStorageService {
   final FlutterSecureStorage _storage;
 
@@ -32,7 +32,7 @@ class SecureStorageService {
   Future<String?> getFcmToken() =>
       _storage.read(key: StorageKeys.fcmToken);
 
-  /// Xóa tất cả token khi đăng xuất
+  /// Discards all secure state tokens on logout
   Future<void> clearAll() async {
     await _storage.delete(key: StorageKeys.accessToken);
     await _storage.delete(key: StorageKeys.refreshToken);

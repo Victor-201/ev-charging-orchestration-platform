@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/storage_keys.dart';
 
-/// Dịch vụ SharedPreferences cho dữ liệu không nhạy cảm
+/// Local key-value store wrapper utilizing SharedPreferences
 class SharedPrefsService {
   final SharedPreferences _prefs;
 
