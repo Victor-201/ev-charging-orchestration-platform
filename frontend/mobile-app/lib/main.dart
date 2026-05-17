@@ -1,4 +1,4 @@
-/**
+/*
  * EVoltSync - EV Charging Orchestration Mobile Platform
  * 
  * Architecture: Clean Architecture / Feature-Driven Development
@@ -40,7 +40,7 @@ void main() async {
   
   await dotenv.load(fileName: ".env");
 
-  // HydratedBloc storage — web: WebStorage, native: file system
+  // Configures the local storage engine for HydratedBloc state persistence across app sessions.
   final storage = await HydratedStorage.build(
     storageDirectory: kIsWeb
         ? HydratedStorage.webStorageDirectory

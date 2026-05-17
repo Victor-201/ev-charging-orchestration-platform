@@ -26,12 +26,12 @@ import '../features/notifications/presentation/bloc/notification_bloc.dart';
 import '../features/charging/presentation/bloc/charging_session_bloc.dart';
 import '../features/booking/presentation/bloc/booking_bloc.dart';
 
-/// Service locator toàn cục
+/// Central dependency injection registry
 final getIt = GetIt.instance;
 
-/// Khởi tạo tất cả phụ thuộc
+/// Boots and registers all platform service locators
 Future<void> configureDependencies() async {
-  // ── Lưu trữ ─────────────────────────────────────────────────────────
+  // ── Local Storage Registries ───────────────────────────────────────
   const secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
@@ -42,12 +42,12 @@ Future<void> configureDependencies() async {
   final prefs = await SharedPreferences.getInstance();
   getIt.registerSingleton<SharedPrefsService>(SharedPrefsService(prefs));
 
-  // ── Mạng ────────────────────────────────────────────────────────────
+  // ── HTTP & Web Socket Client Registries ────────────────────────────
   getIt.registerSingleton<DioClient>(
     DioClient(
       secureStorage: secureStorage,
       onLogout: () async {
-        // AuthBloc xử lý — tránh circular dependency
+        // Intercepted via AuthBloc context lookup to avoid circular dependency
       },
     ),
   );
