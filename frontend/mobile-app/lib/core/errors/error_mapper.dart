@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'failures.dart';
 
-/// Ánh xạ DioException → Failure tương ứng
+/// Maps raw Dio network client exceptions to cohesive UI failures
 class ErrorMapper {
   static Failure fromDioException(DioException e) {
     if (e.type == DioExceptionType.connectionError ||

@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-/// Định dạng số tiền VNĐ — ví dụ: 150.000 ₫
+/// Formats numerical digits into VND currency localized format (e.g., 150.000 ₫)
 class VndFormatter {
   VndFormatter._();
 
@@ -10,11 +10,11 @@ class VndFormatter {
     decimalDigits: 0,
   );
 
-  /// Định dạng số nguyên thành chuỗi VNĐ
-  /// Ví dụ: 150000 → "150.000 ₫"
+  /// Formats numerical integer amounts into currency strings
+  /// Example: 150000 -> "150.000 ₫"
   static String format(num amount) => _formatter.format(amount);
 
-  /// Định dạng chuỗi số thành VNĐ (an toàn)
+  /// Formats arbitrary string digits safely into currency strings
   static String formatString(String? amount) {
     final value = double.tryParse(amount ?? '0') ?? 0;
     return format(value);

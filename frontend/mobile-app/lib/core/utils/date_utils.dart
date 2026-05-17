@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-/// Tiện ích xử lý ngày giờ — dùng cho toàn bộ ứng dụng
+/// Global DateTime utility extensions and formatting schemas
 class DateUtils {
   DateUtils._();
 
@@ -12,14 +12,14 @@ class DateUtils {
   static String formatTime(DateTime dt)     => _timeFormat.format(dt);
   static String formatDateTime(DateTime dt) => _dateTimeFormat.format(dt);
 
-  /// HH:mm — alias ngắn gọn cho slot grid
+  /// Short time hour-minute formatter (e.g. 14:30)
   static String formatTimeHm(DateTime dt) => _timeFormat.format(dt);
 
-  /// Kiểm tra hai DateTime có cùng ngày không
+  /// Compares if two DateTime instances share the same calendar day
   static bool isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// Kiểm tra độ tuổi tối thiểu 18 (từ dateOfBirth)
+  /// Validates legal age requirement (minimum 18 years from birthdate)
   static bool isAtLeast18(DateTime dateOfBirth) {
     final now = DateTime.now();
     final age = now.year - dateOfBirth.year;
@@ -31,7 +31,7 @@ class DateUtils {
     return false;
   }
 
-  /// Đếm ngược dạng HH:MM:SS
+  /// Formats dynamic durations into standard countdowns (HH:MM:SS)
   static String formatCountdown(Duration duration) {
     final hours   = duration.inHours.toString().padLeft(2, '0');
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -39,14 +39,14 @@ class DateUtils {
     return '$hours:$minutes:$seconds';
   }
 
-  /// Đếm ngược dạng MM:SS
+  /// Formats dynamic durations into compact countdowns (MM:SS)
   static String formatCountdownMinSec(Duration duration) {
     final minutes = duration.inMinutes.toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
-  /// Hiển thị tương đối — "vừa xong", "3 phút trước", "2 giờ trước", "hôm qua"
+  /// Computes relative human-friendly date indicators (e.g. "just now", "3m ago")
   static String formatRelative(DateTime dt) {
     final now  = DateTime.now();
     final diff = now.difference(dt);
