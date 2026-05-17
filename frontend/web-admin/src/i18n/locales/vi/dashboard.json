@@ -1,0 +1,177 @@
+{
+  "home": {
+    "title": "Dashboard",
+    "subtitle": "Tổng quan toàn bộ nền tảng EV Charging",
+    "kpi": {
+      "active_sessions": "Phiên sạc đang hoạt động",
+      "revenue_30d": "Doanh thu 30 ngày",
+      "new_users_30d": "Người dùng mới (30d)",
+      "conversion_rate": "Tỷ lệ chuyển đổi Booking"
+    },
+    "charts": {
+      "revenue_title": "Doanh thu 30 ngày",
+      "revenue_sub": "Tổng hợp từ tất cả trạm sạc",
+      "peak_title": "Giờ cao điểm",
+      "peak_sub": "Số phiên sạc theo giờ",
+      "top_stations_title": "Top Trạm sạc",
+      "top_stations_sub": "Hiệu suất và doanh thu theo trạm"
+    },
+    "table": {
+      "station_id": "ID Trạm",
+      "revenue": "Doanh thu",
+      "utilization": "Utilization",
+      "status": "Trạng thái"
+    }
+  },
+  "map": {
+    "title": "Bản đồ Trạm sạc",
+    "subtitle": "{{total}} trạm trên toàn mạng lưới",
+    "filter_all": "Tất cả",
+    "filter_active": "Hoạt động",
+    "filter_maintenance": "Bảo trì",
+    "filter_inactive": "Không hoạt động",
+    "add_station": "Thêm trạm",
+    "station_list": "Danh sách trạm",
+    "chargers_available": "{{available}}/{{total}} trụ trống"
+  },
+  "sessions": {
+    "title": "Phiên sạc",
+    "subtitle": "Theo dõi realtime và lịch sử sạc",
+    "active_count": "{{count}} đang sạc",
+    "tab_active": "🔋 Đang sạc ({{count}})",
+    "tab_history": "📋 Lịch sử",
+    "table": {
+      "session_id": "Session ID",
+      "charger": "Charger",
+      "user": "Người dùng",
+      "start": "Bắt đầu",
+      "energy": "Năng lượng (kWh)",
+      "cost": "Chi phí",
+      "status": "Trạng thái",
+      "action": "Hành động"
+    },
+    "force_stop": "Stop"
+  },
+  "billing": {
+    "title": "Tài chính & Thanh toán",
+    "subtitle": "Quản lý giao dịch và công nợ hệ thống",
+    "total_arrears": "Tổng nợ xấu",
+    "tab_transactions": "Lịch sử Giao dịch",
+    "tab_arrears": "Arrears Guard (Công nợ)",
+    "table_tx": {
+      "ref": "Mã GD (TxnRef)",
+      "type": "Loại",
+      "amount": "Số tiền",
+      "status": "Trạng thái",
+      "time": "Thời gian"
+    },
+    "table_arrears": {
+      "user_id": "User ID",
+      "session_id": "Session ID",
+      "amount": "Số tiền nợ",
+      "status": "Trạng thái",
+      "time": "Thời gian tạo",
+      "action": "Hành động"
+    },
+    "clear_manual": "Tất toán thủ công",
+    "no_arrears": "Hệ thống không có công nợ",
+    "no_transactions": "Chưa có giao dịch nào"
+  },
+  "staff": {
+    "title": "Quản lý Nhân sự",
+    "subtitle": "Hồ sơ nhân viên và theo dõi điểm danh GPS",
+    "add_staff": "Thêm nhân viên",
+    "tab_staff": "Hồ sơ Nhân sự",
+    "tab_attendance": "Điểm danh (GPS)",
+    "table_staff": {
+      "employee": "Nhân viên",
+      "position": "Vị trí",
+      "shift": "Ca làm việc",
+      "status": "Trạng thái",
+      "action": "Hành động"
+    },
+    "table_att": {
+      "employee": "Nhân viên",
+      "station": "Trạm sạc (Nơi điểm danh)",
+      "checkin": "Check In",
+      "checkout": "Check Out",
+      "gps": "Tọa độ GPS"
+    },
+    "not_updated": "Chưa cập nhật",
+    "on_shift": "Đang trong ca"
+  },
+  "analytics": {
+    "title": "Analytics & Báo cáo",
+    "subtitle": "Phân tích chuyên sâu về doanh thu và hiệu suất lưới điện",
+    "last_30d": "30 Ngày qua",
+    "export": "Xuất báo cáo",
+    "revenue_breakdown": {
+      "title": "Cấu trúc Doanh thu",
+      "subtitle": "Năng lượng vs Phí chờ (Idle Fee)",
+      "energy": "Phí Năng lượng",
+      "idle": "Phí Chờ (Idle)"
+    },
+    "load_profile": {
+      "title": "Tải Lưới điện (Load Profile)",
+      "subtitle": "Tổng công suất tiêu thụ toàn mạng lưới (kW)",
+      "power": "Công suất (kW)"
+    }
+  },
+  "maintenance": {
+    "title": "Bảo trì & Sự cố",
+    "subtitle": "Incident Control Center & Lịch bảo trì",
+    "tab_incidents": "Báo cáo Sự cố",
+    "tab_schedules": "Lịch Bảo trì",
+    "table_inc": {
+      "station": "Trạm sạc",
+      "desc": "Mô tả sự cố",
+      "severity": "Mức độ (Severity)",
+      "status": "Trạng thái",
+      "time": "Thời gian báo cáo",
+      "action": "Hành động"
+    },
+    "table_maint": {
+      "station": "Trạm sạc",
+      "reason": "Lý do bảo trì",
+      "start": "Bắt đầu dự kiến",
+      "end": "Kết thúc dự kiến",
+      "status": "Trạng thái"
+    },
+    "resolve": "Resolve"
+  },
+  "data": {
+    "status": {
+      "ACTIVE": "Hoạt động",
+      "INACTIVE": "Không hoạt động",
+      "MAINTENANCE": "Bảo trì",
+      "FAULTED": "Bị lỗi",
+      "CHARGING": "Đang sạc",
+      "COMPLETED": "Hoàn thành",
+      "STARTING": "Đang khởi động",
+      "STOPPED": "Đã dừng",
+      "ERROR": "Lỗi",
+      "SUCCESS": "Thành công",
+      "PENDING": "Đang chờ",
+      "RESOLVED": "Đã xử lý"
+    },
+    "severity": {
+      "CRITICAL": "Khẩn cấp",
+      "HIGH": "Cao",
+      "MEDIUM": "Trung bình",
+      "LOW": "Thấp"
+    },
+    "type": {
+      "TOPUP": "Nạp tiền",
+      "REFUND": "Hoàn tiền",
+      "ENERGY": "Điện năng",
+      "IDLE_FEE": "Phí chờ"
+    },
+    "staff": {
+      "POSITION_TECHNICIAN": "Kỹ thuật viên",
+      "POSITION_OPERATOR": "Nhân viên vận hành",
+      "SHIFT_MORNING": "Ca sáng",
+      "SHIFT_AFTERNOON": "Ca chiều",
+      "SHIFT_NIGHT": "Ca đêm"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "map": "Map View",
+    "sessions": "Sessions",
+    "bookings": "Bookings",
+    "billing": "Billing",
+    "staff": "Staff",
+    "notifications": "Notifications",
+    "maintenance": "Maintenance",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "topbar": {
+    "search_placeholder": "Search stations, users..."
+  },
+  "auth": {
+    "login_title": "Admin Login",
+    "email_label": "Email",
+    "email_placeholder": "admin@evoltboard.com",
+    "password_label": "Password",
+    "password_placeholder": "••••••••",
+    "mfa_label": "MFA Code (6 digits)",
+    "mfa_placeholder": "000000",
+    "login_btn": "Sign In",
+    "login_loading": "Signing in...",
+    "footer_text": "EV Charging Platform v2.0 — Secured by JWT + MFA",
+    "verifying": "Authenticating...",
+    "mfa_required_toast": "Please enter your 2FA (MFA) code",
+    "platform_subtitle": "EV Charging Orchestration Platform"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "no_data": "No data available",
+    "live": "Live · Realtime"
+  },
+  "api_errors": {
+    "UNKNOWN_ERROR": "Unknown system error",
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "MFA_REQUIRED": "MFA token required",
+    "UNAUTHORIZED": "Session expired",
+    "CLEAR_ARREARS_FAILED": "Failed to clear arrears",
+    "CLEAR_ARREARS_SUCCESS": "Arrears cleared successfully"
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "STAFF": "Staff",
+    "TECHNICIAN": "Technician",
+    "OPERATOR": "Operator"
+  }
+}

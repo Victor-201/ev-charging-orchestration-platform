@@ -1,0 +1,177 @@
+{
+  "home": {
+    "title": "Dashboard",
+    "subtitle": "Overview of the entire EV Charging Platform",
+    "kpi": {
+      "active_sessions": "Active Charging Sessions",
+      "revenue_30d": "30-Day Revenue",
+      "new_users_30d": "New Users (30d)",
+      "conversion_rate": "Booking Conversion Rate"
+    },
+    "charts": {
+      "revenue_title": "30-Day Revenue",
+      "revenue_sub": "Aggregated from all stations",
+      "peak_title": "Peak Hours",
+      "peak_sub": "Charging sessions by hour",
+      "top_stations_title": "Top Stations",
+      "top_stations_sub": "Performance and revenue by station"
+    },
+    "table": {
+      "station_id": "Station ID",
+      "revenue": "Revenue",
+      "utilization": "Utilization",
+      "status": "Status"
+    }
+  },
+  "map": {
+    "title": "Station Map",
+    "subtitle": "{{total}} stations across the network",
+    "filter_all": "All",
+    "filter_active": "Active",
+    "filter_maintenance": "Maintenance",
+    "filter_inactive": "Inactive",
+    "add_station": "Add Station",
+    "station_list": "Station List",
+    "chargers_available": "{{available}}/{{total}} available"
+  },
+  "sessions": {
+    "title": "Charging Sessions",
+    "subtitle": "Real-time monitoring and history",
+    "active_count": "{{count}} active",
+    "tab_active": "🔋 Active ({{count}})",
+    "tab_history": "📋 History",
+    "table": {
+      "session_id": "Session ID",
+      "charger": "Charger",
+      "user": "User",
+      "start": "Started At",
+      "energy": "Energy (kWh)",
+      "cost": "Cost",
+      "status": "Status",
+      "action": "Action"
+    },
+    "force_stop": "Stop"
+  },
+  "billing": {
+    "title": "Finance & Billing",
+    "subtitle": "Manage transactions and system arrears",
+    "total_arrears": "Total Arrears",
+    "tab_transactions": "Transaction History",
+    "tab_arrears": "Arrears Guard",
+    "table_tx": {
+      "ref": "Txn Ref",
+      "type": "Type",
+      "amount": "Amount",
+      "status": "Status",
+      "time": "Time"
+    },
+    "table_arrears": {
+      "user_id": "User ID",
+      "session_id": "Session ID",
+      "amount": "Debt Amount",
+      "status": "Status",
+      "time": "Created At",
+      "action": "Action"
+    },
+    "clear_manual": "Clear Manually",
+    "no_arrears": "No arrears in the system",
+    "no_transactions": "No transactions found"
+  },
+  "staff": {
+    "title": "Staff Management",
+    "subtitle": "Employee profiles and GPS attendance tracking",
+    "add_staff": "Add Employee",
+    "tab_staff": "Staff Profiles",
+    "tab_attendance": "Attendance (GPS)",
+    "table_staff": {
+      "employee": "Employee",
+      "position": "Position",
+      "shift": "Shift",
+      "status": "Status",
+      "action": "Action"
+    },
+    "table_att": {
+      "employee": "Employee",
+      "station": "Station (Check-in location)",
+      "checkin": "Check In",
+      "checkout": "Check Out",
+      "gps": "GPS Coordinates"
+    },
+    "not_updated": "Not updated",
+    "on_shift": "On shift"
+  },
+  "analytics": {
+    "title": "Analytics & Reports",
+    "subtitle": "Deep dive into revenue and grid performance",
+    "last_30d": "Last 30 Days",
+    "export": "Export Report",
+    "revenue_breakdown": {
+      "title": "Revenue Breakdown",
+      "subtitle": "Energy vs Idle Fee",
+      "energy": "Energy Fee",
+      "idle": "Idle Fee"
+    },
+    "load_profile": {
+      "title": "Grid Load Profile",
+      "subtitle": "Total power consumption across the network (kW)",
+      "power": "Power (kW)"
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance & Incidents",
+    "subtitle": "Incident Control Center & Maintenance Schedule",
+    "tab_incidents": "Incident Reports",
+    "tab_schedules": "Maintenance Schedule",
+    "table_inc": {
+      "station": "Station",
+      "desc": "Incident Description",
+      "severity": "Severity",
+      "status": "Status",
+      "time": "Reported At",
+      "action": "Action"
+    },
+    "table_maint": {
+      "station": "Station",
+      "reason": "Maintenance Reason",
+      "start": "Scheduled Start",
+      "end": "Scheduled End",
+      "status": "Status"
+    },
+    "resolve": "Resolve"
+  },
+  "data": {
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "MAINTENANCE": "Maintenance",
+      "FAULTED": "Faulted",
+      "CHARGING": "Charging",
+      "COMPLETED": "Completed",
+      "STARTING": "Starting",
+      "STOPPED": "Stopped",
+      "ERROR": "Error",
+      "SUCCESS": "Success",
+      "PENDING": "Pending",
+      "RESOLVED": "Resolved"
+    },
+    "severity": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low"
+    },
+    "type": {
+      "TOPUP": "Top-up",
+      "REFUND": "Refund",
+      "ENERGY": "Energy",
+      "IDLE_FEE": "Idle Fee"
+    },
+    "staff": {
+      "POSITION_TECHNICIAN": "Technician",
+      "POSITION_OPERATOR": "Operator",
+      "SHIFT_MORNING": "Morning",
+      "SHIFT_AFTERNOON": "Afternoon",
+      "SHIFT_NIGHT": "Night"
+    }
+  }
+}

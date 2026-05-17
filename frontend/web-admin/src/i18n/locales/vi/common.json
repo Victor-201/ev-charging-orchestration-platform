@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "map": "Bản đồ",
+    "sessions": "Phiên sạc",
+    "bookings": "Đặt lịch",
+    "billing": "Tài chính",
+    "staff": "Nhân viên",
+    "notifications": "Thông báo",
+    "maintenance": "Bảo trì",
+    "analytics": "Analytics",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "topbar": {
+    "search_placeholder": "Tìm trạm, người dùng..."
+  },
+  "auth": {
+    "login_title": "Đăng nhập Admin",
+    "email_label": "Địa chỉ Email",
+    "email_placeholder": "admin@evoltboard.vn",
+    "password_label": "Mật khẩu",
+    "password_placeholder": "••••••••",
+    "mfa_label": "Mã MFA (6 chữ số)",
+    "mfa_placeholder": "000000",
+    "login_btn": "Đăng nhập",
+    "login_loading": "Đang đăng nhập...",
+    "footer_text": "Hệ thống Quản lý Sạc v2.0 — Bảo mật bởi JWT + MFA",
+    "verifying": "Đang xác thực...",
+    "mfa_required_toast": "Vui lòng nhập mã xác thực 2 yếu tố (MFA)",
+    "platform_subtitle": "Nền tảng Quản lý Sạc Xe điện"
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "add": "Thêm",
+    "no_data": "Chưa có dữ liệu",
+    "live": "Live · Realtime"
+  },
+  "api_errors": {
+    "UNKNOWN_ERROR": "Lỗi hệ thống không xác định",
+    "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng",
+    "MFA_REQUIRED": "Yêu cầu mã MFA",
+    "UNAUTHORIZED": "Phiên đăng nhập hết hạn",
+    "CLEAR_ARREARS_FAILED": "Lỗi khi tất toán công nợ",
+    "CLEAR_ARREARS_SUCCESS": "Đã tất toán công nợ thành công"
+  },
+  "roles": {
+    "ADMIN": "Quản trị viên",
+    "STAFF": "Nhân viên",
+    "TECHNICIAN": "Kỹ thuật viên",
+    "OPERATOR": "Vận hành viên"
+  }
+}
