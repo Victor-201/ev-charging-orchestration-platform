@@ -1,53 +1,100 @@
 #!/bin/bash
+# Usage:
+#   bash logs.sh                          # All services, realtime
+#   bash logs.sh --app                    # Microservices only
+#   bash logs.sh --pg                     # PostgreSQL databases only
+#   bash logs.sh --infra                  # Redis, RabbitMQ, ClickHouse, Kong
+#   bash logs.sh --service <name>         # Single service (compose service key)
+#   bash logs.sh --tail 200 --no-follow   # Static (non-streaming) output
 
-# Auto-WSL Redirection
-if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-    WSL_PATH=$(wsl.exe wslpath -u "$(pwd -W)")
-    wsl.exe bash -c "cd '$WSL_PATH' && bash ./$0 $@"
-    exit $?
-fi
-# ==============================================================================
-# logs.sh - Xem log container (Native WSL)
-# ==============================================================================
+set -uo pipefail
 
-# Force Native WSL Socket
 export DOCKER_HOST=unix:///var/run/docker.sock
+
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_FILE="$SCRIPT_DIR/../../docker/docker-compose.yml"
+ENV_FILE="$SCRIPT_DIR/../../docker/.env"
+
+# Service keys must match docker-compose.yml service names (not container_name).
+SERVICES_APP=(
+    "iam-service"
+    "analytics-service"
+    "ev-infrastructure-service"
+    "session-service"
+    "billing-service"
+    "notification-service"
+    "telemetry-ingestion-service"
+    "ocpp-gateway-service"
+)
+
+SERVICES_PG=(
+    "postgres-iam"
+    "postgres-infra"
+    "postgres-session"
+    "postgres-billing"
+    "postgres-analytics"
+    "postgres-notification"
+)
+
+SERVICES_INFRA=(
+    "redis"
+    "rabbitmq"
+    "clickhouse"
+    "kong"
+)
 
 SERVICE_NAMES=()
 TAIL=100
 FOLLOW=true
 
-# Parsing arguments
 while [[ "$#" -gt 0 ]]; do
-    case $1 in
+    case "$1" in
         --service)
             shift
-            while [[ "$#" -gt 0 && ! "$1" =~ ^- ]]; do
+            while [[ "$#" -gt 0 && ! "$1" =~ ^-- ]]; do
                 SERVICE_NAMES+=("$1")
                 shift
             done
             continue
             ;;
-        --tail) TAIL="$2"; shift ;;
+        --pg)    SERVICE_NAMES+=("${SERVICES_PG[@]}") ;;
+        --infra) SERVICE_NAMES+=("${SERVICES_INFRA[@]}") ;;
+        --app)   SERVICE_NAMES+=("${SERVICES_APP[@]}") ;;
+        --tail)
+            TAIL="$2"
+            shift
+            ;;
         --no-follow) FOLLOW=false ;;
-        *) echo "Unknown parameter: $1"; exit 1 ;;
+        *) echo -e "${RED}[ERROR] Unknown flag: $1${NC}"; exit 1 ;;
     esac
     shift
 done
 
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="$SCRIPT_DIR/../../docker/docker-compose.yml"
-
 OPTS="--tail $TAIL"
-if [ "$FOLLOW" = true ]; then OPTS="$OPTS -f"; fi
+if [[ "$FOLLOW" == "true" ]]; then
+    OPTS="$OPTS -f"
+fi
 
-if [ ${#SERVICE_NAMES[@]} -eq 0 ]; then
-    echo -e "${CYAN}[INFO] Dang hien thi log cua tat ca services...${NC}"
-    docker compose -f "$COMPOSE_FILE" logs $OPTS
+if [[ ${#SERVICE_NAMES[@]} -eq 0 ]]; then
+    LABEL="All services"
 else
-    echo -e "${CYAN}[INFO] Dang hien thi log cho: ${SERVICE_NAMES[*]}${NC}"
-    docker compose -f "$COMPOSE_FILE" logs $OPTS "${SERVICE_NAMES[@]}"
+    LABEL="${SERVICE_NAMES[*]}"
+fi
+
+echo -e "${CYAN}======================================================================"
+echo -e "  EV Platform — Logs: $LABEL"
+echo -e "  [follow=$FOLLOW | tail=$TAIL]"
+echo -e "  Press Ctrl+C to exit."
+echo -e "======================================================================${NC}"
+echo ""
+
+if [[ ${#SERVICE_NAMES[@]} -eq 0 ]]; then
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs $OPTS
+else
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs $OPTS "${SERVICE_NAMES[@]}"
 fi
