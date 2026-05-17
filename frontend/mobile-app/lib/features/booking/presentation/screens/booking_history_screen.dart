@@ -9,7 +9,10 @@ import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình lịch sử đặt lịch — S-07 list
+/// Historic Reservations and Booking Records Screen
+///
+/// Queries and lists the chronological log of user charger slot reservations,
+/// displaying transactional statuses and redirect links to detailed QR tickets.
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
 

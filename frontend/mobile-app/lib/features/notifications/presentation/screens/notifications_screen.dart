@@ -9,7 +9,10 @@ import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình thông báo — inbox
+/// User Notifications Inbox Screen
+///
+/// Renders a list of chronological system, charging, billing, and queue alerts,
+/// allowing status updates (mark-as-read/mark-all-read) and deep-linking routing.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 

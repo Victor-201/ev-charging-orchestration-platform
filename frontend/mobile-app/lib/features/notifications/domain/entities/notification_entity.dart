@@ -1,5 +1,9 @@
 import 'package:equatable/equatable.dart';
 
+/// Notification Alert and Preferences Domain Entity
+///
+/// Encapsulates notification payloads, dynamic deep-link routing generators,
+/// and fine-grained communication mode preferences (Push, SMS, Email, Quiet Hours).
 class NotificationEntity extends Equatable {
   final String id;
   final String title;
@@ -32,8 +36,8 @@ class NotificationEntity extends Equatable {
       case 'payment_success':
       case 'arrears_created':
         return '/wallet';
-      // [Phase 3] Khi đến lượt trong hàng đợi → chuyển sang màn hình đặt lịch mới
       case 'queue_turn':
+        // Redirect to slot scheduler upon receiving the virtual queue allocation turn.
         return data?['chargerId'] != null
             ? '/bookings/new?chargerId=${data!['chargerId']}'
             : '/bookings';

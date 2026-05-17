@@ -13,8 +13,10 @@ import '../../../../core/utils/date_utils.dart' as ev_date;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event_state.dart';
 
-/// Màn hình đặt lịch mới — S-07
-/// Hiển thị slot khả dụng, thanh toán wallet-first → VNPay fallback
+/// New Slot Booking and Scheduler Screen
+///
+/// Renders calendar dates and available slot intervals, handling wallet deposits
+/// and fallback VNPay deep-links.
 class BookingNewScreen extends StatefulWidget {
   final String chargerId;
   final String stationId;
@@ -81,14 +83,12 @@ class _BookingNewScreenState extends State<BookingNewScreen> {
         builder: (context, state) {
           return Column(
             children: [
-              // Arrears guard
               if (hasArrears)
                 ArrearsAlertBanner(
                   amount: 'Nợ tồn đọng — không thể đặt lịch',
                   onTap: () => context.go('/wallet'),
                 ),
 
-              // Date picker
               _DateSelector(
                 selected: _selectedDate,
                 onChanged: (d) {
@@ -100,12 +100,10 @@ class _BookingNewScreenState extends State<BookingNewScreen> {
                 },
               ),
 
-              // Slot grid
               Expanded(
                 child: _buildSlotGrid(context, state, hasArrears),
               ),
 
-              // Booking summary + confirm
               if (_selectedSlot != null)
                 _BookingSummary(
                   slot: _selectedSlot!,

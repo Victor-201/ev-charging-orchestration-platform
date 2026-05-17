@@ -7,8 +7,10 @@ import '../../../../core/design_system/app_theme.dart';
 import '../../../../core/design_system/app_typography.dart';
 import '../../../../core/design_system/ev_button.dart';
 
-/// Màn hình hàng đợi — S-09
-/// Hiển thị vị trí hàng đợi, ETA = position × 45 phút
+/// Charging Session Virtual Queue Screen
+///
+/// Renders live queue order numbers and projects wait duration estimates
+/// computed dynamically based on current queue positions (position * 45 minutes).
 class QueueStatusScreen extends StatefulWidget {
   final String chargerId;
   const QueueStatusScreen({super.key, required this.chargerId});
@@ -74,7 +76,6 @@ class _QueueStatusScreenState extends State<QueueStatusScreen>
         children: [
           const SizedBox(height: AppSpacing.xxxl),
 
-          // Số thứ tự — hero number
           AnimatedBuilder(
             animation: _pulseController,
             builder: (_, __) => Container(
@@ -117,7 +118,6 @@ class _QueueStatusScreenState extends State<QueueStatusScreen>
           ),
           const SizedBox(height: AppSpacing.xxxl),
 
-          // ETA
           if (state.estimatedWaitMinutes != null)
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),

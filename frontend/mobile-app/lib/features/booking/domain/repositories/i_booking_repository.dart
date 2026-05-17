@@ -2,17 +2,21 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/booking_entity.dart';
 
+/// Reservation and Charging Queue Repository Interface
+///
+/// Defines the data-layer contract for checking slot availabilities, managing charging
+/// reservations, processing cancellations, and entering or leaving live wait queues.
 abstract class IBookingRepository {
-  // [39] Khả năng đặt lịch
+  /// Queries available charging slot schedules for a given charger and target date.
   Future<Either<Failure, List<AvailabilitySlotEntity>>> getAvailability({
     required String chargerId,
     required DateTime date,
   });
 
-  // [40] Danh sách đặt lịch của tôi
+  /// Queries all reservation history records linked to the current customer.
   Future<Either<Failure, List<BookingEntity>>> getMyBookings();
 
-  // [41] Tạo đặt lịch mới
+  /// Submits a request to create a new reservation for an EV charging connector.
   Future<Either<Failure, BookingEntity>> createBooking({
     required String chargerId,
     required String stationId,
@@ -21,19 +25,18 @@ abstract class IBookingRepository {
     required DateTime endTime,
   });
 
-  // [42] Chi tiết đặt lịch
+  /// Resolves the current parameters and state metadata of a single reservation.
   Future<Either<Failure, BookingEntity>> getBookingById(String id);
 
-  // [43] Hủy đặt lịch
+  /// Cancels a pending or active reservation.
   Future<Either<Failure, void>> cancelBooking(String id);
 
-  // [44] Tham gia hàng đợi
+  /// Enters a virtual FIFO reservation queue when all station connectors are occupied.
   Future<Either<Failure, void>> joinQueue(String chargerId);
 
-  // [45] Rời hàng đợi
+  /// Exits the virtual reservation wait queue prematurely.
   Future<Either<Failure, void>> leaveQueue(String chargerId);
 
-  // [46] Vị trí hàng đợi
-  Future<Either<Failure, QueuePositionEntity>> getQueuePosition(
-      String chargerId);
+  /// Resolves the customer's current index and estimated wait duration in the queue.
+  Future<Either<Failure, QueuePositionEntity>> getQueuePosition(String chargerId);
 }

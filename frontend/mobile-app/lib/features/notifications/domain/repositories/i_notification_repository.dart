@@ -2,21 +2,32 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/notification_entity.dart';
 
+/// Notification Services Repository Interface
+///
+/// Defines the data-layer contract for fetching notification logs, tracking unread counts,
+/// managing push notification device tokens, and updating alert preferences.
 abstract class INotificationRepository {
-  // [63] GET /notifications?limit=20
+  /// Retrieves a list of chronological notification records for the user.
   Future<Either<Failure, List<NotificationEntity>>> getNotifications({int limit = 20});
-  // [64] GET /notifications/unread
+
+  /// Counts the total number of unread notifications in the user's inbox.
   Future<Either<Failure, int>> getUnreadCount();
-  // [65] PATCH /notifications/:id/read
+
+  /// Marks a specific notification as read.
   Future<Either<Failure, void>> markRead(String id);
-  // [66] PATCH /notifications/read-all
+
+  /// Marks all unread notifications in the user's inbox as read.
   Future<Either<Failure, void>> markAllRead();
-  // [67] POST /devices/register
+
+  /// Registers a mobile push notification token (FCM/APNS) for the current device.
   Future<Either<Failure, void>> registerDevice(String pushToken);
-  // [68] DELETE /devices/:id
+
+  /// Unregisters a mobile push notification token, disabling notifications on this device.
   Future<Either<Failure, void>> unregisterDevice(String deviceId);
-  // [70] GET /preferences
+
+  /// Queries the user's notification event preference settings.
   Future<Either<Failure, NotificationPreferencesEntity>> getPreferences();
-  // [71] PATCH /preferences
+
+  /// Modifies the user's notification preference indicators.
   Future<Either<Failure, void>> updatePreferences(NotificationPreferencesEntity prefs);
 }

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Entity đặt lịch — từ BookingStatus enum trong booking.aggregate.ts
+/// Domain entity representing reservation records
 class BookingEntity extends Equatable {
   final String id;
   final String chargerId;
@@ -37,7 +37,7 @@ class BookingEntity extends Equatable {
   List<Object?> get props => [id, status, startTime, endTime];
 }
 
-/// Entity slot khả dụng
+/// Domain entity representing available charger reservation slots
 class AvailabilitySlotEntity extends Equatable {
   final DateTime startTime;
   final DateTime endTime;
@@ -53,7 +53,7 @@ class AvailabilitySlotEntity extends Equatable {
   List<Object?> get props => [startTime, isAvailable];
 }
 
-/// Entity hàng đợi
+/// Domain entity representing real-time charger queues
 class QueuePositionEntity extends Equatable {
   final int position;
   final int estimatedWaitMinutes; // position × 45

@@ -4,7 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/repositories/i_notification_repository.dart';
 
-// ── Events ─────────────────────────────────────────────────────────────
+/// Notification Management Business Logic Component (BLoC)
+///
+/// Coordinates all states and operations related to customer push notifications, unread counts,
+/// push token device registration, and fine-grained communication preferences.
 abstract class NotificationEvent extends Equatable {
   const NotificationEvent();
   @override
@@ -40,7 +43,6 @@ class NotificationReceived extends NotificationEvent {
   @override List<Object?> get props => [notification];
 }
 
-// ── States ─────────────────────────────────────────────────────────────
 abstract class NotificationState extends Equatable {
   const NotificationState();
   @override List<Object?> get props => [];
@@ -63,7 +65,6 @@ class NotificationError extends NotificationState {
   @override List<Object?> get props => [message];
 }
 
-// ── BLoC ───────────────────────────────────────────────────────────────
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final INotificationRepository _repository;
 

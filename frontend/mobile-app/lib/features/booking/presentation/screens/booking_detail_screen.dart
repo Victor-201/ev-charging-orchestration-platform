@@ -12,7 +12,10 @@ import '../../../../core/design_system/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 
-/// Màn hình chi tiết đặt lịch — S-08
+/// Detailed Reservation Information Screen
+///
+/// Renders comprehensive transaction records for an EV connector reservation,
+/// displaying countdown timers, secure QR tokens, and interactive cancel workflows.
 class BookingDetailScreen extends StatefulWidget {
   final String bookingId;
   const BookingDetailScreen({super.key, required this.bookingId});
@@ -126,7 +129,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(children: [
-        // Status
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
           decoration: BoxDecoration(
@@ -138,7 +140,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ),
         const SizedBox(height: AppSpacing.xl),
 
-        // QR
         if (b.qrToken != null && b.isConfirmed) ...[
           Text('Mã QR sạc điện', style: AppTypography.headingMd),
           const SizedBox(height: AppSpacing.md),
@@ -175,7 +176,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           const SizedBox(height: AppSpacing.xl),
         ],
 
-        // Info
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(

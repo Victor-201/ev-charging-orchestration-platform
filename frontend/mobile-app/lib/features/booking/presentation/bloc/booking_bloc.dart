@@ -4,7 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../domain/repositories/i_booking_repository.dart';
 
-// ── Events ────────────────────────────────────────────────────────────
+/// Charging Slot Reservation and Wait Queue Business Logic Component (BLoC)
+///
+/// Coordinates all states and operations related to checking slot schedules, reserving EV
+/// connectors, tracking booking status changes, and managing virtual FIFO wait queue positions.
 abstract class BookingEvent extends Equatable {
   const BookingEvent();
   @override
@@ -67,7 +70,6 @@ class BookingStopPolling extends BookingEvent {
   const BookingStopPolling();
 }
 
-// Queue events
 class QueueJoin extends BookingEvent {
   final String chargerId;
   const QueueJoin({required this.chargerId});
@@ -89,7 +91,6 @@ class QueueLoadPosition extends BookingEvent {
   List<Object?> get props => [chargerId];
 }
 
-// ── States ────────────────────────────────────────────────────────────
 abstract class BookingState extends Equatable {
   const BookingState();
   @override
@@ -161,7 +162,6 @@ class BookingError extends BookingState {
   List<Object?> get props => [message];
 }
 
-// ── BLoC ─────────────────────────────────────────────────────────────
 class BookingBloc extends Bloc<BookingEvent, BookingState> {
   final IBookingRepository _repository;
   Timer? _pollTimer;
@@ -242,7 +242,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     );
   }
 
-  /// Poll [42] GET /bookings/:id mỗi 3 giây đến khi CONFIRMED
+  /// Polls the booking detail endpoint periodically until status reaches confirmation.
   void _onStartPolling(
       BookingStartPolling event, Emitter<BookingState> emit) {
     _pollTimer?.cancel();
@@ -264,7 +264,6 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       (f) => emit(BookingError(message: f.message)),
       (_) {
         emit(const QueueState(inQueue: true, position: 0));
-        // Bắt đầu poll vị trí hàng đợi mỗi 30 giây
         _queuePollTimer?.cancel();
         _queuePollTimer = Timer.periodic(
           const Duration(seconds: 30),
@@ -286,7 +285,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     final result =
         await _repository.getQueuePosition(event.chargerId);
     result.fold(
-      (f) {}, // giữ nguyên state
+      (f) {},
       (pos) => emit(QueueState(
         inQueue: true,
         position: pos.position,
