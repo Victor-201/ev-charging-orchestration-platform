@@ -1,46 +1,46 @@
-/// Tên route và đường dẫn đầy đủ — lấy từ §3.3
+/// Navigation Route Names and Paths mapped from §3.3 specifications
 abstract class RouteNames {
-  // Màn hình khởi động / chào mừng
+  // Startup / Welcome Screens
   static const String splash = 'splash';
   static const String welcome = 'welcome';
 
-  // Xác thực
+  // Authentication
   static const String login = 'login';
   static const String register = 'register';
   static const String mfaVerify = 'mfa-verify';
 
-  // Bản đồ
+  // Map / Navigation
   static const String map = 'map';
   static const String stationDetail = 'station-detail';
   static const String routeNavigation = 'route-navigation';
 
-  // Đặt lịch
+  // Reservation / Scheduler
   static const String bookingHistory = 'booking-history';
   static const String bookingNew = 'booking-new';
   static const String bookingDetail = 'booking-detail';
   static const String queueStatus = 'queue-status';
 
-  // Sạc điện
+  // Active Charging Hub
   static const String chargingHub = 'charging-hub';
   static const String qrScan = 'qr-scan';
   static const String activeSession = 'active-session';
   static const String sessionSummary = 'session-summary';
 
-  // Ví điện tử
+  // Wallet / Deposits
   static const String walletDashboard = 'wallet-dashboard';
   static const String topUp = 'top-up';
   static const String vnpayProcessing = 'vnpay-processing';
 
-  // Thông báo
+  // Push Notifications
   static const String notifications = 'notifications';
 
-  // Hồ sơ
+  // User Profiles
   static const String profile = 'profile';
   static const String vehicles = 'vehicles';
   static const String securitySettings = 'security-settings';
 }
 
-/// Đường dẫn route đầy đủ
+/// Complete path parameters for go_router
 abstract class RoutePaths {
   static const String splash = '/splash';
   static const String welcome = '/welcome';

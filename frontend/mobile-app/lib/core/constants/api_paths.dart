@@ -1,6 +1,6 @@
-/// Đường dẫn API — lấy từ Coverage Matrix (82 endpoints)
+/// API Route Endpoints based on Coverage Matrix (82 endpoints)
 abstract class ApiPaths {
-  // [01-14] IAM Service — Xác thực
+  // [01-14] IAM Service — Authentication
   static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String refresh = '/auth/refresh';
@@ -17,19 +17,19 @@ abstract class ApiPaths {
   static const String verifyEmail = '/auth/verify-email';
   static const String resendVerification = '/auth/resend-verification';
 
-  // [15-18] IAM Service — Người dùng
+  // [15-18] IAM Service — Users
   static const String userProfile = '/users/profile';
   static String userAuditLogs(String id) => '/users/$id/audit-logs';
   static String deleteUser(String id) => '/users/$id';
 
-  // [19-25] IAM Service — Phương tiện
+  // [19-25] IAM Service — Vehicles
   static const String vehicles = '/vehicles';
   static String vehicleById(String id) => '/vehicles/$id';
   static String vehiclePrimary(String id) => '/vehicles/$id/primary';
   static String vehicleAudit(String id) => '/vehicles/$id/audit';
   static String vehicleAutocharge(String id) => '/vehicles/$id/autocharge';
 
-  // [26-38] Infra Service — Trạm sạc
+  // [26-38] Infra Service — Charging Stations
   static const String stations = '/stations';
   static String stationById(String id) => '/stations/$id';
   static String stationChargers(String stationId) =>
@@ -45,7 +45,7 @@ abstract class ApiPaths {
   static String pricingRuleDeactivate(String ruleId) =>
       '/stations/pricing-rules/$ruleId/deactivate';
 
-  // [39-46] Session Service — Đặt lịch & Hàng đợi
+  // [39-46] Session Service — Bookings & Queue
   static const String bookingAvailability = '/bookings/availability';
   static const String myBookings = '/bookings/me';
   static const String bookings = '/bookings';
@@ -56,7 +56,7 @@ abstract class ApiPaths {
   static String queuePosition(String chargerId) =>
       '/bookings/queue/$chargerId/position';
 
-  // [47-53] Session Service — Phiên sạc
+  // [47-53] Session Service — Charging Sessions
   static const String startSession = '/charging/start';
   static String stopSession(String id) => '/charging/stop/$id';
   static String chargingSessionById(String id) => '/charging/session/$id';
@@ -66,7 +66,7 @@ abstract class ApiPaths {
   static String chargerActiveSession(String chargerId) =>
       '/charging/charger/$chargerId/active';
 
-  // [54-62] Billing Service — Thanh toán & Ví
+  // [54-62] Billing Service — Payments & Wallet
   static const String paymentsCreate = '/payments/create';
   static const String paymentsPay = '/payments/pay';
   static const String vnpayReturn = '/payments/vnpay-return';

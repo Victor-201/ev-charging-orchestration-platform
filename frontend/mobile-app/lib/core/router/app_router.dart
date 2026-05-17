@@ -29,7 +29,7 @@ import '../../features/profile/presentation/screens/vehicles_screen.dart';
 import '../../features/profile/presentation/screens/security_settings_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 
-/// Router ứng dụng — ShellRoute 5-tab từ §3.3
+/// Central app routing topology with persistent bottom navigation tabs
 class AppRouter {
   final AuthBloc authBloc;
   AppRouter({required this.authBloc});
@@ -108,7 +108,7 @@ class AppRouter {
         builder: (context, state, nav) => _AppScaffold(navigationShell: nav),
         branches: [
 
-          // Tab 0: Bản đồ
+          // Tab 0: Map navigation
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/map', name: 'map',
@@ -133,7 +133,7 @@ class AppRouter {
             ),
           ]),
 
-          // Tab 1: Đặt lịch
+          // Tab 1: Charger slot scheduler
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/bookings', name: 'booking-history',
@@ -162,7 +162,7 @@ class AppRouter {
             ),
           ]),
 
-          // Tab 2: Sạc điện
+          // Tab 2: Active charging hub
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/charging', name: 'charging-hub',
@@ -195,7 +195,7 @@ class AppRouter {
             ),
           ]),
 
-          // Tab 3: Ví
+          // Tab 3: Digital payment wallet
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/wallet', name: 'wallet-dashboard',
@@ -212,7 +212,7 @@ class AppRouter {
             ),
           ]),
 
-          // Tab 4: Hồ sơ
+          // Tab 4: User settings profile
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/profile', name: 'profile',
@@ -259,7 +259,7 @@ class _AppScaffold extends StatelessWidget {
   }
 }
 
-/// RefreshListenable để router phản ứng với AuthBloc
+/// Custom ChangeNotifier notifier acting as a route redirection guard
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
     notifyListeners();

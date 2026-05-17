@@ -1,6 +1,6 @@
-/// Hằng số khóa cho flutter_secure_storage và SharedPreferences
+/// Storage Key Constants for SharedPreferences and SecureStorage
 abstract class StorageKeys {
-  // Khóa bảo mật (Android Keystore / iOS Keychain)
+  // Secure Storage cryptographic key references
   static const String accessToken = 'ev_access_token';
   static const String refreshToken = 'ev_refresh_token';
   static const String deviceId = 'ev_device_id';
