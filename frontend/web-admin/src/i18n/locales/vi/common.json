@@ -1,4 +1,7 @@
 {
+  "brand": {
+    "name": "EVOLTBOARD"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "map": "Bản đồ",
@@ -46,7 +49,8 @@
     "MFA_REQUIRED": "Yêu cầu mã MFA",
     "UNAUTHORIZED": "Phiên đăng nhập hết hạn",
     "CLEAR_ARREARS_FAILED": "Lỗi khi tất toán công nợ",
-    "CLEAR_ARREARS_SUCCESS": "Đã tất toán công nợ thành công"
+    "CLEAR_ARREARS_SUCCESS": "Đã tất toán công nợ thành công",
+    "FORCE_STOP_SUCCESS": "Đã dừng phiên sạc thành công"
   },
   "roles": {
     "ADMIN": "Quản trị viên",

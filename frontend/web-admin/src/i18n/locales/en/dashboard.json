@@ -50,7 +50,8 @@
       "status": "Status",
       "action": "Action"
     },
-    "force_stop": "Stop"
+    "force_stop": "Stop",
+    "force_stop_success": "Session stopped successfully"
   },
   "billing": {
     "title": "Finance & Billing",
@@ -173,5 +174,35 @@
       "SHIFT_AFTERNOON": "Afternoon",
       "SHIFT_NIGHT": "Night"
     }
+  },
+  "bookings": {
+    "title": "Bookings",
+    "subtitle": "Advance reservations and slot management",
+    "total": "{{count}} bookings",
+    "table": {
+      "booking_id": "Booking ID",
+      "user": "User",
+      "charger": "Charger",
+      "connector": "Connector",
+      "start": "Scheduled Start",
+      "end": "Scheduled End",
+      "status": "Status"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "System events and platform alerts",
+    "unread": "{{count}} unread"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Platform configuration and preferences",
+    "tab_general": "General",
+    "tab_notifications": "Notifications",
+    "tab_security": "Security",
+    "tab_appearance": "Appearance",
+    "language": "Display Language",
+    "platform_name": "Platform Name",
+    "coming_soon": "This section is under construction."
   }
 }

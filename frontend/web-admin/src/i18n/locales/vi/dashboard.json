@@ -50,7 +50,8 @@
       "status": "Trạng thái",
       "action": "Hành động"
     },
-    "force_stop": "Stop"
+    "force_stop": "Stop",
+    "force_stop_success": "Đã dừng phiên sạc"
   },
   "billing": {
     "title": "Tài chính & Thanh toán",
@@ -173,5 +174,35 @@
       "SHIFT_AFTERNOON": "Ca chiều",
       "SHIFT_NIGHT": "Ca đêm"
     }
+  },
+  "bookings": {
+    "title": "Quản lý Đặt lịch",
+    "subtitle": "Danh sách đặt trước và quản lý slot sạc",
+    "total": "{{count}} lịch đặt",
+    "table": {
+      "booking_id": "Booking ID",
+      "user": "Người dùng",
+      "charger": "Trụ sạc",
+      "connector": "Loại cắm",
+      "start": "Giờ bắt đầu",
+      "end": "Giờ kết thúc",
+      "status": "Trạng thái"
+    }
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "subtitle": "Sự kiện hệ thống và cảnh báo nền tảng",
+    "unread": "{{count}} chưa đọc"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Cấu hình nền tảng và tuùy chỉnh",
+    "tab_general": "Tổng quát",
+    "tab_notifications": "Thông báo",
+    "tab_security": "Bảo mật",
+    "tab_appearance": "Giao diện",
+    "language": "Ngôn ngữ hiển thị",
+    "platform_name": "Tên nền tảng",
+    "coming_soon": "Mục này đang được phát triển."
   }
 }

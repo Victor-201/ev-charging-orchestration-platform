@@ -1,4 +1,7 @@
 {
+  "brand": {
+    "name": "EVOLTBOARD"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "map": "Map View",
@@ -46,7 +49,8 @@
     "MFA_REQUIRED": "MFA token required",
     "UNAUTHORIZED": "Session expired",
     "CLEAR_ARREARS_FAILED": "Failed to clear arrears",
-    "CLEAR_ARREARS_SUCCESS": "Arrears cleared successfully"
+    "CLEAR_ARREARS_SUCCESS": "Arrears cleared successfully",
+    "FORCE_STOP_SUCCESS": "Session stopped successfully"
   },
   "roles": {
     "ADMIN": "Administrator",

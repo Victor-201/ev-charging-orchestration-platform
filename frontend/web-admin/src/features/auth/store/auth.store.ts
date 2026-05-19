@@ -3,6 +3,10 @@
  *
  * Manages authentication contexts, JWT tokens persistence, identity fetching,
  * and credential validations using the Zustand state store.
+ *
+ * isCheckingAuth: starts true, set to false after initial auth check resolves.
+ * This prevents the dashboard layout from seeing isAuthenticated=false during
+ * the initial async token verification and incorrectly redirecting to /login.
  */
 
 import { create } from 'zustand';
@@ -20,29 +24,64 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isCheckingAuth: boolean;
   login: (email: string, password: string, mfaToken?: string) => Promise<void>;
   logout: () => void;
   fetchMe: () => Promise<void>;
+}
+
+/** Decode user info from JWT payload without verifying signature (client-side only). */
+function decodeJwtPayload(token: string): Partial<User> | null {
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    const payload = JSON.parse(jsonPayload);
+    return {
+      id: payload.sub,
+      email: payload.email,
+      fullName: payload.fullName ?? payload.full_name ?? payload.name ?? payload.email,
+      roles: payload.roles ?? (payload.role ? [payload.role] : []),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isCheckingAuth: true,
 
   login: async (email, password, mfaToken) => {
     set({ isLoading: true });
     try {
       const res = await apiClient.post('/auth/login', { email, password, mfaToken });
-      const { accessToken, refreshToken, user } = res.data;
-      
+      const { accessToken, refreshToken } = res.data;
+
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      
-      // Persists the access token in a cookie to authorize initial page loads during Server-Side Rendering (SSR).
+
+      // Persist access token in a cookie for SSR page loads.
       Cookies.set('accessToken', accessToken, { expires: 1 });
 
-      set({ user, isAuthenticated: true, isLoading: false });
+      // Decode user info from JWT payload to avoid an extra /auth/me round-trip.
+      const decoded = decodeJwtPayload(accessToken);
+      const user: User = {
+        id: decoded?.id ?? '',
+        email: decoded?.email ?? email,
+        fullName: decoded?.fullName ?? email,
+        roles: decoded?.roles ?? [],
+      };
+
+      set({ user, isAuthenticated: true, isLoading: false, isCheckingAuth: false });
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -53,19 +92,40 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     Cookies.remove('accessToken');
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, isCheckingAuth: false });
     if (typeof window !== 'undefined') window.location.href = '/login';
   },
 
   fetchMe: async () => {
+    set({ isCheckingAuth: true });
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) throw new Error('No token');
-      
+      if (!token) {
+        set({ user: null, isAuthenticated: false, isCheckingAuth: false });
+        return;
+      }
+
+      // First try to decode from stored token (instant, no network needed).
+      const decoded = decodeJwtPayload(token);
+      if (decoded?.id) {
+        set({
+          user: {
+            id: decoded.id,
+            email: decoded.email ?? '',
+            fullName: decoded.fullName ?? decoded.email ?? '',
+            roles: decoded.roles ?? [],
+          },
+          isAuthenticated: true,
+          isCheckingAuth: false,
+        });
+        return;
+      }
+
+      // Fallback: call /auth/me for the full user object.
       const res = await apiClient.get('/auth/me');
-      set({ user: res.data, isAuthenticated: true });
-    } catch (error) {
-      set({ user: null, isAuthenticated: false });
+      set({ user: res.data, isAuthenticated: true, isCheckingAuth: false });
+    } catch {
+      set({ user: null, isAuthenticated: false, isCheckingAuth: false });
     }
   },
 }));
