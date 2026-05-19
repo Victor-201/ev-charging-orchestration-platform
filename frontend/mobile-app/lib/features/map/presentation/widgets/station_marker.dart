@@ -59,11 +59,12 @@ class StationMarker extends StatelessWidget {
 
     // Active - Occupied status (zero vacant slots available) -> Red theme.
     if (availableCount == 0) {
-      return _MarkerStatusData('active_full', '0/$total');
+      return _MarkerStatusData('active_full', '$total/$total');
     }
 
     // Active - Available status (has vacant slots available) -> Green theme.
-    return _MarkerStatusData('active_empty', '$availableCount/$total');
+    final int unavailableCount = total - availableCount;
+    return _MarkerStatusData('active_empty', '$unavailableCount/$total');
   }
 }
 

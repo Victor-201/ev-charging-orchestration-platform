@@ -55,14 +55,9 @@ class StationMarkerSvgs {
       <stop stop-color="$stop1"/>
       <stop offset="1" stop-color="$stop2"/>
     </linearGradient>
-    ${isSelected ? '''
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.3"/>
-    </filter>
-    ''' : ''}
   </defs>
-  <path d="M30 80C30 80 60 52.4183 60 30C60 13.4315 46.5685 0 30 0C13.4315 0 0 13.4315 0 30C0 52.4183 30 80 30 80Z" fill="url(#$gradientId)" ${isSelected ? 'filter="url(#shadow)"' : ''}/>
-  ${isSelected ? '<path d="M30 80C30 80 60 52.4183 60 30C60 13.4315 46.5685 0 30 0C13.4315 0 0 13.4315 0 30C0 52.4183 30 80 30 80Z" stroke="white" stroke-width="2"/>' : ''}
+  <path d="M30 80C30 80 60 52.4183 60 30C60 13.4315 46.5685 0 30 0C13.4315 0 0 13.4315 0 30C0 52.4183 30 80 30 80Z" fill="url(#$gradientId)"/>
+  ${isSelected ? '<path d="M30 80C30 80 60 52.4183 60 30C60 13.4315 46.5685 0 30 0C13.4315 0 0 13.4315 0 30C0 52.4183 30 80 30 80Z" stroke="white" stroke-width="4"/>' : ''}
   <circle cx="30" cy="30" r="24" fill="white" fill-opacity="0.2"/>
   <rect x="23" y="16" width="10" height="16" rx="2" fill="white"/>
   <path d="M33 22H35C36.1046 22 37 22.8954 37 24V30C37 31.1046 36.1046 32 35 32H33" stroke="white" stroke-width="2" stroke-linecap="round"/>

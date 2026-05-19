@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_typography.dart';
-import '../../../../core/design_system/ev_button.dart';
-import '../../../../core/design_system/app_theme.dart';
+import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_typography.dart';
+import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/theme/app_theme.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../domain/entities/station_entity.dart';
-import '../../domain/repositories/i_station_repository.dart';
+import '../../domain/usecases/get_charger_pricing_usecase.dart';
 
 /// Dynamic Estimation Pricing Dialog Component
 ///
@@ -34,13 +34,13 @@ class _PricingDialogState extends State<PricingDialog> {
   }
 
   Future<void> _fetchPricing() async {
-    final repo = GetIt.I<IStationRepository>();
+    final usecase = GetIt.I<GetChargerPricingUseCase>();
     
     // Assume a standard 1-hour charging duration session context.
     final now = DateTime.now();
     final endTime = now.add(const Duration(hours: 1));
 
-    final result = await repo.getChargerPricing(
+    final result = await usecase(
       stationId: widget.stationId,
       chargerId: widget.charger.id,
       connectorType: widget.charger.connectorType,
