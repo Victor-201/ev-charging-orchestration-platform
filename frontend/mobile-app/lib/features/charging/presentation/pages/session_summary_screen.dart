@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/charging_session_entity.dart';
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_theme.dart';
-import '../../../../core/design_system/app_typography.dart';
-import '../../../../core/design_system/ev_button.dart';
+import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_theme.dart';
+import '../../../../core/design_system/theme/app_typography.dart';
+import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 

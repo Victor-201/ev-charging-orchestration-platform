@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_typography.dart';
+import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/utils/qr_validator.dart';
 
 /// QR Scanning Camera Screen for Session Activation

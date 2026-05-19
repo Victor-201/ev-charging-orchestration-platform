@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/charging_session_bloc.dart';
 import '../../domain/entities/charging_session_entity.dart';
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_theme.dart';
-import '../../../../core/design_system/app_typography.dart';
-import '../../../../core/design_system/ev_button.dart';
+import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_theme.dart';
+import '../../../../core/design_system/theme/app_typography.dart';
+import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 
 /// Unified Charging Hub Main Dashboard Screen
