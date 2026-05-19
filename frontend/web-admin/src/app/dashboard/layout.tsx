@@ -15,16 +15,20 @@ const queryClient = new QueryClient({
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, fetchMe } = useAuthStore();
+  const { isAuthenticated, isCheckingAuth, fetchMe } = useAuthStore();
   const { t } = useTranslation('common');
 
   useEffect(() => {
     fetchMe().then(() => {
-      if (!useAuthStore.getState().isAuthenticated) router.push('/login');
+      if (!useAuthStore.getState().isAuthenticated) {
+        router.push('/login');
+      }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!isAuthenticated) {
+  // Still verifying the token — show a spinner, do NOT redirect yet.
+  if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -33,6 +37,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
     );
+  }
+
+  // Token check finished — user is not authenticated, redirect to login.
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

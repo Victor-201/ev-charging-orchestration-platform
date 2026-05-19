@@ -59,7 +59,7 @@ export default function Sidebar() {
               transition={{ duration: 0.18 }}
               className="font-bold text-white text-sm tracking-tight whitespace-nowrap"
             >
-              EVOLTBOARD
+              {t('brand.name')}
             </motion.span>
           )}
         </AnimatePresence>

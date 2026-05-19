@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { StopCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 type ChargingSession = {
   id: string; userId: string; chargerId: string; status: string;
@@ -25,7 +26,7 @@ export default function SessionsPage() {
   const [tab, setTab] = useState<'active' | 'history'>('active');
   const { t } = useTranslation(['dashboard', 'common']);
 
-  const { data: history, isLoading } = useQuery<ChargingSession[]>({
+  const { data: history, isLoading, refetch } = useQuery<ChargingSession[]>({
     queryKey: ['charging-history', tab],
     queryFn: async () => (await apiClient.get('/charging/history', { params: { limit: 50 } })).data,
     refetchInterval: tab === 'active' ? 10_000 : false,
@@ -34,6 +35,17 @@ export default function SessionsPage() {
   const sessions = history ?? [];
   const active = sessions.filter(s => ['STARTING', 'CHARGING'].includes(s.status));
   const displayed = tab === 'active' ? active : sessions;
+
+  /** L-NX-4: All API mutations must go through named handlers with error handling */
+  const handleForceStop = async (sessionId: string) => {
+    try {
+      await apiClient.post(`/charging/admin/stop/${sessionId}`, { reason: 'Admin force stop' });
+      toast.success(t('common:api_errors.FORCE_STOP_SUCCESS'));
+      refetch();
+    } catch {
+      toast.error(t('common:api_errors.UNKNOWN_ERROR'));
+    }
+  };
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -105,7 +117,7 @@ export default function SessionsPage() {
                     <td>
                       {['STARTING', 'CHARGING'].includes(s.status) && (
                         <button
-                          onClick={() => apiClient.post(`/charging/admin/stop/${s.id}`, { reason: 'Admin force stop' })}
+                          onClick={() => handleForceStop(s.id)}
                           className="btn-danger px-3 py-1 text-xs flex items-center gap-1"
                         >
                           <StopCircle className="w-3.5 h-3.5" /> {t('dashboard:sessions.force_stop')}
