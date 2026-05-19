@@ -242,6 +242,7 @@ function Sub-Logs {
         Write-MenuItem "3" "Databases"        Yellow
         Write-MenuItem "4" "Infrastructure"   Magenta
         Write-MenuItem "5" "Select Service..." Cyan
+        Write-MenuItem "6" "Ngrok Traffic Logs" DarkYellow
         Write-Host ""
         Show-Separator
         Write-MenuItem -IsBack
@@ -253,6 +254,14 @@ function Sub-Logs {
             "3" { Run-WSL "logs.sh" "--pg"; return }
             "4" { Run-WSL "logs.sh" "--infra"; return }
             "5" { Sub-Log-Service-Selector; return }
+            "6" { 
+                $logPath = "$ProjectRoot\deployment\ngrok.log"
+                if (-not (Test-Path $logPath)) {
+                    $null = New-Item -Path $logPath -ItemType File -Force
+                }
+                Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$ProjectRoot'; Write-Host '=== NGROK REALTIME TRAFFIC LOGS ===' -ForegroundColor Yellow; Get-Content -Path '$logPath' -Wait -Tail 50"
+                return 
+            }
             "0" { return }
         }
     }
@@ -372,6 +381,7 @@ function Sub-Seeding {
         Write-Host ""
         Write-MenuItem "1" "SEED UP (Insert seed data)" Green
         Write-MenuItem "2" "SEED DOWN (Clear seed data)" Red
+        Write-MenuItem "3" "SEED RESET (Destroy & Re-seed with Ngrok)" Magenta
         Write-Host ""
         Show-Separator
         Write-MenuItem -IsBack
@@ -380,6 +390,11 @@ function Sub-Seeding {
         switch ($c) {
             "1" { Sub-Seeding-Up }
             "2" { Sub-Seeding-Down }
+            "3" { 
+                if (Confirm-Action "Truncate all tables and re-seed from scratch?") { 
+                    Run-WSL "database/seed-reset.sh" 
+                } 
+            }
             "0" { return }
         }
     }

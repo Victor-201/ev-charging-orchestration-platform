@@ -32,6 +32,7 @@ Tai lieu nay huong dan toan bo bo cong cu tu dong hoa (Bash cho Backend va Power
 | `backend/clickhouse-check.sh`  | Kiem tra nhanh ClickHouse (Multi-Query) | _(khong co)_   |
 | `database/seed-up.sh`          | Nap du lieu (Seed) vao Database         | `<service-name>`       |
 | `database/seed-down.sh`        | Xoa du lieu (Clean) khoi Database       | `<service-name>`       |
+| `database/seed-reset.sh`       | Xoa va Nap lai toan bo du lieu mau      | `<service-name>`       |
 
 ---
 
@@ -239,6 +240,12 @@ Hai script `seed-up.sh` va `seed-down.sh` giup tu dong hoa qua trinh nap va xoa 
 
 # Xoa du lieu mau cho 1 dich vu cu the
 ./deployment/scripts/database/seed-down.sh iam-service
+
+# Xoa va nap lai toan bo du lieu (Reset)
+./deployment/scripts/database/seed-reset.sh
+
+# Reset du lieu mau cho 1 dich vu cu the
+./deployment/scripts/database/seed-reset.sh iam-service
 ```
 
 > **Luu y:** Database Container phai dang chay truoc khi thuc hien nap du lieu. Du lieu se duoc chen truc tiep thong qua `psql` ben trong container.
