@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/booking_bloc.dart';
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_theme.dart';
-import '../../../../core/design_system/app_typography.dart';
-import '../../../../core/design_system/ev_button.dart';
+import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_theme.dart';
+import '../../../../core/design_system/theme/app_typography.dart';
+import '../../../../core/design_system/widgets/ev_button.dart';
 
 /// Charging Session Virtual Queue Screen
 ///
@@ -59,7 +59,7 @@ class _QueueStatusScreenState extends State<QueueStatusScreen>
           }
         },
         builder: (context, state) {
-          if (state is QueueState) return _buildQueueView(context, state);
+          if (state is QueuePositionState) return _buildQueueView(context, state);
           if (state is BookingLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -69,7 +69,7 @@ class _QueueStatusScreenState extends State<QueueStatusScreen>
     );
   }
 
-  Widget _buildQueueView(BuildContext context, QueueState state) {
+  Widget _buildQueueView(BuildContext context, QueuePositionState state) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
