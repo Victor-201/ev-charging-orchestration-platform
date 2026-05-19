@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { Charger, ChargerStatus, ConnectorType } from '../../../../domain/entities/charger.aggregate';
+import { StationStatus } from '../../../../domain/entities/station.aggregate';
 import {
   IChargerRepository,
   ChargerFilter,
@@ -21,7 +22,7 @@ export class ChargerRepository implements IChargerRepository {
   async findById(id: string): Promise<Charger | null> {
     const cp = await this.cpRepo.findOne({
       where: { id },
-      relations: ['connectors'],
+      relations: ['connectors', 'station'],
     });
     if (!cp) return null;
     return this.toDomain(cp);
@@ -30,7 +31,7 @@ export class ChargerRepository implements IChargerRepository {
   async findByStationId(stationId: string): Promise<Charger[]> {
     const rows = await this.cpRepo.find({
       where: { stationId },
-      relations: ['connectors'],
+      relations: ['connectors', 'station'],
       order: { createdAt: 'ASC' },
     });
     return rows.map((r) => this.toDomain(r));
@@ -96,13 +97,17 @@ export class ChargerRepository implements IChargerRepository {
   // Mapper
 
   private toDomain(cp: ChargingPointOrmEntity): Charger {
+    let status = cp.status as ChargerStatus;
+    if (cp.station && cp.station.status !== StationStatus.ACTIVE) {
+      status = ChargerStatus.OFFLINE;
+    }
     return Charger.reconstitute({
       id:         cp.id,
       stationId:  cp.stationId,
       name:       cp.name,
       externalId: cp.externalId,
       maxPowerKw: Number(cp.maxPowerKw),
-      status:     cp.status as ChargerStatus,
+      status,
       connectors: (cp.connectors ?? []).map((c: ConnectorOrmEntity) => ({
         id:              c.id,
         chargingPointId: c.chargingPointId,

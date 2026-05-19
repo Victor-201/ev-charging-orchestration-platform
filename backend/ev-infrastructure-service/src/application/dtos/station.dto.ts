@@ -91,7 +91,7 @@ export class ListStationsQueryDto {
   @IsOptional()
   @IsNumber()
   @Min(0.1)
-  @Max(100)
+  @Max(2000) // Vietnam spans ~1650 km north-to-south; 2000 km covers the entire country
   @Type(() => Number)
   radiusKm?: number;
 
@@ -102,10 +102,19 @@ export class ListStationsQueryDto {
   @MaxLength(200)
   search?: string;
 
+  /**
+   * Filter stations that have at least one charging point with this connector type.
+   * Applied at SQL level so `limit` is respected correctly.
+   * Values: 'CCS' | 'CHAdeMO' | 'Type2' | 'GB/T' | 'Other'
+   */
+  @IsOptional()
+  @IsString()
+  connectorType?: string;
+
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(100)
+  @Max(1000) // allow fetching all stations in one request for map display
   @Type(() => Number)
   limit?: number;
 

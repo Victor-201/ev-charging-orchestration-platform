@@ -34,6 +34,7 @@ export interface StationResponse {
   ownerName: string | null;
   totalChargers: number;
   availableChargers: number;
+  chargers?: ChargerResponse[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +69,7 @@ function toStationResponse(s: Station): StationResponse {
     ownerName:         s.ownerName,
     totalChargers:     s.getTotalChargerCount(),
     availableChargers: s.getAvailableChargerCount(),
+    chargers:          s.getChargers().map(toChargerResponse),
     createdAt:         s.createdAt,
     updatedAt:         s.updatedAt,
   };
@@ -137,7 +139,9 @@ export class CreateStationUseCase {
 export class UpdateStationUseCase {
   constructor(
     @Inject(STATION_REPOSITORY) private readonly stationRepo: IStationRepository,
+    @Inject(CHARGER_REPOSITORY) private readonly chargerRepo: IChargerRepository,
     @Inject(EVENT_BUS)          private readonly eventBus: IEventBus,
+    private readonly cache: RedisAvailabilityCache,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -158,6 +162,19 @@ export class UpdateStationUseCase {
     });
 
     station.clearDomainEvents();
+
+    if (dto.status !== undefined) {
+      try {
+        const chargers = await this.chargerRepo.findByStationId(stationId);
+        for (const charger of chargers) {
+          await this.cache.invalidateCharger(charger.id);
+        }
+        await this.cache.invalidateStation(stationId);
+      } catch (err) {
+        // Log cache invalidation errors, do not fail operation
+      }
+    }
+
     return toStationResponse(station);
   }
 }
@@ -192,14 +209,15 @@ export class ListStationsUseCase {
 
   async execute(query: ListStationsQueryDto): Promise<PaginatedResult<StationResponse>> {
     const filter: StationFilter = {
-      cityId:   query.cityId,
-      status:   query.status,
-      nearLat:  query.lat,
-      nearLng:  query.lng,
-      radiusKm: query.radiusKm,
-      search:   query.search,
-      limit:    query.limit ?? 20,
-      offset:   query.offset ?? 0,
+      cityId:        query.cityId,
+      status:        query.status,
+      nearLat:       query.lat,
+      nearLng:       query.lng,
+      radiusKm:      query.radiusKm,
+      search:        query.search,
+      connectorType: query.connectorType,
+      limit:         query.limit ?? 20,
+      offset:        query.offset ?? 0,
     };
 
     const result = await this.stationRepo.findMany(filter);

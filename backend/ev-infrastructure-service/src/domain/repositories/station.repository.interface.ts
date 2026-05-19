@@ -10,7 +10,8 @@ export interface StationFilter {
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
-  search?: string;   // full-text search: name ILIKE OR address ILIKE
+  search?: string;        // full-text search: name ILIKE OR address ILIKE
+  connectorType?: string; // filter stations that have at least one connector of this type
   limit?: number;
   offset?: number;
 }

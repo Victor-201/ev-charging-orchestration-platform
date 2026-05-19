@@ -19,6 +19,7 @@ import {
 } from '../../src/domain/repositories/station.repository.interface';
 import { CHARGER_REPOSITORY } from '../../src/domain/repositories/charger.repository.interface';
 import { EVENT_BUS } from '../../src/infrastructure/messaging/outbox/outbox-event-bus';
+import { RedisAvailabilityCache } from '../../src/infrastructure/cache/redis-availability.cache';
 
 // Mocks
 
@@ -417,3 +418,51 @@ describe('ListStationsUseCase', () => {
     );
   });
 });
+
+describe('UpdateStationUseCase', () => {
+  let useCase: UpdateStationUseCase;
+  const mockRedisCache = {
+    invalidateCharger: jest.fn(),
+    invalidateStation: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UpdateStationUseCase,
+        { provide: STATION_REPOSITORY, useValue: mockStationRepo },
+        { provide: CHARGER_REPOSITORY, useValue: mockChargerRepo },
+        { provide: EVENT_BUS,          useValue: mockEventBus },
+        { provide: RedisAvailabilityCache, useValue: mockRedisCache },
+        { provide: DataSource,         useValue: mockDataSource },
+      ],
+    }).compile();
+    useCase = module.get(UpdateStationUseCase);
+  });
+
+  it('should update station status and invalidate cache', async () => {
+    const station = makeStation();
+    const charger = makeCharger();
+    mockStationRepo.findById.mockResolvedValue(station);
+    mockStationRepo.save.mockResolvedValue(undefined);
+    mockEventBus.publishAll.mockResolvedValue(undefined);
+    mockChargerRepo.findByStationId.mockResolvedValue([charger]);
+
+    const result = await useCase.execute(station.id, { status: StationStatus.CLOSED });
+
+    expect(result.status).toBe(StationStatus.CLOSED);
+    expect(mockStationRepo.save).toHaveBeenCalled();
+    expect(mockRedisCache.invalidateCharger).toHaveBeenCalledWith(charger.id);
+    expect(mockRedisCache.invalidateStation).toHaveBeenCalledWith(station.id);
+  });
+
+  it('should throw StationNotFoundException if station not found', async () => {
+    mockStationRepo.findById.mockResolvedValue(null);
+
+    await expect(
+      useCase.execute('nonexistent', { name: 'New Name' }),
+    ).rejects.toThrow(StationNotFoundException);
+  });
+});
+

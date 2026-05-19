@@ -37,7 +37,7 @@ export class StationRepository implements IStationRepository {
       relations: ['chargingPoints', 'chargingPoints.connectors'],
     });
     if (!e) return null;
-    const chargers = (e.chargingPoints ?? []).map((cp) => this.chargerToDomain(cp));
+    const chargers = (e.chargingPoints ?? []).map((cp) => this.chargerToDomain(cp, e.status));
     return this.toDomain(e, chargers);
   }
 
@@ -70,16 +70,35 @@ export class StationRepository implements IStationRepository {
       );
     }
 
-    const limit  = filter.limit  ?? 20;
+    // Connector-type filter — applied at SQL level BEFORE limit/offset so the result count
+    // is correct (e.g. admin paging or search with limit=8 return only matching stations).
+    // Uses an EXISTS subquery to avoid JOIN fan-out that would inflate row count.
+    if (filter.connectorType && filter.connectorType.trim().length > 0) {
+      qb.andWhere(
+        `EXISTS (
+          SELECT 1
+          FROM   charging_points  cp_f
+          INNER JOIN connectors   cn_f ON cn_f.charging_point_id = cp_f.id
+          WHERE  cp_f.station_id       = s.id
+          AND    cn_f.connector_type   = :connType
+        )`,
+        { connType: filter.connectorType.trim() },
+      );
+    }
+
+    // Default to a high limit so map queries return all stations in the area.
+    // The map client always passes limit=1000 explicitly; this guards against omission.
+    const limit  = filter.limit  ?? 1000;
     const offset = filter.offset ?? 0;
 
-    qb.leftJoinAndSelect('s.chargingPoints', 'cp');
+    qb.leftJoinAndSelect('s.chargingPoints', 'cp')
+      .leftJoinAndSelect('cp.connectors',    'cn');
 
     qb.orderBy('s.createdAt', 'DESC').take(limit).skip(offset);
 
     const [rows, total] = await qb.getManyAndCount();
     const items = rows.map((r) => {
-      const chargers = (r.chargingPoints ?? []).map((cp) => this.chargerToDomain(cp));
+      const chargers = (r.chargingPoints ?? []).map((cp) => this.chargerToDomain(cp, r.status));
       return this.toDomain(r, chargers);
     });
     
@@ -143,14 +162,18 @@ export class StationRepository implements IStationRepository {
     }, chargers);
   }
 
-  private chargerToDomain(cp: ChargingPointOrmEntity): Charger {
+  private chargerToDomain(cp: ChargingPointOrmEntity, stationStatus?: string): Charger {
+    let status = cp.status as ChargerStatus;
+    if (stationStatus && stationStatus !== StationStatus.ACTIVE) {
+      status = ChargerStatus.OFFLINE;
+    }
     return Charger.reconstitute({
       id:          cp.id,
       stationId:   cp.stationId,
       name:        cp.name,
       externalId:  cp.externalId,
       maxPowerKw:  Number(cp.maxPowerKw),
-      status:      cp.status as ChargerStatus,
+      status,
       connectors:  (cp.connectors ?? []).map((c: ConnectorOrmEntity) => ({
         id:              c.id,
         chargingPointId: c.chargingPointId,
