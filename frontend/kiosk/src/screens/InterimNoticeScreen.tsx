@@ -90,7 +90,7 @@ const InterimNoticeScreen: React.FC<InterimNoticeScreenProps> = ({
           </button>
           <button 
             onClick={onConfirm}
-            className="flex-[2] py-5 rounded-2xl bg-[var(--warning)] hover:bg-[var(--warning)]/90 transition-all flex items-center justify-center gap-3 font-black text-black shadow-[0_8px_25px_rgba(245,158,11,0.3)]"
+            className="flex-[2] py-5 rounded-2xl bg-[var(--warning)] hover:bg-[var(--warning)]/90 transition-all flex items-center justify-center gap-3 font-black text-black shadow-[0_8px_25px_var(--lime-glow)]"
           >
             ĐỒNG Ý & BẮT ĐẦU SẠC
             <ArrowRight size={20} />

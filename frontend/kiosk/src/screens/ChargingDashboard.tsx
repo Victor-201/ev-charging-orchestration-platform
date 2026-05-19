@@ -8,6 +8,14 @@
  *   - Estimated cost (taxi-meter style, updates each second)
  *   - Session timer
  * Actions: Stop session button
+ *
+ * L-RE-2: 1:1 FSM state mapping (ACTIVE)
+ * L-RE-4: All colors via CSS Custom Properties (var(--*))
+ *
+ * Sub-components split per L-RE-5 (≤100 lines each):
+ *   - HudMetric   → ./widgets/HudMetric.tsx
+ *   - BillingRow  → ./widgets/BillingRow.tsx
+ *   - MetricChip  → ./widgets/MetricChip.tsx
  */
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -18,9 +26,11 @@ import {
   Activity,
   Thermometer,
   Clock,
-  DollarSign,
 } from "lucide-react";
 import type { TelemetryData, ChargingSession, PricingInfo } from "../types";
+import HudMetric from "./widgets/HudMetric";
+import BillingRow from "./widgets/BillingRow";
+import MetricChip from "./widgets/MetricChip";
 
 interface ChargingDashboardProps {
   telemetry: TelemetryData;
@@ -33,12 +43,11 @@ interface ChargingDashboardProps {
 const RING_RADIUS = 230;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const formatNumber = (num: number, decimals: number = 2) => {
-  return num.toLocaleString("vi-VN", {
+const formatNumber = (num: number, decimals: number = 2) =>
+  num.toLocaleString("vi-VN", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
-};
 
 const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
   telemetry,
@@ -54,12 +63,8 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
   useEffect(() => {
     if (telemetry.soc >= 100 && !fullChargeTime) {
       setFullChargeTime(
-        new Date().toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
       );
-      // Capture the cost and energy at the moment of 100% SoC
       setFinalChargingCost(telemetry.estimatedCost);
       setFinalEnergyDelivered(telemetry.energyDelivered);
     }
@@ -81,6 +86,7 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
   }, [telemetry.elapsedSeconds]);
 
   const sessionIdShort = session.id.split("-").pop()?.toUpperCase() ?? "—";
+  const isFull = telemetry.soc >= 99;
 
   return (
     <motion.div
@@ -99,9 +105,7 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
         <div className="flex items-center gap-5">
           <div className="glass-pill px-5 py-2.5 flex items-center gap-2.5">
             <span className="status-dot active" />
-            <span className="text-xs font-bold tracking-widest uppercase">
-              Đang sạc
-            </span>
+            <span className="text-xs font-bold tracking-widest uppercase">Đang sạc</span>
           </div>
           <div className="h-5 w-px bg-white/10" />
           <span className="text-xs font-mono text-[var(--text-muted)] tracking-wider">
@@ -110,29 +114,25 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div 
+          <div
             className={`glass-pill px-5 py-2.5 flex items-center gap-3 transition-all duration-500 ${
-              telemetry.soc >= 99 ? "animate-pulse-danger" : ""
+              isFull ? "animate-pulse-danger" : ""
             }`}
-            style={telemetry.soc >= 99 ? {
-              borderColor: 'rgba(239, 68, 68, 0.6)',
-              backgroundColor: 'transparent',
-              boxShadow: '0 0 25px rgba(239, 68, 68, 0.4)',
-              color: '#ef4444'
+            style={isFull ? {
+              borderColor: "var(--danger)",
+              boxShadow: "0 0 25px var(--red-glow)",
+              color: "var(--danger)",
             } : {}}
           >
-            <Clock 
-              size={20} 
-              className={telemetry.soc >= 99 
-                ? "text-[var(--danger)] drop-shadow-[0_0_8px_rgba(255,59,48,0.6)]" 
-                : "text-[var(--primary)]"
-              } 
+            <Clock
+              size={20}
+              className={isFull ? "text-[var(--danger)]" : "text-[var(--primary)]"}
             />
-            <span className={`text-xl font-mono font-black ${
-              telemetry.soc >= 99 
-                ? "text-[var(--danger)] drop-shadow-[0_0_8px_rgba(255,59,48,0.6)]" 
-                : ""
-            }`}>
+            <span
+              className={`text-xl font-mono font-black ${
+                isFull ? "text-[var(--danger)]" : ""
+              }`}
+            >
               {elapsedLabel}
             </span>
           </div>
@@ -143,20 +143,13 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
       <div className="relative z-10 flex-1 grid grid-cols-12 gap-6">
         {/* ── LEFT: Central SoC Visualizer ── */}
         <div className="col-span-7 glass flex flex-col items-center justify-center relative overflow-hidden">
-          {/* Inner grid overlay */}
           <div className="absolute inset-0 grid-overlay opacity-30 rounded-[28px]" />
 
           {/* SVG Circular Ring */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-10">
             <svg viewBox="0 0 500 500" className="progress-ring w-full h-full max-w-[460px] max-h-[460px]">
               <defs>
-                <linearGradient
-                  id="ring-gradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="0%"
-                >
+                <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="var(--primary)" />
                   <stop offset="100%" stopColor="var(--secondary)" />
                 </linearGradient>
@@ -168,17 +161,7 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
                   </feMerge>
                 </filter>
               </defs>
-
-              {/* Background track */}
-              <circle
-                cx="250"
-                cy="250"
-                r={RING_RADIUS}
-                fill="none"
-                stroke="rgba(255,255,255,0.04)"
-                strokeWidth="14"
-              />
-              {/* Progress arc */}
+              <circle cx="250" cy="250" r={RING_RADIUS} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="14" />
               <motion.circle
                 cx="250"
                 cy="250"
@@ -195,57 +178,31 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
             </svg>
           </div>
 
-            {/* Center content */}
-            <div className="relative z-10 flex flex-col items-center text-center mt-4">
-              <motion.div
-                key={telemetry.soc}
-                initial={{ scale: 0.92, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-                className="flex items-baseline gap-2"
-              >
-                <span className="text-[clamp(4rem,7vw,130px)] font-black leading-none tracking-tighter tabular-nums">
-                  {telemetry.soc}
-                </span>
-                <span className="text-[clamp(1.5rem,2.5vw,40px)] font-bold text-[var(--primary)] mb-2">
-                  %
-                </span>
-              </motion.div>
-              <p className="caption mt-2">Mức pin (SoC)</p>
-            </div>
+          {/* Center content */}
+          <div className="relative z-10 flex flex-col items-center text-center mt-4">
+            <motion.div
+              key={telemetry.soc}
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="flex items-baseline gap-2"
+            >
+              <span className="text-[clamp(4rem,7vw,130px)] font-black leading-none tracking-tighter tabular-nums">
+                {telemetry.soc}
+              </span>
+              <span className="text-[clamp(1.5rem,2.5vw,40px)] font-bold text-[var(--primary)] mb-2">%</span>
+            </motion.div>
+            <p className="caption mt-2">Mức pin (SoC)</p>
+          </div>
 
           {/* HUD Corners */}
           <div className="absolute top-8 left-8 space-y-6">
-            <HudMetric
-              icon={<Activity size={14} />}
-              label="Công suất"
-              value={formatNumber(telemetry.power, 1)}
-              unit="kW"
-              highlight
-            />
-            <HudMetric
-              icon={<Zap size={14} />}
-              label="Điện áp"
-              value={formatNumber(telemetry.voltage, 1)}
-              unit="V"
-            />
+            <HudMetric icon={<Activity size={14} />} label="Công suất" value={formatNumber(telemetry.power, 1)} unit="kW" highlight />
+            <HudMetric icon={<Zap size={14} />}      label="Điện áp"  value={formatNumber(telemetry.voltage, 1)} unit="V" />
           </div>
           <div className="absolute bottom-8 right-8 text-right space-y-6">
-            <HudMetric
-              icon={<Thermometer size={14} />}
-              label="Nhiệt độ pin"
-              value={formatNumber(telemetry.temperature, 1)}
-              unit="°C"
-              align="right"
-            />
-            <HudMetric
-              icon={<Activity size={14} />}
-              label="Dòng điện"
-              value={formatNumber(telemetry.current, 1)}
-              unit="A"
-              align="right"
-              highlight
-            />
+            <HudMetric icon={<Thermometer size={14} />} label="Nhiệt độ pin" value={formatNumber(telemetry.temperature, 1)} unit="°C" align="right" />
+            <HudMetric icon={<Activity size={14} />}    label="Dòng điện"   value={formatNumber(telemetry.current, 1)}     unit="A"  align="right" highlight />
           </div>
         </div>
 
@@ -260,23 +217,16 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
               <motion.div
                 key={Math.floor(chargingFee / 1000)}
                 initial={{ y: 12, opacity: 0 }}
-                animate={{ 
-                  y: 0, 
-                  opacity: 1,
-                  scale: idleFee > 0 ? 0.8 : 1,
-                }}
+                animate={{ y: 0, opacity: 1, scale: idleFee > 0 ? 0.8 : 1 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
                 className="flex items-baseline gap-3 origin-left"
               >
                 <span className="text-[64px] font-black tabular-nums leading-none">
                   {chargingFee.toLocaleString("vi-VN")}
                 </span>
-                <span className="text-[43px] font-black text-[var(--text-secondary)] opacity-50">
-                  ₫
-                </span>
+                <span className="text-[43px] font-black text-[var(--text-secondary)] opacity-50">₫</span>
               </motion.div>
 
-              {/* Idle Fee — Appears right below hero cost, right-aligned */}
               <AnimatePresence>
                 {idleFee > 0 && (
                   <motion.div
@@ -297,42 +247,19 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
             </div>
 
             <div className="border-t border-white/[0.06] pt-5 space-y-3">
-              <BillingRow
-                label="Giá điện"
-                value={
-                  pricing
-                    ? `${pricing.pricePerKwh.toLocaleString()} ₫/kWh`
-                    : "—"
-                }
-              />
-              <BillingRow
-                label="Phí nhàn rỗi (Đơn giá)"
-                value={
-                  pricing
-                    ? `${pricing.idleFeePerMinute.toLocaleString()} ₫/phút`
-                    : "—"
-                }
-              />
+              <BillingRow label="Giá điện" value={pricing ? `${pricing.pricePerKwh.toLocaleString()} ₫/kWh` : "—"} />
+              <BillingRow label="Phí nhàn rỗi (Đơn giá)" value={pricing ? `${pricing.idleFeePerMinute.toLocaleString()} ₫/phút` : "—"} />
               <BillingRow
                 label="Giờ bắt đầu"
-                value={new Date(session.startTime).toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                value={new Date(session.startTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
               />
-              {fullChargeTime && (
-                <BillingRow label="Giờ sạc đầy" value={fullChargeTime} />
-              )}
+              {fullChargeTime && <BillingRow label="Giờ sạc đầy" value={fullChargeTime} />}
             </div>
           </div>
 
           {/* Session Summary Chips */}
           <div className={`grid gap-4 ${telemetry.soc >= 100 ? "grid-cols-2" : "grid-cols-1"}`}>
-            <MetricChip
-              label="Điện năng tiêu thụ"
-              value={formatNumber(energyConsumed, 2)}
-              unit="kWh"
-            />
+            <MetricChip label="Điện năng tiêu thụ" value={formatNumber(energyConsumed, 2)} unit="kWh" />
             {telemetry.soc >= 100 && (
               <MetricChip
                 label="Tổng thanh toán"
@@ -350,43 +277,15 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
             className="btn-danger w-full py-5 flex items-center justify-center gap-3 text-base relative overflow-hidden group"
             onClick={() => setIsConfirmingStop(true)}
           >
-            {/* Border Spirit Animation (2 spirits via Framer Motion for precision) */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-              <motion.div
-                animate={{
-                  top: ["0%", "100%", "100%", "0%", "0%"],
-                  left: ["100%", "100%", "0%", "0%", "100%"],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "linear",
-                  times: [0, 0.15, 0.5, 0.65, 1],
-                }}
-                style={{ position: 'absolute', width: 8, height: 8, background: 'var(--danger)', borderRadius: '50%', filter: 'blur(2px)', boxShadow: '0 0 12px var(--danger), 0 0 24px var(--danger)', transform: 'translate(-50%, -50%)', zIndex: 10 }}
-              />
-              <motion.div
-                animate={{
-                  top: ["100%", "0%", "0%", "100%", "100%"],
-                  left: ["0%", "0%", "100%", "100%", "0%"],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "linear",
-                  times: [0, 0.15, 0.5, 0.65, 1],
-                }}
-                style={{ position: 'absolute', width: 8, height: 8, background: 'var(--danger)', borderRadius: '50%', filter: 'blur(2px)', boxShadow: '0 0 12px var(--danger), 0 0 24px var(--danger)', transform: 'translate(-50%, -50%)', zIndex: 10 }}
-              />
-            </div>
-            
+            <span className="spirit-glow opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <span className="spirit-glow-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <Power size={20} className="relative z-10" />
             <span className="relative z-10">DỪNG SẠC</span>
           </motion.button>
         </div>
       </div>
 
-      {/* ── Stop Confirmation Modal Overlay ── */}
+      {/* ── Stop Confirmation Modal ── */}
       <AnimatePresence>
         {isConfirmingStop && (
           <motion.div
@@ -404,14 +303,12 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
               <div className="w-20 h-20 rounded-full bg-[var(--danger)]/10 flex items-center justify-center">
                 <Power size={36} className="text-[var(--danger)]" />
               </div>
-
               <div>
                 <h2 className="text-3xl font-black mb-3">DỪNG PHIÊN SẠC?</h2>
                 <p className="text-[var(--text-secondary)]">
                   Bạn có chắc chắn muốn kết thúc phiên sạc hiện tại và thanh toán?
                 </p>
               </div>
-
               <div className="flex gap-6 w-full mt-4">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -425,10 +322,7 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="btn-danger flex-1"
-                  onClick={() => {
-                    setIsConfirmingStop(false);
-                    onStop();
-                  }}
+                  onClick={() => { setIsConfirmingStop(false); onStop(); }}
                 >
                   XÁC NHẬN
                 </motion.button>
@@ -440,60 +334,5 @@ const ChargingDashboard: React.FC<ChargingDashboardProps> = ({
     </motion.div>
   );
 };
-
-// ── Sub-components ──
-
-const HudMetric: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  unit: string;
-  align?: "left" | "right";
-  highlight?: boolean;
-}> = ({ icon, label, value, unit, align = "left", highlight = false }) => (
-  <div className={align === "right" ? "text-right" : "text-left"}>
-    <div
-      className={`flex items-center gap-1.5 caption mb-1.5 ${align === "right" ? "justify-end" : ""}`}
-    >
-      <span className="text-[var(--primary)]">{icon}</span>
-      {label}
-    </div>
-    <p className="text-3xl font-bold tabular-nums flex items-baseline gap-1">
-      <span className={highlight ? "text-gradient" : ""}>{value}</span>
-      <span className="text-xl font-bold opacity-40">{unit}</span>
-    </p>
-  </div>
-);
-
-const BillingRow: React.FC<{ label: string; value: string }> = ({
-  label,
-  value,
-}) => (
-  <div className="flex justify-between items-center text-base">
-    <span className="text-[var(--text-muted)] font-medium">{label}</span>
-    <span className="font-bold">{value}</span>
-  </div>
-);
-
-const MetricChip: React.FC<{ label: string; value: string; unit?: string; variant?: "default" | "danger" }> = ({
-  label,
-  value,
-  unit,
-  variant = "default"
-}) => (
-  <div className={`metric-card transition-all duration-500 flex flex-col justify-center items-center py-6 ${
-    variant === "danger" ? "bg-[var(--danger)]/10 border border-[var(--danger)]/50 shadow-[0_0_20px_rgba(255,59,48,0.2)]" : ""
-  }`}>
-    <p className={`mb-3 text-base font-bold uppercase tracking-widest ${
-      variant === "danger" ? "text-[var(--danger)] opacity-90" : "text-[var(--text-secondary)] opacity-70"
-    }`}>{label}</p>
-    <p className={`text-4xl font-black tabular-nums flex items-baseline gap-2 ${
-      variant === "danger" ? "text-[var(--danger)] drop-shadow-[0_0_8px_rgba(255,59,48,0.5)]" : ""
-    }`}>
-      <span>{value}</span>
-      {unit && <span className="text-2xl font-black opacity-40">{unit}</span>}
-    </p>
-  </div>
-);
 
 export default ChargingDashboard;

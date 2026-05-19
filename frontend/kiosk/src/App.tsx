@@ -39,6 +39,7 @@ const App: React.FC = () => {
     pricing,
     vnpayUrl,
     errorMessage,
+    mockBookingTime,
     startSession,
     stopSession,
     resetSession,
