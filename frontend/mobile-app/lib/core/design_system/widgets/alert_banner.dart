@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import '../design_system/app_colors.dart';
-import '../design_system/app_theme.dart';
-import '../design_system/app_typography.dart';
+import 'dart:async';
+import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
+import '../theme/app_theme.dart';
 
 /// Reusable shimmer loader for all async content loading
 class ShimmerLoader extends StatelessWidget {

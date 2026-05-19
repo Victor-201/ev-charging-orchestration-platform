@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../design_system/app_colors.dart';
-import '../design_system/app_theme.dart';
-import '../design_system/app_typography.dart';
+import '../design_system/theme/app_colors.dart';
+import '../design_system/theme/app_theme.dart';
+import '../design_system/theme/app_typography.dart';
 
 /// Animated surface container with ripple touch feedback
 class EVCard extends StatelessWidget {

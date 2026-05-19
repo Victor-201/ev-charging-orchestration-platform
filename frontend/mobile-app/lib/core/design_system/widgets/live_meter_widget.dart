@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../design_system/app_colors.dart';
-import '../design_system/app_theme.dart';
-import '../design_system/app_typography.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_typography.dart';
 
 /// Circular dynamic battery state-of-charge widget
 /// Update animation interval: 800ms easeInOut
