@@ -648,14 +648,14 @@ function Show-MainMenu {
 
     Write-Host ""
     Show-Separator "FRONTENDS (UI)"
-    Write-MenuItem "8" "Mobile App (Flutter)" Green
-    Write-MenuItem "9" "Web Admin (Next.js)"  Green
-    Write-MenuItem "A" "Kiosk App (React)"    Green
+    Write-MenuItem "M" "Mobile App (Flutter)" Green
+    Write-MenuItem "W" "Web Admin (Next.js)"  Green
+    Write-MenuItem "K" "Kiosk App (React)"    Green
 
     Write-Host ""
-    Show-Separator "TOOLS"
-    Write-MenuItem "U" "Troubleshooting"   Cyan
-    Write-MenuItem "W" "Open Ubuntu Shell" DarkYellow
+    Show-Separator "TOOLS & UTILITIES"
+    Write-MenuItem "T" "Troubleshooting & Diagnostics (Check Docker, WSL mounts, Auto-fix DB LAN IP)" Cyan
+    Write-MenuItem "S" "Open Ubuntu WSL Bash Shell (Quick terminal command-line access inside WSL)" DarkYellow
 
     Write-Host ""
     Show-Separator
@@ -679,13 +679,11 @@ try {
             "5" { Sub-Logs }
             "6" { Sub-Testing }
             "7" { Sub-Seeding }
-            "8" { Sub-Frontend-Mobile }
-            "9" { Sub-Frontend-WebAdmin }
-            "a" { Sub-Frontend-Kiosk }
-            "u" { Sub-Troubleshoot }
-            "w" {
-                Open-UbuntuTerminal -BashCommand "cd '$(Get-WslRoot)' && exec bash"
-            }
+            "m" { Sub-Frontend-Mobile }
+            "w" { Sub-Frontend-WebAdmin }
+            "k" { Sub-Frontend-Kiosk }
+            "t" { Sub-Troubleshoot }
+            "s" { Open-UbuntuShell }
         }
     }
 }
