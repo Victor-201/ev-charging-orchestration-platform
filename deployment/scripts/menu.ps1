@@ -1,8 +1,36 @@
 $ErrorActionPreference = "Continue"
 $OriginalPath = Get-Location
 
-$ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+# Bulletproof determination of ScriptDir and ProjectRoot
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir -and $MyInvocation -and $MyInvocation.MyCommand -and $MyInvocation.MyCommand.Path) {
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+if (-not $ScriptDir) {
+    $ScriptDir = (Get-Location).Path
+}
+
+$ProjectRoot = $null
+$checkPath = $ScriptDir
+while ($checkPath) {
+    if (Test-Path "$checkPath\deployment\scripts\menu.ps1") {
+        $ProjectRoot = $checkPath
+        break
+    }
+    $parent = Split-Path -Parent $checkPath
+    if ($parent -eq $checkPath -or -not $parent) { break }
+    $checkPath = $parent
+}
+
+if (-not $ProjectRoot) {
+    # Fallback to resolving relative to ScriptDir
+    $ProjectRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+}
+
+# Resolve canonical absolute path and change directory
+if (Test-Path $ProjectRoot) {
+    $ProjectRoot = (Resolve-Path $ProjectRoot).Path
+}
 Set-Location $ProjectRoot
 
 function Safe-Clear {
@@ -17,27 +45,51 @@ function Clear-KeyBuffer {
 }
 
 function Get-Key {
-    try { $k = [Console]::ReadKey($true) }
-    catch { return $null }
-    switch ($k.Key) {
-        ([ConsoleKey]::Escape)     { return "0" }
-        ([ConsoleKey]::Backspace)  { return "0" }
-        ([ConsoleKey]::LeftArrow)  { return "0" }
-        ([ConsoleKey]::RightArrow) { return "enter" }
-        ([ConsoleKey]::Enter)      { return "enter" }
-        ([ConsoleKey]::UpArrow)    { return "up" }
-        ([ConsoleKey]::DownArrow)  { return "down" }
+    try {
+        $k = [Console]::ReadKey($true)
+        if ($null -eq $k) {
+            # Fallback to Read-Host
+            $input = Read-Host
+            if ($null -eq $input) { return "" }
+            return $input.Trim().ToLower()
+        }
+        switch ($k.Key) {
+            ([ConsoleKey]::Escape)     { return "0" }
+            ([ConsoleKey]::Backspace)  { return "0" }
+            ([ConsoleKey]::LeftArrow)  { return "0" }
+            ([ConsoleKey]::RightArrow) { return "enter" }
+            ([ConsoleKey]::Enter)      { return "enter" }
+            ([ConsoleKey]::UpArrow)    { return "up" }
+            ([ConsoleKey]::DownArrow)  { return "down" }
+        }
+        return $k.KeyChar.ToString().ToLower()
     }
-    return $k.KeyChar.ToString().ToLower()
+    catch {
+        # Fall back to Read-Host if console reading is not supported
+        try {
+            $input = Read-Host
+            if ($null -eq $input) { return "" }
+            return $input.Trim().ToLower()
+        } catch {
+            # Absolute fallback to prevent CPU spin in headless automated tasks
+            Start-Sleep -Milliseconds 200
+            return ""
+        }
+    }
 }
 
 function Get-Key-Timeout {
     param([int]$TimeoutMs = 500)
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
     while ($timer.ElapsedMilliseconds -lt $TimeoutMs) {
-        if ([Console]::KeyAvailable) {
+        $available = $false
+        try {
+            $available = [Console]::KeyAvailable
+        } catch {}
+        if ($available) {
             try {
                 $k = [Console]::ReadKey($true)
+                if ($null -eq $k) { return "" }
                 switch ($k.Key) {
                     ([ConsoleKey]::Escape)    { return "0" }
                     ([ConsoleKey]::Backspace) { return "0" }
@@ -89,17 +141,39 @@ function Get-WslRoot {
 function Open-UbuntuTerminal {
     param([string]$BashCommand)
 
+    # Detect if 'Ubuntu' distribution is installed, otherwise fall back to default
+    $hasUbuntu = $false
+    try {
+        $wslList = wsl --list --quiet 2>$null
+        if ($null -ne $wslList) {
+            foreach ($dist in $wslList) {
+                if ($dist.Trim() -match "^Ubuntu") {
+                    $hasUbuntu = $true
+                    break
+                }
+            }
+        }
+    } catch {}
+
     # Prefer Windows Terminal (wt) for optimal multi-tab and color support.
     $wtCmd = Get-Command "wt" -ErrorAction SilentlyContinue
     if ($null -ne $wtCmd) {
-        Start-Process "wt" -ArgumentList "new-tab", "--profile", "Ubuntu", "bash", "-c", "$BashCommand"
+        if ($hasUbuntu) {
+            Start-Process "wt" -ArgumentList "new-tab", "--profile", "Ubuntu", "bash", "-c", "$BashCommand"
+        } else {
+            Start-Process "wt" -ArgumentList "new-tab", "wsl", "bash", "-c", "$BashCommand"
+        }
     } else {
         # Fallback to standard CLI app or direct wsl.exe shell.
         $uCmd = Get-Command "ubuntu" -ErrorAction SilentlyContinue
-        if ($null -ne $uCmd) {
+        if ($hasUbuntu -and $null -ne $uCmd) {
             Start-Process "ubuntu" -ArgumentList "run", "bash", "-c", "$BashCommand"
         } else {
-            Start-Process "wsl.exe" -ArgumentList "-d", "Ubuntu", "--", "bash", "-c", "$BashCommand"
+            if ($hasUbuntu) {
+                Start-Process "wsl.exe" -ArgumentList "-d", "Ubuntu", "--", "bash", "-c", "$BashCommand"
+            } else {
+                Start-Process "wsl.exe" -ArgumentList "--", "bash", "-c", "$BashCommand"
+            }
         }
     }
 }
@@ -127,7 +201,7 @@ function Run-Frontend {
     $FullArgs   = if ($ArgsStr) { " $ArgsStr" } else { "" }
     $PsCmd      = "Set-Location '$ProjectRoot'; & '$scriptPath'$FullArgs; Write-Host ''; Write-Host ' [DONE] Press any key to close...' -ForegroundColor DarkGray; `$null = [Console]::ReadKey(`$true)"
 
-    Start-Process "powershell" -ArgumentList "-NoProfile", "-NoExit", "-Command", $PsCmd
+    Start-Process "powershell" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", $PsCmd
     Start-Sleep -Milliseconds 100
 }
 
@@ -605,8 +679,9 @@ function Fix-Database-Networking {
     Write-Host ""
     Write-Host " [*] Locating local LAN IP address..." -ForegroundColor Cyan -NoNewline
 
+    # Query active non-loopback, non-WSL physical LAN interfaces in a language-independent manner
     $ipObj = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-             Where-Object { $_.InterfaceAlias -match "Wi-Fi|Ethernet|WLAN" } |
+             Where-Object { $_.IPAddress -notmatch "^127\." -and $_.InterfaceAlias -notmatch "Loopback|vEthernet" } |
              Select-Object -First 1
 
     $ip = if ($null -ne $ipObj) { $ipObj.IPAddress } else { "127.0.0.1" }
