@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../design_system/theme/app_colors.dart';
-import '../design_system/theme/app_theme.dart';
-import '../design_system/theme/app_typography.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../theme/app_typography.dart';
+import 'glass_container.dart';
 
-/// Animated surface container with ripple touch feedback
-class EVCard extends StatelessWidget {
+/// Animated surface container with Liquid Glass aesthetic
+class EVCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? padding;
@@ -25,26 +26,79 @@ class EVCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final radius = borderRadius ?? BorderRadius.circular(AppRadius.md);
+  State<EVCard> createState() => _EVCardState();
+}
 
-    return Padding(
-      padding: margin ?? EdgeInsets.zero,
+class _EVCardState extends State<EVCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    if (widget.onTap != null) _controller.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    if (widget.onTap != null) {
+      _controller.reverse();
+      widget.onTap!();
+    }
+  }
+
+  void _onTapCancel() {
+    if (widget.onTap != null) _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = widget.borderRadius ?? BorderRadius.circular(AppRadius.xl);
+
+    Widget cardContent = GlassContainer(
+      margin: widget.margin,
+      padding: EdgeInsets.zero, // Padding handled by internal inkwell/container
+      borderRadius: radius,
+      enableBlur: true,
       child: Material(
-        color: backgroundColor ?? theme.cardTheme.color,
-        elevation: elevation ?? 2,
-        shadowColor: Colors.black.withOpacity(0.08),
-        borderRadius: radius,
+        color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
           borderRadius: radius,
+          onTap: widget.onTap == null ? null : () {}, // Handled by gesture detector
+          splashColor: AppColors.primaryCyan.withValues(alpha: 0.1),
+          highlightColor: Colors.transparent,
           child: Padding(
-            padding: padding ??
-                const EdgeInsets.all(AppSpacing.lg),
-            child: child,
+            padding: widget.padding ?? const EdgeInsets.all(AppSpacing.lg),
+            child: widget.child,
           ),
         ),
+      ),
+    );
+
+    if (widget.onTap == null) return cardContent;
+
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: cardContent,
       ),
     );
   }
@@ -65,9 +119,9 @@ class ChargerStatusChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -78,6 +132,12 @@ class ChargerStatusChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.5),
+                  blurRadius: 4,
+                )
+              ]
             ),
           ),
           const SizedBox(width: AppSpacing.xs),
@@ -126,7 +186,7 @@ class BookingStatusBadge extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Text(
@@ -158,3 +218,4 @@ class BookingStatusBadge extends StatelessWidget {
     }
   }
 }
+
