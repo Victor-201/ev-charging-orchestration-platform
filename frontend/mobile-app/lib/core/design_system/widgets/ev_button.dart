@@ -6,7 +6,7 @@ import '../theme/app_theme.dart';
 /// Visual configuration variants: primary, secondary, danger, outlined
 enum EVButtonVariant { primary, secondary, danger, outlined }
 
-/// Reusable high-fidelity button component for all UI screens
+/// Reusable high-fidelity button component with Neon Glow & Glassmorphism
 class EVButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -29,60 +29,41 @@ class EVButton extends StatelessWidget {
     this.foregroundColor,
   });
 
-  Color _resolvedBg() {
-    if (backgroundColor != null) return backgroundColor!;
-    switch (variant) {
-      case EVButtonVariant.secondary:
-        return AppColors.secondary;
-      case EVButtonVariant.danger:
-        return AppColors.error;
-      case EVButtonVariant.outlined:
-        return Colors.transparent;
-      case EVButtonVariant.primary:
-        return AppColors.primary;
-    }
-  }
-
-  Color _resolvedFg() {
-    if (foregroundColor != null) return foregroundColor!;
-    switch (variant) {
-      case EVButtonVariant.outlined:
-        return AppColors.primary;
-      case EVButtonVariant.danger:
-        return AppColors.onError;
-      default:
-        return AppColors.onPrimary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isVariantOutlined =
-        isOutlined || variant == EVButtonVariant.outlined;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isVariantOutlined = isOutlined || variant == EVButtonVariant.outlined;
 
-    Widget child;
+    // Foreground resolution
+    Color resolveFg() {
+      if (foregroundColor != null) return foregroundColor!;
+      if (isVariantOutlined) return AppColors.primaryCyan;
+      if (variant == EVButtonVariant.danger) return AppColors.white;
+      if (variant == EVButtonVariant.secondary) return isDark ? AppColors.white : AppColors.black;
+      return AppColors.white;
+    }
+
+    Widget childContent;
     if (isLoading) {
-      child = SizedBox(
+      childContent = SizedBox(
         width: 22,
         height: 22,
         child: CircularProgressIndicator(
           strokeWidth: 2.5,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            isVariantOutlined ? AppColors.primary : AppColors.onPrimary,
-          ),
+          valueColor: AlwaysStoppedAnimation<Color>(resolveFg()),
         ),
       );
     } else if (icon != null) {
-      child = Row(
+      childContent = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 20, color: resolveFg()),
           const SizedBox(width: AppSpacing.sm),
-          Text(label),
+          Text(label, style: TextStyle(color: resolveFg())),
         ],
       );
     } else {
-      child = Text(label);
+      childContent = Text(label, style: TextStyle(color: resolveFg()));
     }
 
     if (isVariantOutlined) {
@@ -91,23 +72,84 @@ class EVButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: isLoading ? null : onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: _resolvedFg(),
-            side: BorderSide(color: _resolvedFg(), width: 1.5),
+            foregroundColor: resolveFg(),
+            side: BorderSide(color: resolveFg(), width: 1.5),
           ),
-          child: child,
+          child: childContent,
         ),
       );
     }
 
-    return SizedBox(
+    // Primary Button with Gradient and Neon Glow
+    if (variant == EVButtonVariant.primary) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          gradient: backgroundColor == null ? AppColors.primaryGradient : null,
+          color: backgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryCyan.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+          ),
+          child: childContent,
+        ),
+      );
+    }
+
+    // Danger Button with soft red tint & glow
+    if (variant == EVButtonVariant.danger) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: AppColors.danger.withValues(alpha: 0.9),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.danger.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+          ),
+          child: childContent,
+        ),
+      );
+    }
+
+    // Secondary Button (Translucent Glass)
+    return Container(
       width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: isDark ? AppColors.glassBgDark : AppColors.glassBgLight,
+        border: Border.all(
+          color: isDark ? AppColors.glassBorderDark : AppColors.glassBorderLight,
+        ),
+      ),
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _resolvedBg(),
-          foregroundColor: _resolvedFg(),
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
         ),
-        child: child,
+        child: childContent,
       ),
     );
   }
