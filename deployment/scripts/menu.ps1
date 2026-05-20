@@ -484,6 +484,68 @@ function Sub-Troubleshoot {
     }
 }
 
+function Sub-Frontend-Mobile {
+    while ($true) {
+        Show-Header "MOBILE APP (Flutter)"
+        Write-MenuItem "1" "Setup Environment" Green
+        Write-MenuItem "2" "Run Dev Server"    Green
+        Write-MenuItem "3" "Build Production"  Yellow
+        Write-MenuItem "4" "Run Tests"         Yellow
+        Write-Host ""
+        Show-Separator
+        Write-MenuItem -IsBack
+        Write-Host ""
+        $c = Get-Key
+        switch ($c) {
+            "1" { Run-Frontend "mobile-app\setup.ps1"; return }
+            "2" { Run-Frontend "mobile-app\run.ps1"; return }
+            "3" { Run-Frontend "mobile-app\build.ps1"; return }
+            "4" { Run-Frontend "mobile-app\test.ps1"; return }
+            "0" { return }
+        }
+    }
+}
+
+function Sub-Frontend-WebAdmin {
+    while ($true) {
+        Show-Header "WEB ADMIN (Next.js)"
+        Write-MenuItem "1" "Setup (npm install)" Green
+        Write-MenuItem "2" "Run Dev Server"      Green
+        Write-MenuItem "3" "Build Production"    Yellow
+        Write-Host ""
+        Show-Separator
+        Write-MenuItem -IsBack
+        Write-Host ""
+        $c = Get-Key
+        switch ($c) {
+            "1" { Run-Frontend "web-admin\setup.ps1"; return }
+            "2" { Run-Frontend "web-admin\run.ps1"; return }
+            "3" { Run-Frontend "web-admin\build.ps1"; return }
+            "0" { return }
+        }
+    }
+}
+
+function Sub-Frontend-Kiosk {
+    while ($true) {
+        Show-Header "KIOSK APP (React/Vite)"
+        Write-MenuItem "1" "Setup (npm install)" Green
+        Write-MenuItem "2" "Run Dev Server"      Green
+        Write-MenuItem "3" "Build Production"    Yellow
+        Write-Host ""
+        Show-Separator
+        Write-MenuItem -IsBack
+        Write-Host ""
+        $c = Get-Key
+        switch ($c) {
+            "1" { Run-Frontend "kiosk\setup.ps1"; return }
+            "2" { Run-Frontend "kiosk\run.ps1"; return }
+            "3" { Run-Frontend "kiosk\build.ps1"; return }
+            "0" { return }
+        }
+    }
+}
+
 function Check-Docker {
     Write-Host ""
     Write-Host " [*] Checking Docker..." -ForegroundColor Cyan -NoNewline
@@ -585,11 +647,10 @@ function Show-MainMenu {
     Write-MenuItem "7" "Seed Databases"   Magenta
 
     Write-Host ""
-    Show-Separator "FRONTEND (PS)"
-    Write-MenuItem "S" "Setup Environment" Green
-    Write-MenuItem "R" "Run Dev Server"    Green
-    Write-MenuItem "B" "Build Production"  Yellow
-    Write-MenuItem "T" "Run Tests"         Yellow
+    Show-Separator "FRONTENDS (UI)"
+    Write-MenuItem "8" "Mobile App (Flutter)" Green
+    Write-MenuItem "9" "Web Admin (Next.js)"  Green
+    Write-MenuItem "A" "Kiosk App (React)"    Green
 
     Write-Host ""
     Show-Separator "TOOLS"
@@ -618,10 +679,9 @@ try {
             "5" { Sub-Logs }
             "6" { Sub-Testing }
             "7" { Sub-Seeding }
-            "s" { Run-Frontend "setup.ps1" }
-            "r" { Run-Frontend "run.ps1" }
-            "b" { Run-Frontend "build.ps1" }
-            "t" { Run-Frontend "test.ps1" }
+            "8" { Sub-Frontend-Mobile }
+            "9" { Sub-Frontend-WebAdmin }
+            "a" { Sub-Frontend-Kiosk }
             "u" { Sub-Troubleshoot }
             "w" {
                 Open-UbuntuTerminal -BashCommand "cd '$(Get-WslRoot)' && exec bash"
