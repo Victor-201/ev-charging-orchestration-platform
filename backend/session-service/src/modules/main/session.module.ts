@@ -7,11 +7,8 @@ import { IdleFeeDetectionJob, StoppedSessionBillingJob } from '../../application
 import { LateDeliveryReconciler } from '../../application/use-cases/late-delivery-reconciler';
 import { ReconciliationJob, FaultDetectionService } from '../../application/use-cases/reconciliation.use-cases';
 import { SessionRepository } from '../../infrastructure/persistence/typeorm/repositories/session.repository';
+import { SESSION_REPOSITORY } from '../../domain/repositories/session.repository.interface';
 import { BookingConfirmedSyncConsumer, BookingCancelledSyncConsumer } from '../../infrastructure/messaging/consumers/booking-sync.consumer';
-import {
-  BillingDeductedConsumer,
-  BillingDeductionFailedConsumer,
-} from '../../infrastructure/messaging/consumers/booking.consumers';
 import { TelemetryConsumer } from '../../infrastructure/messaging/consumers/telemetry.consumer';
 import { ChargingGateway } from '../../infrastructure/realtime/charging.gateway';
 import { SessionOrmEntity, TelemetryOrmEntity, ChargerStateOrmEntity, ProcessedEventOrmEntity, UserDebtReadModelOrmEntity, BookingReadModelOrmEntity } from '../../infrastructure/persistence/typeorm/entities/session.orm-entities';
@@ -28,13 +25,12 @@ import { OutboxOrmEntity } from '../../infrastructure/persistence/typeorm/entiti
   controllers: [SessionController],
   providers: [
     StartSessionUseCase, StopSessionUseCase, RecordTelemetryUseCase, GetSessionUseCase,
-    // Saga consumers (billing outcome -> booking state machine)
-    BillingDeductedConsumer, BillingDeductionFailedConsumer,
     // Legacy consumers preserved
     BookingConfirmedConsumer, PaymentCompletedConsumer,
     AutoChargeUseCase, IdleFeeDetectionJob,
     LateDeliveryReconciler, StoppedSessionBillingJob, ReconciliationJob, FaultDetectionService,
-    { provide: 'ISessionRepository', useClass: SessionRepository },
+    { provide: SESSION_REPOSITORY, useClass: SessionRepository },
+    { provide: 'ISessionRepository', useExisting: SESSION_REPOSITORY },
     BookingConfirmedSyncConsumer, BookingCancelledSyncConsumer, TelemetryConsumer, ChargingGateway,
   ],
   exports: [StartSessionUseCase, StopSessionUseCase, GetSessionUseCase],

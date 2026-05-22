@@ -13,7 +13,6 @@
 import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
-// @ts-ignore from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -53,6 +52,9 @@ import { OutboxOrmEntity as OutboxEntity } from './infrastructure/messaging/outb
           PricingSnapshotOrmEntity, QueueOrmEntity,
           SchedulingSlotOrmEntity, ProcessedEventOrmEntity,
           OutboxOrmEntity,
+          SessionOrmEntity, TelemetryOrmEntity,
+          ChargerStateOrmEntity, UserDebtReadModelOrmEntity,
+          BookingReadModelOrmEntity,
         ],
         migrations: [__dirname + '/infrastructure/persistence/typeorm/migrations/*.js'],
         migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN === 'true' || false,
@@ -84,12 +86,8 @@ import { OutboxOrmEntity as OutboxEntity } from './infrastructure/messaging/outb
     TypeOrmModule.forFeature([OutboxOrmEntity]),
 
     BookingModule,
+    SessionModule,
     QueueModule,
   ],
 })
 export class AppModule {}
-
-
-
-
-
