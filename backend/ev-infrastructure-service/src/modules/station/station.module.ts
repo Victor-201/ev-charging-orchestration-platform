@@ -18,6 +18,7 @@ import {
   AddChargerUseCase, UpdateChargerStatusUseCase,
   GetChargersUseCase, GetCitiesUseCase,
   GetChargerAvailabilityUseCase, SlaMonitoringUseCase,
+  GetStationByChargerUseCase,
 } from '../../application/use-cases/station.use-cases';
 import { GetPricingUseCase, CalculateSessionFeeUseCase, UpsertPricingRuleUseCase, DeactivatePricingRuleUseCase, ListPricingRulesUseCase } from '../../application/use-cases/pricing.use-case';
 import { StationController } from './station.controller';
@@ -74,6 +75,7 @@ class SlaScheduler {
     AddChargerUseCase, UpdateChargerStatusUseCase,
     GetChargersUseCase, GetCitiesUseCase,
     GetChargerAvailabilityUseCase, SlaMonitoringUseCase,
+    GetStationByChargerUseCase,
     GetPricingUseCase, CalculateSessionFeeUseCase,
     UpsertPricingRuleUseCase, DeactivatePricingRuleUseCase, ListPricingRulesUseCase,
     // Scheduled jobs

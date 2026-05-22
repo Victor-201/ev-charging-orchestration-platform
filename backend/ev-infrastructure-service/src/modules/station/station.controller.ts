@@ -10,6 +10,7 @@ import {
   ListStationsUseCase, GetNearbyStationsUseCase,
   AddChargerUseCase, UpdateChargerStatusUseCase,
   GetChargersUseCase, GetCitiesUseCase,
+  GetStationByChargerUseCase,
 } from '../../application/use-cases/station.use-cases';
 import {
   GetPricingUseCase, CalculateSessionFeeUseCase,
@@ -66,6 +67,7 @@ export class StationController {
     private readonly upsertPricingRule:   UpsertPricingRuleUseCase,
     private readonly deactivateRule:      DeactivatePricingRuleUseCase,
     private readonly listPricingRules:    ListPricingRulesUseCase,
+    private readonly getStationByCharger: GetStationByChargerUseCase,
   ) {}
 
   @Get()
@@ -91,6 +93,12 @@ export class StationController {
   @Public()
   async cities() {
     return this.getCities.execute();
+  }
+
+  @Get('by-charger/:chargerId')
+  @Public()
+  async getByCharger(@Param('chargerId', ParseUUIDPipe) chargerId: string) {
+    return this.handleDomainErrors(() => this.getStationByCharger.execute(chargerId));
   }
 
   @Get(':id')

@@ -18,6 +18,7 @@ import {
 import { CreateStationDto, UpdateStationDto, ListStationsQueryDto } from '../dtos/station.dto';
 import { AddChargerDto, UpdateChargerStatusDto } from '../dtos/charger.dto';
 import { RedisAvailabilityCache } from '../../infrastructure/cache/redis-availability.cache';
+import { ConnectorOrmEntity } from '../../infrastructure/persistence/typeorm/entities/station.orm-entities';
 
 
 
@@ -412,6 +413,65 @@ export class SlaMonitoringUseCase {
     }
 
     return results;
+  }
+}
+
+
+@Injectable()
+export class GetStationByChargerUseCase {
+  constructor(
+    @Inject(STATION_REPOSITORY) private readonly stationRepo: IStationRepository,
+    @Inject(CHARGER_REPOSITORY) private readonly chargerRepo: IChargerRepository,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async execute(chargerId: string): Promise<StationDetailResponse> {
+    let stationId: string | null = null;
+    let matchedChargingPointId: string | null = null;
+
+    // 1. Try to find if chargerId matches a connector ID in 'connectors' table
+    const connector = await this.dataSource.getRepository(ConnectorOrmEntity).findOne({
+      where: { id: chargerId },
+      relations: ['chargingPoint'],
+    });
+
+    if (connector && connector.chargingPoint) {
+      stationId = connector.chargingPoint.stationId;
+      matchedChargingPointId = connector.chargingPoint.id;
+    } else {
+      // 2. Fallback to check if chargerId matches a charging point ID
+      const charger = await this.chargerRepo.findById(chargerId);
+      if (charger) {
+        stationId = charger.stationId;
+        matchedChargingPointId = charger.id;
+      }
+    }
+
+    if (!stationId || !matchedChargingPointId) {
+      throw new ChargerNotFoundException(chargerId);
+    }
+
+    const station = await this.stationRepo.findByIdWithChargers(stationId);
+    if (!station) throw new StationNotFoundException(stationId);
+
+    // Filter chargers to only include the single matched charging point (Trụ sạc)
+    const allChargers = station.getChargers();
+    const matchedCharger = allChargers.find((c) => c.id === matchedChargingPointId);
+
+    let chargersResponse: ChargerResponse[] = [];
+    if (matchedCharger) {
+      const chargerRes = toChargerResponse(matchedCharger);
+      // Optional: Filter connectors of this charging point to only include the booked connector
+      if (connector) {
+        chargerRes.connectors = chargerRes.connectors.filter((cn) => cn.id === chargerId);
+      }
+      chargersResponse = [chargerRes];
+    }
+
+    return {
+      ...toStationResponse(station),
+      chargers: chargersResponse,
+    };
   }
 }
 
