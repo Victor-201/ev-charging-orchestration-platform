@@ -43,6 +43,17 @@ class DioClient {
 
   Dio get dio => _dio;
 
+  /// Wires the logout callback after [AuthBloc] is ready.
+  /// Called from [_EVoltAppState.initState] to avoid a circular DI dependency.
+  void setOnLogout(Future<void> Function() callback) {
+    for (final interceptor in _dio.interceptors) {
+      if (interceptor is DioAuthInterceptor) {
+        interceptor.onLogout = callback;
+        return;
+      }
+    }
+  }
+
   /// Idempotency header for all payment-related POST requests
   Map<String, String> idempotencyHeader() =>
       {'Idempotency-Key': _uuid.v4()};

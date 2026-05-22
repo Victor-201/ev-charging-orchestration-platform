@@ -23,7 +23,8 @@ class UserModel extends UserEntity {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id']?.toString() ?? '',
+      // API may return `userId` instead of `id`
+      id: (json['userId'] ?? json['id'])?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
       phone: json['phone']?.toString(),
@@ -47,6 +48,17 @@ class AuthRepositoryImpl implements IAuthRepository {
   })  : _client = client,
         _storage = storage;
 
+  /// Handles both `{ data: { ... } }` (wrapped) and `{ accessToken: ... }` (flat)
+  /// response shapes returned by the IAM service.
+  static Map<String, dynamic> _extractData(dynamic responseData) {
+    if (responseData is Map<String, dynamic>) {
+      final inner = responseData['data'];
+      if (inner is Map<String, dynamic>) return inner;
+      return responseData;
+    }
+    return {};
+  }
+
   @override
   Future<Either<Failure, LoginResult>> login({
     required String email,
@@ -57,7 +69,7 @@ class AuthRepositoryImpl implements IAuthRepository {
         ApiPaths.login,
         data: {'email': email, 'password': password},
       );
-      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final data = _extractData(response.data);
 
       if (data['mfaRequired'] == true) {
         return Right(const LoginResult(mfaRequired: true));
@@ -67,8 +79,8 @@ class AuthRepositoryImpl implements IAuthRepository {
       final refreshToken = data['refreshToken']?.toString() ?? '';
       final userData = data['user'] as Map<String, dynamic>? ?? {};
 
-      await _storage.saveAccessToken(accessToken);
-      await _storage.saveRefreshToken(refreshToken);
+      if (accessToken.isNotEmpty) await _storage.saveAccessToken(accessToken);
+      if (refreshToken.isNotEmpty) await _storage.saveRefreshToken(refreshToken);
 
       return Right(LoginResult(
         accessToken: accessToken,
@@ -90,13 +102,13 @@ class AuthRepositoryImpl implements IAuthRepository {
         ApiPaths.mfaVerify,
         data: {'token': otpCode},
       );
-      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final data = _extractData(response.data);
       final accessToken = data['accessToken']?.toString() ?? '';
       final refreshToken = data['refreshToken']?.toString() ?? '';
       final userData = data['user'] as Map<String, dynamic>? ?? {};
 
-      await _storage.saveAccessToken(accessToken);
-      await _storage.saveRefreshToken(refreshToken);
+      if (accessToken.isNotEmpty) await _storage.saveAccessToken(accessToken);
+      if (refreshToken.isNotEmpty) await _storage.saveRefreshToken(refreshToken);
 
       return Right(LoginResult(
         accessToken: accessToken,
@@ -128,7 +140,7 @@ class AuthRepositoryImpl implements IAuthRepository {
           'dateOfBirth': dateOfBirth.toIso8601String(),
         },
       );
-      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final data = _extractData(response.data);
       return Right(UserModel.fromJson(data));
     } on DioException catch (e) {
       return Left(ErrorMapper.fromDioException(e));
@@ -139,16 +151,16 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<Either<Failure, String>> refreshToken() async {
     try {
       final refresh = await _storage.getRefreshToken();
-      if (refresh == null) {
+      if (refresh == null || refresh.isEmpty) {
         return const Left(UnauthorizedFailure());
       }
       final response = await _client.post(
         ApiPaths.refresh,
         data: {'refreshToken': refresh},
       );
-      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final data = _extractData(response.data);
       final accessToken = data['accessToken']?.toString() ?? '';
-      await _storage.saveAccessToken(accessToken);
+      if (accessToken.isNotEmpty) await _storage.saveAccessToken(accessToken);
       return Right(accessToken);
     } on DioException catch (e) {
       return Left(ErrorMapper.fromDioException(e));
@@ -171,7 +183,7 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<Either<Failure, UserEntity>> getMe() async {
     try {
       final response = await _client.get(ApiPaths.me);
-      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final data = _extractData(response.data);
       return Right(UserModel.fromJson(data));
     } on DioException catch (e) {
       return Left(ErrorMapper.fromDioException(e));

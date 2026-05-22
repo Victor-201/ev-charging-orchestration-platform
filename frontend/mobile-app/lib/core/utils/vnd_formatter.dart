@@ -19,4 +19,14 @@ class VndFormatter {
     final value = double.tryParse(amount ?? '0') ?? 0;
     return format(value);
   }
+
+  /// Compact format for tiles: 150k, 1.5tr, 12.5tr
+  static String compact(num amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}tr';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}k';
+    }
+    return amount.toStringAsFixed(0);
+  }
 }

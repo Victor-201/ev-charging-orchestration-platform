@@ -48,12 +48,8 @@ Future<void> configureDependencies() async {
 
   // ── HTTP & Web Socket Client Registries ────────────────────────────
   getIt.registerSingleton<DioClient>(
-    DioClient(
-      secureStorage: secureStorage,
-      onLogout: () async {
-        // Intercepted via AuthBloc context lookup to avoid circular dependency
-      },
-    ),
+    DioClient(secureStorage: secureStorage),
+    // onLogout is wired in _EVoltAppState.initState() to avoid circular deps
   );
 
   // ── Repositories ─────────────────────────────────────────────────────

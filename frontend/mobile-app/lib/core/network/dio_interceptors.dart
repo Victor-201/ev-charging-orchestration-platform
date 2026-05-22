@@ -7,7 +7,7 @@ import '../constants/storage_keys.dart';
 class DioAuthInterceptor extends QueuedInterceptor {
   final FlutterSecureStorage _secureStorage;
   final Dio _dio;
-  final Future<void> Function()? onLogout;
+  Future<void> Function()? onLogout;  // mutable — wired after AuthBloc is ready
 
   DioAuthInterceptor({
     required FlutterSecureStorage secureStorage,
@@ -19,9 +19,9 @@ class DioAuthInterceptor extends QueuedInterceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    final token =
-        await _secureStorage.read(key: StorageKeys.accessToken);
-    if (token != null) {
+    final token = await _secureStorage.read(key: StorageKeys.accessToken);
+    // Only attach if we have a real non-empty token
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -33,6 +33,15 @@ class DioAuthInterceptor extends QueuedInterceptor {
     // Only handle 401 and not the refresh endpoint itself
     if (err.response?.statusCode == 401 &&
         !err.requestOptions.path.contains('/auth/refresh')) {
+      // Skip refresh attempt when there is no (or empty) refresh token stored.
+      // Avoids an extra round-trip on first app launch before login.
+      final refreshToken =
+          await _secureStorage.read(key: StorageKeys.refreshToken);
+      if (refreshToken == null || refreshToken.isEmpty) {
+        handler.next(err);
+        return;
+      }
+
       try {
         final newTokens = await _refresh();
         if (newTokens != null) {
@@ -57,23 +66,29 @@ class DioAuthInterceptor extends QueuedInterceptor {
   Future<String?> _refresh() async {
     final refreshToken =
         await _secureStorage.read(key: StorageKeys.refreshToken);
-    if (refreshToken == null) return null;
+    if (refreshToken == null || refreshToken.isEmpty) return null;
 
     final response = await _dio.post(
       '/auth/refresh',
       data: {'refreshToken': refreshToken},
     );
 
-    final accessToken = response.data['data']?['accessToken'] as String?;
-    final newRefresh = response.data['data']?['refreshToken'] as String?;
+    // Handle both flat { accessToken } and wrapped { data: { accessToken } }
+    final body = response.data as Map<String, dynamic>? ?? {};
+    final payload = (body['data'] is Map<String, dynamic>)
+        ? body['data'] as Map<String, dynamic>
+        : body;
 
-    if (newRefresh != null) {
+    final accessToken = payload['accessToken'] as String?;
+    final newRefresh = payload['refreshToken'] as String?;
+
+    if (newRefresh != null && newRefresh.isNotEmpty) {
       await _secureStorage.write(
         key: StorageKeys.refreshToken,
         value: newRefresh,
       );
     }
-    return accessToken;
+    return (accessToken != null && accessToken.isNotEmpty) ? accessToken : null;
   }
 
   Future<void> _clearTokens() async {

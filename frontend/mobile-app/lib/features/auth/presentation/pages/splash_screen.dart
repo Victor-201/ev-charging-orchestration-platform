@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 
-/// Startup Splash Screen mapping initial token lookups
+/// Startup Splash Screen — Liquid Glass animated brand reveal
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,16 +22,16 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
     _controller.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 600), () {
         if (mounted) context.go('/map');
       });
     });
@@ -46,40 +46,88 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.electric_bolt,
-                    color: AppColors.primary,
-                    size: 48,
-                  ),
+      backgroundColor: AppColors.bgDark,
+      body: Stack(
+        children: [
+          // Radial glow top-left
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(-0.6, -0.6),
+                  radius: 1.0,
+                  colors: [AppColors.bgGradDark1, Colors.transparent],
+                  stops: [0.0, 0.5],
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'EVoltSync',
-                  style: AppTypography.displayLg.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Radial glow bottom-right
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0.8, 0.8),
+                  radius: 0.9,
+                  colors: [AppColors.bgGradDark1, Colors.transparent],
+                  stops: [0.0, 0.5],
+                ),
+              ),
+            ),
+          ),
+          // Logo content
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo box with gradient
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.cyanLimeGradient,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.cyan.withValues(alpha: 0.5),
+                            blurRadius: 40,
+                            offset: const Offset(0, 16),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.electric_bolt,
+                        color: Colors.white,
+                        size: 50,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Text(
+                      'EVoltSync',
+                      style: AppTypography.displayLg.copyWith(
+                        color: AppColors.textLight,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'EV Charging Platform',
+                      style: AppTypography.bodyMd.copyWith(
+                        color: AppColors.textMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

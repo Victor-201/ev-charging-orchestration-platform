@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../core/constants/api_paths.dart';
-import '../../core/network/dio_client.dart';
+import 'package:mobile_app/core/constants/api_paths.dart';
+import 'package:mobile_app/core/network/dio_client.dart';
 import 'admin_response_dtos.dart';
 
 /// Admin and System Operations API Stubs
@@ -33,9 +33,9 @@ class AdminApiStubs {
   }
 
   /// Retrieves chronological audit logs detailing administrative changes for a specific user.
-  /// HTTP: GET /users/:id/audit-logs
+  /// HTTP: GET /users/:id/audit-log
   Future<List<AuditLogDto>> getUserAuditLogs(String userId) async {
-    final r = await _client.get(ApiPaths.userAuditLogs(userId));
+    final r = await _client.get('/users/$userId/audit-log');
     final list = r.data as List<dynamic>;
     return list.map((e) => AuditLogDto.fromJson(e as Map<String, dynamic>)).toList();
   }

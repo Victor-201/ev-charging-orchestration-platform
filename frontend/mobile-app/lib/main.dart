@@ -25,7 +25,6 @@ import 'core/design_system/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'core/di/injection.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/domain/repositories/i_auth_repository.dart';
 import 'features/map/presentation/bloc/map_bloc.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
@@ -33,6 +32,7 @@ import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 import 'features/notification/presentation/bloc/notification_bloc.dart';
 import 'features/charging/presentation/bloc/charging_session_bloc.dart';
 import 'features/booking/presentation/bloc/booking_bloc.dart';
+import 'core/network/dio_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -69,7 +69,14 @@ class _EVoltAppState extends State<EVoltApp> {
     super.initState();
     _authBloc = AuthBloc(repository: getIt<IAuthRepository>());
     _appRouter = AppRouter(authBloc: _authBloc);
-    _authBloc.add(AuthCheckRequested());
+    _authBloc.add(const AuthCheckRequested());
+
+    // Wire the real logout callback now that AuthBloc exists.
+    // When a 401 occurs and the refresh token is also expired/revoked,
+    // the interceptor will call this to properly log out the user.
+    getIt<DioClient>().setOnLogout(() async {
+      _authBloc.add(const AuthLogoutRequested());
+    });
   }
 
   @override

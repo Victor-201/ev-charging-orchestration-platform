@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
-import '../../../../core/design_system/theme/app_theme.dart';
+import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/widgets/liquid_glass_card.dart';
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
 
 /// Application Welcome Portal Screen
 class WelcomeScreen extends StatelessWidget {
@@ -10,101 +12,139 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/map'),
-        ),
-      ),
-      body: SafeArea(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return LiquidGlassScaffold(
+      child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.electric_bolt,
-                  color: AppColors.white,
-                  size: 30,
-                ),
-              ),
-              SizedBox(height: AppSpacing.xl),
-              Text(
-                'EVoltSync',
-                style: AppTypography.displayMd.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: AppSpacing.sm),
-              Text(
-                'Nền tảng điều phối sạc xe điện thông minh tại Việt Nam.',
-                style: AppTypography.bodyMd.copyWith(
-                  color: AppColors.grey600,
-                ),
-              ),
-              SizedBox(height: AppSpacing.xl),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () => context.go('/auth/login'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: LiquidGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.cyanLimeGradient,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.cyan.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.electric_bolt,
+                      color: Colors.white,
+                      size: 34,
                     ),
                   ),
-                  child: Text(
-                    'Đăng nhập',
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Headline
+                  Text(
+                    'EVoltSync',
+                    style: AppTypography.displayLg.copyWith(
+                      color: isDark ? AppColors.textLight : AppColors.textDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Nền tảng điều phối sạc xe điện\nthông minh tại Việt Nam 🇻🇳',
                     style: AppTypography.bodyLg.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.white,
+                      color: AppColors.textMuted,
+                      height: 1.5,
                     ),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Feature chips
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      _FeatureChip(icon: Icons.bolt, label: 'Sạc nhanh'),
+                      _FeatureChip(icon: Icons.map_outlined, label: 'Tìm trạm'),
+                      _FeatureChip(icon: Icons.account_balance_wallet_outlined, label: 'Ví điện tử'),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // CTA Buttons
+                  EVButton(
+                    label: 'Đăng nhập',
+                    onPressed: () => context.go('/auth/login'),
+                    icon: Icons.login_rounded,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  EVButton(
+                    label: 'Tạo tài khoản',
+                    onPressed: () => context.go('/auth/register'),
+                    variant: EVButtonVariant.outlined,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go('/map'),
+                      child: Text(
+                        'Khám phá bản đồ →',
+                        style: AppTypography.bodyMd.copyWith(
+                          color: AppColors.cyan,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () => context.go('/auth/register'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(
-                        color: AppColors.primary, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Tạo tài khoản',
-                    style: AppTypography.bodyLg.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FeatureChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _FeatureChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.cyan.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(
+          color: AppColors.cyan.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.cyan, size: 14),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTypography.labelSm.copyWith(
+              color: isDark ? AppColors.textLight : AppColors.textDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

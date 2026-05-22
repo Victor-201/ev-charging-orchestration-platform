@@ -18,20 +18,23 @@ abstract class ApiPaths {
   static const String resendVerification = '/auth/resend-verification';
 
   // [15-18] IAM Service — Users
-  static const String userProfile = '/users/profile';
-  static String userAuditLogs(String id) => '/users/$id/audit-logs';
+  static const String userProfile = '/users/me';
+  static const String userAuditLogs = '/users/me/audit-log';
   static String deleteUser(String id) => '/users/$id';
 
   // [19-25] IAM Service — Vehicles
-  static const String vehicles = '/vehicles';
-  static String vehicleById(String id) => '/vehicles/$id';
-  static String vehiclePrimary(String id) => '/vehicles/$id/primary';
-  static String vehicleAudit(String id) => '/vehicles/$id/audit';
-  static String vehicleAutocharge(String id) => '/vehicles/$id/autocharge';
+  static const String vehicles = '/users/me/vehicles';
+  static String vehicleById(String id) => '/users/me/vehicles/$id';
+  static String vehiclePrimary(String id) => '/users/me/vehicles/$id/primary';
+  static String vehicleAudit(String id) => '/users/me/vehicles/$id/audit-log';
+  static String vehicleAutocharge(String id) => '/users/me/vehicles/$id/autocharge-setup';
 
   // [26-38] Infra Service — Charging Stations
   static const String stations = '/stations';
+  // Geospatial nearby search — GET /stations/nearby?lat=&lng=&radiusKm=
+  static const String stationsNearby = '/stations/nearby';
   static String stationById(String id) => '/stations/$id';
+  static String stationByCharger(String chargerId) => '/stations/by-charger/$chargerId';
   static String stationChargers(String stationId) =>
       '/stations/$stationId/chargers';
   static String chargerStatus(String stationId, String chargerId) =>
@@ -55,6 +58,8 @@ abstract class ApiPaths {
       '/bookings/queue/$chargerId';
   static String queuePosition(String chargerId) =>
       '/bookings/queue/$chargerId/position';
+  // [61b] Suggest Charger & DP Optimizer — GET /bookings/suggest
+  static const String bookingSuggest = '/bookings/suggest';
 
   // [47-53] Session Service — Charging Sessions
   static const String startSession = '/charging/start';

@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/auth_bloc.dart';
-import '../bloc/auth_bloc.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
-import '../../../../core/design_system/theme/app_theme.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 
@@ -141,13 +139,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            AppColors.primary.withOpacity(0.15),
-                            AppColors.secondary.withOpacity(0.15),
+                            AppColors.primary.withValues(alpha: 0.15),
+                            AppColors.secondary.withValues(alpha: 0.15),
                           ],
                         ),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           width: 2,
                         ),
                       ),
@@ -222,8 +220,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                           ),
                           decoration: InputDecoration(
                             hintText: 'eyJ0b2tlbi...',
-                            hintStyle: AppTypography.bodyMd.copyWith(
-                              color: AppColors.grey600.withOpacity(0.5),
+                          hintStyle: AppTypography.bodyMd.copyWith(
+                              color: AppColors.grey600.withValues(alpha: 0.5),
                               fontSize: 12,
                             ),
                             suffixIcon: IconButton(
