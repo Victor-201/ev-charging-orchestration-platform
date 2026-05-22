@@ -12,8 +12,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$AppDir    = Join-Path $ScriptDir "..\..\..\frontend\mobile-app"
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir -and $MyInvocation -and $MyInvocation.MyCommand -and $MyInvocation.MyCommand.Path) {
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+if (-not $ScriptDir) {
+    $ScriptDir = (Get-Location).Path
+}
+
+$ProjectRoot = (Resolve-Path (Join-Path $ScriptDir "..\..\..\..")).Path
+$AppDir      = Join-Path $ProjectRoot "frontend\mobile-app"
 
 Write-Host "======================================================"
 Write-Host "  EV Charging — Flutter Test Suite" -ForegroundColor Cyan

@@ -252,7 +252,7 @@ function Sub-Start {
     while ($true) {
         Show-Header "START SYSTEM"
         Write-MenuItem "1" "Normal Start"     Green
-        Write-MenuItem "2" "Rebuild Images"   Yellow
+        Write-MenuItem "2" "Rebuild + Start"  Yellow
         Write-MenuItem "3" "Start + Ngrok"    Cyan
         Write-MenuItem "4" "Rebuild + Ngrok"  Magenta
         Write-Host ""
@@ -265,6 +265,40 @@ function Sub-Start {
             "2" { if (Confirm-Action "Rebuild all images?") { Run-WSL "start.sh" "--rebuild" }; return }
             "3" { Run-WSL "start.sh" "--ngrok"; return }
             "4" { if (Confirm-Action "Rebuild and start with Ngrok?") { Run-WSL "start.sh" "--rebuild --ngrok" }; return }
+            "0" { return }
+        }
+    }
+}
+
+function Sub-Rebuild {
+    while ($true) {
+        Show-Header "REBUILD SERVICE IMAGES"
+        Write-Host "  [!] Rebuilds Docker image and restarts the container." -ForegroundColor Yellow
+        Write-Host ""
+        Write-MenuItem "1" "IAM Service"                    Cyan
+        Write-MenuItem "2" "EV Infrastructure Service"      Cyan
+        Write-MenuItem "3" "Session Service"                Cyan
+        Write-MenuItem "4" "Billing Service"                Cyan
+        Write-MenuItem "5" "Analytics Service"              Cyan
+        Write-MenuItem "6" "Notification Service"           Cyan
+        Write-MenuItem "7" "Telemetry Ingestion Service"    Cyan
+        Write-MenuItem "8" "OCPP Gateway Service"           Cyan
+        Write-MenuItem "A" "Rebuild ALL Services"           Red
+        Write-Host ""
+        Show-Separator
+        Write-MenuItem -IsBack
+        Write-Host ""
+        $c = Get-Key
+        switch ($c) {
+            "1" { Run-WSL "rebuild.sh" "iam-service"; return }
+            "2" { Run-WSL "rebuild.sh" "ev-infrastructure-service"; return }
+            "3" { Run-WSL "rebuild.sh" "session-service"; return }
+            "4" { Run-WSL "rebuild.sh" "billing-service"; return }
+            "5" { Run-WSL "rebuild.sh" "analytics-service"; return }
+            "6" { Run-WSL "rebuild.sh" "notification-service"; return }
+            "7" { Run-WSL "rebuild.sh" "telemetry-ingestion-service"; return }
+            "8" { Run-WSL "rebuild.sh" "ocpp-gateway-service"; return }
+            "a" { if (Confirm-Action "Rebuild ALL service images? This may take several minutes.") { Run-WSL "rebuild.sh" "all" }; return }
             "0" { return }
         }
     }
@@ -534,30 +568,6 @@ function Sub-Seeding-Down {
     }
 }
 
-function Sub-Troubleshoot {
-    while ($true) {
-        Show-Header "TROUBLESHOOTING & DIAGNOSTICS"
-        Write-MenuItem "1" "Docker status"                                      Cyan
-        Write-MenuItem "2" "WSL + Ubuntu path health"                           Cyan
-        Write-MenuItem "3" "Auto-Fix DB Network (Map LAN IP to local .env)"     Green
-        Write-MenuItem "4" "Open WSL shell (external window)"                  Yellow
-        Write-MenuItem "5" "Environment variables summary"                      White
-        Write-Host ""
-        Show-Separator
-        Write-MenuItem -IsBack
-        Write-Host ""
-        $c = Get-Key
-        switch ($c) {
-            "1" { Check-Docker }
-            "2" { Check-WSL }
-            "3" { Fix-Database-Networking }
-            "4" { Open-UbuntuShell }
-            "5" { Show-EnvInfo }
-            "0" { return }
-        }
-    }
-}
-
 function Sub-Frontend-Mobile {
     while ($true) {
         Show-Header "MOBILE APP (Flutter)"
@@ -620,118 +630,62 @@ function Sub-Frontend-Kiosk {
     }
 }
 
-function Check-Docker {
-    Write-Host ""
-    Write-Host " [*] Checking Docker..." -ForegroundColor Cyan -NoNewline
-    $info = docker info 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host " OK - Daemon running" -ForegroundColor Green
-        $containers = docker ps --format "table {{.Names}}`t{{.Status}}`t{{.Ports}}" 2>$null
-        if ($containers) {
-            Write-Host ""
-            Write-Host " Active containers:" -ForegroundColor Yellow
-            $containers | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
+
+function Write-TwoColumn-Row {
+    param(
+        [string]$Key1 = "", [string]$Label1 = "", [ConsoleColor]$Color1 = [ConsoleColor]::White,
+        [string]$Key2 = "", [string]$Label2 = "", [ConsoleColor]$Color2 = [ConsoleColor]::White
+    )
+    Write-Host "  │  " -NoNewline -ForegroundColor Cyan
+    if ($Key1) {
+        Write-Host "[$Key1] " -NoNewline -ForegroundColor $Color1
+        $len = 3 + $Key1.Length + $Label1.Length
+        $pad = 26 - $len
+        if ($pad -gt 0) {
+            Write-Host $Label1 -NoNewline -ForegroundColor White
+            Write-Host (" " * $pad) -NoNewline
         } else {
-            Write-Host " (No containers active)" -ForegroundColor DarkGray
+            Write-Host ($Label1.Substring(0, 26 - (3 + $Key1.Length))) -NoNewline -ForegroundColor White
         }
     } else {
-        Write-Host " FAIL — Verify Docker Desktop daemon is started." -ForegroundColor Red
+        Write-Host (" " * 26) -NoNewline
     }
-    Pause-Key
-}
-
-function Check-WSL {
-    Write-Host ""
-    Write-Host " [*] Registered WSL distributions:" -ForegroundColor Cyan
-    wsl --list --verbose 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor White }
-    Write-Host ""
-    Write-Host " [*] WSL project mount alignment:" -ForegroundColor Cyan
-    $wslRoot = Get-WslRoot
-    Write-Host "  Windows : $ProjectRoot" -ForegroundColor Yellow
-    Write-Host "  WSL     : $wslRoot"     -ForegroundColor Green
-    $exists = wsl -d Ubuntu bash -c "[ -d '$wslRoot' ] && echo 'OK' || echo 'MISSING'" 2>$null
-    $color  = if ($exists -match "OK") { "Green" } else { "Red" }
-    Write-Host "  Mount result: $exists" -ForegroundColor $color
-    Pause-Key
-}
-
-function Open-UbuntuShell {
-    Write-Host ""
-    Write-Host " [*] Launching Ubuntu shell at project root..." -ForegroundColor Cyan
-    $WslRoot = Get-WslRoot
-    $BashCmd = "cd '$WslRoot' && exec bash"
-    Open-UbuntuTerminal -BashCommand $BashCmd
-    Start-Sleep -Milliseconds 500
-}
-
-function Show-EnvInfo {
-    Write-Host ""
-    Write-Host " Environment Details:" -ForegroundColor Cyan
-    Write-Host "  ProjectRoot (Windows) : $ProjectRoot"                           -ForegroundColor Yellow
-    Write-Host "  ProjectRoot (WSL)     : $(Get-WslRoot)"                        -ForegroundColor Green
-    Write-Host "  PowerShell Version    : $($PSVersionTable.PSVersion)"          -ForegroundColor White
-    Write-Host "  OS Version            : $([System.Environment]::OSVersion.VersionString)" -ForegroundColor White
-    Write-Host "  Windows Terminal (wt) : $(if (Get-Command 'wt' -ErrorAction SilentlyContinue) { 'Yes' } else { 'No' })" -ForegroundColor White
-    Pause-Key
-}
-
-function Fix-Database-Networking {
-    Write-Host ""
-    Write-Host " [*] Locating local LAN IP address..." -ForegroundColor Cyan -NoNewline
-
-    # Query active non-loopback, non-WSL physical LAN interfaces in a language-independent manner
-    $ipObj = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-             Where-Object { $_.IPAddress -notmatch "^127\." -and $_.InterfaceAlias -notmatch "Loopback|vEthernet" } |
-             Select-Object -First 1
-
-    $ip = if ($null -ne $ipObj) { $ipObj.IPAddress } else { "127.0.0.1" }
-    Write-Host " $ip" -ForegroundColor Green
-
-    if (Confirm-Action "Update all backend .env files: DB_HOST -> $ip?") {
-        $envFiles = Get-ChildItem -Path "$ProjectRoot\backend" -Filter ".env" -Recurse -ErrorAction SilentlyContinue
-        $count = 0
-        foreach ($f in $envFiles) {
-            $content    = Get-Content $f.FullName -Raw
-            $newContent = $content -replace "DB_HOST=localhost",    "DB_HOST=$ip" `
-                                   -replace "DB_HOST=127\.0\.0\.1", "DB_HOST=$ip"
-            if ($newContent -ne $content) {
-                Set-Content -Path $f.FullName -Value $newContent -NoNewline
-                Write-Host "  [OK] $($f.FullName)" -ForegroundColor Green
-                $count++
-            }
-        }
-        Write-Host ""
-        if ($count -gt 0) {
-            Write-Host " [OK] Updated $count .env file(s). Restart backend." -ForegroundColor Green
+    
+    Write-Host " │  " -NoNewline -ForegroundColor Cyan
+    if ($Key2) {
+        Write-Host "[$Key2] " -NoNewline -ForegroundColor $Color2
+        $len = 3 + $Key2.Length + $Label2.Length
+        $pad = 26 - $len
+        if ($pad -gt 0) {
+            Write-Host $Label2 -NoNewline -ForegroundColor White
+            Write-Host (" " * $pad) -NoNewline
         } else {
-            Write-Host " [INFO] All .env configurations aligned. No modifications required." -ForegroundColor Yellow
+            Write-Host ($Label2.Substring(0, 26 - (3 + $Key2.Length))) -NoNewline -ForegroundColor White
         }
+    } else {
+        Write-Host (" " * 26) -NoNewline
     }
-    Pause-Key
+    Write-Host " │" -ForegroundColor Cyan
 }
 
 function Show-MainMenu {
     Show-Header
-    Show-Separator "BACKEND (WSL)"
-    Write-MenuItem "1" "Start System"     Green
-    Write-MenuItem "2" "Stop System"      Yellow
-    Write-MenuItem "3" "Reset Project"    Red
-    Write-MenuItem "4" "Health Check"     Magenta
-    Write-MenuItem "5" "System Logs"      Cyan
-    Write-MenuItem "6" "Testing Suite"    White
-    Write-MenuItem "7" "Seed Databases"   Magenta
-
-    Write-Host ""
-    Show-Separator "FRONTENDS (UI)"
-    Write-MenuItem "M" "Mobile App (Flutter)" Green
-    Write-MenuItem "W" "Web Admin (Next.js)"  Green
-    Write-MenuItem "K" "Kiosk App (React)"    Green
-
-    Write-Host ""
-    Show-Separator "TOOLS & UTILITIES"
-    Write-MenuItem "T" "Troubleshooting & Diagnostics (Check Docker, WSL mounts, Auto-fix DB LAN IP)" Cyan
-    Write-MenuItem "S" "Open Ubuntu WSL Bash Shell (Quick terminal command-line access inside WSL)" DarkYellow
-
+    
+    Write-Host "  ┌─────────────────────────────┬─────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │        BACKEND (WSL)        │        FRONTENDS (UI)       │" -ForegroundColor Cyan
+    Write-Host "  ├─────────────────────────────┼─────────────────────────────┤" -ForegroundColor Cyan
+    
+    Write-TwoColumn-Row -Key1 "1" -Label1 "Start System" -Color1 Green -Key2 "M" -Label2 "Mobile App (Flutter)" -Color2 Green
+    Write-TwoColumn-Row -Key1 "2" -Label1 "Stop System" -Color1 Yellow -Key2 "W" -Label2 "Web Admin (Next.js)" -Color2 Green
+    Write-TwoColumn-Row -Key1 "3" -Label1 "Reset Project" -Color1 Red -Key2 "K" -Label2 "Kiosk App (React)" -Color2 Green
+    Write-TwoColumn-Row -Key1 "4" -Label1 "Health Check" -Color1 Magenta
+    Write-TwoColumn-Row -Key1 "5" -Label1 "System Logs" -Color1 Cyan
+    Write-TwoColumn-Row -Key1 "6" -Label1 "Testing Suite" -Color1 White
+    Write-TwoColumn-Row -Key1 "7" -Label1 "Seed Databases" -Color1 Magenta
+    Write-TwoColumn-Row -Key1 "8" -Label1 "Rebuild Service" -Color1 DarkYellow
+    
+    Write-Host "  └─────────────────────────────┴─────────────────────────────┘" -ForegroundColor Cyan
+    
     Write-Host ""
     Show-Separator
     Write-MenuItem -IsQuit
@@ -754,11 +708,11 @@ try {
             "5" { Sub-Logs }
             "6" { Sub-Testing }
             "7" { Sub-Seeding }
+            "8" { Sub-Rebuild }
             "m" { Sub-Frontend-Mobile }
             "w" { Sub-Frontend-WebAdmin }
+            "ư" { Sub-Frontend-WebAdmin }
             "k" { Sub-Frontend-Kiosk }
-            "t" { Sub-Troubleshoot }
-            "s" { Open-UbuntuShell }
         }
     }
 }
