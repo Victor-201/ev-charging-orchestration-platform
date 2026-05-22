@@ -173,8 +173,8 @@ CREATE TABLE vehicles (
     color VARCHAR(30),
     status vehicles_status_enum NOT NULL DEFAULT 'active',
     is_primary BOOLEAN NOT NULL DEFAULT false,
-    mac_address VARCHAR(17) UNIQUE,
-    vin_number VARCHAR(17) UNIQUE,
+    mac_address VARCHAR(17),
+    vin_number VARCHAR(17),
     autocharge_enabled BOOLEAN NOT NULL DEFAULT false,
     version INTEGER NOT NULL DEFAULT 1,
     deleted_at TIMESTAMPTZ,
@@ -183,6 +183,8 @@ CREATE TABLE vehicles (
 );
 
 CREATE INDEX idx_vehicles_owner_status ON vehicles (owner_id, status);
+CREATE UNIQUE INDEX idx_vehicles_mac_address ON vehicles (mac_address) WHERE mac_address IS NOT NULL;
+CREATE UNIQUE INDEX idx_vehicles_vin_number ON vehicles (vin_number) WHERE vin_number IS NOT NULL;
 
 CREATE TABLE user_arrears (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

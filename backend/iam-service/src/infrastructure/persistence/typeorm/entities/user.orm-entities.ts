@@ -7,7 +7,7 @@ import {
 // BCNF: user_id -> {email, full_name, phone, role_name, status}
 @Entity('users_cache')
 export class UsersCacheOrmEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @Column({ type: 'varchar', length: 255 })

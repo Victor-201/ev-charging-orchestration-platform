@@ -16,6 +16,7 @@ import {
   AddVehicleUseCase, UpdateVehicleUseCase, DeleteVehicleUseCase,
   SetPrimaryVehicleUseCase, SyncUserCacheUseCase,
   SoftDeleteUserUseCase, GetProfileAuditLogUseCase, GetVehicleAuditLogUseCase,
+  SetupAutochargeUseCase,
 } from '../../application/use-cases/user.use-cases';
 import { UserController } from './user.controller';
 import {
@@ -56,6 +57,7 @@ import {
     AddVehicleUseCase, UpdateVehicleUseCase, DeleteVehicleUseCase,
     SetPrimaryVehicleUseCase, SyncUserCacheUseCase,
     SoftDeleteUserUseCase, GetProfileAuditLogUseCase, GetVehicleAuditLogUseCase,
+    SetupAutochargeUseCase,
     // Arrears management consumers
     WalletArrearsCreatedConsumer, // wallet.arrears.created -> sets debt flag + records arrears entry
     WalletArrearsClearedConsumer, // wallet.arrears.cleared -> clears debt flag

@@ -31,6 +31,9 @@ export class Vehicle {
   private _status: VehicleStatus;
   private _isPrimary: boolean;
   private _color: string | null;
+  private _macAddress: string | null;
+  private _vinNumber: string | null;
+  private _autochargeEnabled: boolean;
   private _updatedAt: Date;
   private _deletedAt: Date | null;
   private _version: number;
@@ -51,6 +54,9 @@ export class Vehicle {
     color: string | null;
     status: VehicleStatus;
     isPrimary: boolean;
+    macAddress?: string | null;
+    vinNumber?: string | null;
+    autochargeEnabled?: boolean;
     version?: number;
     deletedAt?: Date | null;
     createdAt?: Date;
@@ -64,6 +70,9 @@ export class Vehicle {
     this._color = props.color;
     this._status = props.status;
     this._isPrimary = props.isPrimary;
+    this._macAddress = props.macAddress ?? null;
+    this._vinNumber = props.vinNumber ?? null;
+    this._autochargeEnabled = props.autochargeEnabled ?? false;
     this._version = props.version ?? 1;
     this._deletedAt = props.deletedAt ?? null;
     this.createdAt = props.createdAt ?? new Date();
@@ -86,6 +95,9 @@ export class Vehicle {
       color: props.color ?? null,
       status: VehicleStatus.ACTIVE,
       isPrimary: props.isPrimary ?? false,
+      macAddress: null,
+      vinNumber: null,
+      autochargeEnabled: false,
       version: 1,
       deletedAt: null,
     });
@@ -103,6 +115,9 @@ export class Vehicle {
     color: string | null;
     status: VehicleStatus;
     isPrimary: boolean;
+    macAddress?: string | null;
+    vinNumber?: string | null;
+    autochargeEnabled?: boolean;
     version?: number;
     deletedAt?: Date | null;
     createdAt: Date;
@@ -144,6 +159,24 @@ export class Vehicle {
     this._version += 1;
   }
 
+  setupAutocharge(props: {
+    macAddress?: string | null;
+    vinNumber?: string | null;
+    autochargeEnabled?: boolean;
+  }): void {
+    if (props.macAddress !== undefined) {
+      this._macAddress = props.macAddress;
+    }
+    if (props.vinNumber !== undefined) {
+      this._vinNumber = props.vinNumber;
+    }
+    if (props.autochargeEnabled !== undefined) {
+      this._autochargeEnabled = props.autochargeEnabled;
+    }
+    this._updatedAt = new Date();
+    this._version += 1;
+  }
+
   bumpVersion(): void {
     this._version += 1;
     this._updatedAt = new Date();
@@ -152,6 +185,9 @@ export class Vehicle {
   get status(): VehicleStatus { return this._status; }
   get isPrimary(): boolean { return this._isPrimary; }
   get color(): string | null { return this._color; }
+  get macAddress(): string | null { return this._macAddress; }
+  get vinNumber(): string | null { return this._vinNumber; }
+  get autochargeEnabled(): boolean { return this._autochargeEnabled; }
   get isActive(): boolean { return this._status === VehicleStatus.ACTIVE; }
   get updatedAt(): Date { return this._updatedAt; }
   get deletedAt(): Date | null { return this._deletedAt; }

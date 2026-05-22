@@ -37,6 +37,10 @@ export class VehicleRepository implements IVehicleRepository {
       color: e.color,
       status: e.status as VehicleStatus,
       isPrimary: e.isPrimary,
+      macAddress: e.macAddress,
+      vinNumber: e.vinNumber,
+      autochargeEnabled: e.autochargeEnabled,
+      version: e.version,
       createdAt: e.createdAt,
       updatedAt: e.updatedAt,
       model,
@@ -52,6 +56,10 @@ export class VehicleRepository implements IVehicleRepository {
       color: vehicle.color,
       status: vehicle.status,
       isPrimary: vehicle.isPrimary,
+      macAddress: vehicle.macAddress,
+      vinNumber: vehicle.vinNumber,
+      autochargeEnabled: vehicle.autochargeEnabled,
+      version: vehicle.version,
     };
   }
 

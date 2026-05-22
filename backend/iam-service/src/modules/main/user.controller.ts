@@ -7,6 +7,7 @@ import {
   GetVehiclesUseCase, AddVehicleUseCase, UpdateVehicleUseCase,
   DeleteVehicleUseCase, SetPrimaryVehicleUseCase,
   SoftDeleteUserUseCase, GetProfileAuditLogUseCase, GetVehicleAuditLogUseCase,
+  SetupAutochargeUseCase,
 } from '../../application/use-cases/user.use-cases';
 import { UpdateProfileDto } from '../../application/dtos/profile.dto';
 import { AddVehicleDto, UpdateVehicleDto, AutoChargeSetupDto } from '../../application/dtos/vehicle.dto';
@@ -35,6 +36,7 @@ export class UserController {
     private readonly softDeleteUserUC: SoftDeleteUserUseCase,
     private readonly getProfileAuditUC: GetProfileAuditLogUseCase,
     private readonly getVehicleAuditUC: GetVehicleAuditLogUseCase,
+    private readonly setupAutochargeUC: SetupAutochargeUseCase,
   ) {}
 
 
@@ -181,26 +183,16 @@ export class UserController {
     @Param('id', ParseUUIDPipe) vehicleId: string,
     @Body() dto: AutoChargeSetupDto,
   ) {
-    const updateFields: string[] = [];
-    const params: (string | boolean | null)[] = [vehicleId, user.id];
-
-    if (dto.macAddress !== undefined) {
-      params.push(dto.macAddress ?? null);
-      updateFields.push(`mac_address = $${params.length}`);
+    try {
+      return await this.setupAutochargeUC.execute(user.id, vehicleId, {
+        macAddress: dto.macAddress,
+        vinNumber: dto.vinNumber,
+        autochargeEnabled: dto.autochargeEnabled,
+      });
+    } catch (e) {
+      if (e instanceof VehicleNotFoundException) throw new NotFoundException(e.message);
+      if (e instanceof VehicleOwnershipException) throw new BadRequestException(e.message);
+      throw e;
     }
-    if (dto.vinNumber !== undefined) {
-      params.push(dto.vinNumber ?? null);
-      updateFields.push(`vin_number = $${params.length}`);
-    }
-    if (dto.autochargeEnabled !== undefined) {
-      params.push(dto.autochargeEnabled);
-      updateFields.push(`autocharge_enabled = $${params.length}`);
-    }
-
-    if (updateFields.length === 0) {
-      throw new BadRequestException('No values provided for update');
-    }
-
-    return { message: 'AutoCharge configuration updated', vehicleId };
   }
 }

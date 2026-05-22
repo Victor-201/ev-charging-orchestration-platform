@@ -480,3 +480,55 @@ export class SyncUserCacheUseCase {
     this.logger.log(`User deactivated in cache: ${payload.userId}`);
   }
 }
+
+@Injectable()
+export class SetupAutochargeUseCase {
+  constructor(
+    @Inject(VEHICLE_REPOSITORY) private readonly vehicleRepo: IVehicleRepository,
+    @InjectRepository(VehicleAuditLogOrmEntity)
+    private readonly vehicleAuditRepo: Repository<VehicleAuditLogOrmEntity>,
+  ) {}
+
+  async execute(
+    userId: string,
+    vehicleId: string,
+    data: { macAddress?: string | null; vinNumber?: string | null; autochargeEnabled?: boolean },
+  ) {
+    const vehicle = await this.vehicleRepo.findById(vehicleId);
+    if (!vehicle) throw new VehicleNotFoundException(vehicleId);
+    vehicle.assertOwnership(userId);
+    if (!vehicle.isActive) throw new VehicleNotFoundException(vehicleId);
+
+    const before = {
+      macAddress: vehicle.macAddress,
+      vinNumber: vehicle.vinNumber,
+      autochargeEnabled: vehicle.autochargeEnabled,
+    };
+
+    vehicle.setupAutocharge({
+      macAddress: data.macAddress !== undefined ? data.macAddress : vehicle.macAddress,
+      vinNumber: data.vinNumber !== undefined ? data.vinNumber : vehicle.vinNumber,
+      autochargeEnabled: data.autochargeEnabled !== undefined ? data.autochargeEnabled : vehicle.autochargeEnabled,
+    });
+
+    await this.vehicleRepo.save(vehicle);
+
+    // Audit log
+    await this.vehicleAuditRepo.save({
+      id: uuidv4(),
+      vehicleId,
+      userId,
+      action: 'autocharge_setup',
+      changes: { before, after: data },
+      changedBy: userId,
+    });
+
+    return {
+      id: vehicle.id,
+      macAddress: vehicle.macAddress,
+      vinNumber: vehicle.vinNumber,
+      autochargeEnabled: vehicle.autochargeEnabled,
+      version: vehicle.version,
+    };
+  }
+}
