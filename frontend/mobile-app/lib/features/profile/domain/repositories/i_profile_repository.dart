@@ -13,11 +13,18 @@ abstract class IProfileRepository {
   /// Retrieves detailed contact and settings metadata for the current user profile.
   Future<Either<Failure, UserProfileEntity>> getProfile();
 
-  /// Updates personal profile details (e.g., name, phone number, date of birth).
-  Future<Either<Failure, UserProfileEntity>> updateProfile({String? fullName, String? phone, DateTime? dateOfBirth});
+  /// Updates mutable profile display fields — only avatarUrl and address are accepted
+  /// by PATCH /api/v1/users/me. fullName/phone are set at registration only.
+  Future<Either<Failure, UserProfileEntity>> updateProfile({
+    String? avatarUrl,
+    String? address,
+  });
 
   /// Changes the user's password credential.
-  Future<Either<Failure, void>> changePassword({required String currentPassword, required String newPassword});
+  Future<Either<Failure, void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
 
   /// Queries all registered active device sessions for this user.
   Future<Either<Failure, List<SessionDeviceEntity>>> getSessions();
@@ -31,23 +38,23 @@ abstract class IProfileRepository {
   /// Retrieves all electric vehicles registered under this user account.
   Future<Either<Failure, List<VehicleEntity>>> getVehicles();
 
-  /// Adds a new electric vehicle configuration.
+  /// Adds a new EV — POST /api/v1/users/me/vehicles
+  /// Required: brand, modelName, year, plateNumber, color, batteryCapacityKwh
   Future<Either<Failure, VehicleEntity>> addVehicle({
-    required String plateNumber,
-    required String model,
     required String brand,
-    required String connectorType,
+    required String modelName,
+    required int year,
+    required String plateNumber,
+    required String color,
     required double batteryCapacityKwh,
+    String? macAddress,
+    String? vinNumber,
   });
 
-  /// Updates details for an existing vehicle configuration.
+  /// Updates mutable vehicle fields — only color is accepted by PATCH /users/me/vehicles/:id
   Future<Either<Failure, VehicleEntity>> updateVehicle(
     String id, {
-    String? plateNumber,
-    String? model,
-    String? brand,
-    String? connectorType,
-    double? batteryCapacityKwh,
+    String? color,
   });
 
   /// Deletes a registered vehicle configuration from the user's profile.
@@ -56,6 +63,12 @@ abstract class IProfileRepository {
   /// Configures a targeted vehicle as the default primary option.
   Future<Either<Failure, void>> setPrimaryVehicle(String id);
 
-  /// Registers or modifies the AutoCharge MAC address for a vehicle.
-  Future<Either<Failure, void>> setAutoCharge(String id, String macAddress);
+  /// Configures AutoCharge settings — PATCH /users/me/vehicles/:id/autocharge-setup
+  /// All fields optional; at least one should be provided.
+  Future<Either<Failure, VehicleEntity>> setAutoCharge(
+    String vehicleId, {
+    String? macAddress,
+    String? vinNumber,
+    bool? autochargeEnabled,
+  });
 }

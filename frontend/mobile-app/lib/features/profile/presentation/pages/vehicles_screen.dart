@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/profile_bloc.dart';
 import '../../domain/entities/profile_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
-import '../../../../core/design_system/theme/app_theme.dart';
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 
@@ -69,11 +69,12 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   void _showAddVehicleDialog(BuildContext context) {
-    final plateCtrl  = TextEditingController();
-    final modelCtrl  = TextEditingController();
-    final brandCtrl  = TextEditingController();
-    final battCtrl   = TextEditingController();
-    String connector = 'CCS';
+    final plateCtrl = TextEditingController();
+    final modelCtrl = TextEditingController(); // modelName
+    final brandCtrl = TextEditingController();
+    final battCtrl  = TextEditingController();
+    final colorCtrl = TextEditingController();
+    int year = DateTime.now().year;
 
     showModalBottomSheet(
       context: context, isScrollControlled: true,
@@ -83,38 +84,53 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             left: AppSpacing.lg, right: AppSpacing.lg, top: AppSpacing.lg,
             bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
           ),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Thêm phương tiện', style: AppTypography.headingMd),
-            const SizedBox(height: AppSpacing.lg),
-            TextField(controller: plateCtrl, decoration: const InputDecoration(labelText: 'Biển số xe')),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(controller: brandCtrl, decoration: const InputDecoration(labelText: 'Hãng xe')),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Mẫu xe')),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              initialValue: connector,
-              decoration: const InputDecoration(labelText: 'Đầu sạc'),
-              items: ['CCS', 'CHAdeMO', 'Type2', 'GB/T', 'Other']
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-              onChanged: (v) => setModalState(() => connector = v ?? 'CCS'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(controller: battCtrl, decoration: const InputDecoration(labelText: 'Dung lượng pin (kWh)'), keyboardType: TextInputType.number),
-            const SizedBox(height: AppSpacing.xl),
-            EVButton(
-              label: 'Thêm phương tiện',
-              onPressed: () {
-                final kwh = double.tryParse(battCtrl.text) ?? 0;
-                if (plateCtrl.text.isEmpty || modelCtrl.text.isEmpty) return;
-                Navigator.pop(context);
-                context.read<ProfileBloc>().add(VehicleAdd(
-                  plateNumber: plateCtrl.text, model: modelCtrl.text,
-                  brand: brandCtrl.text, connectorType: connector, batteryCapacityKwh: kwh,
-                ));
-              },
-            ),
-          ]),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Thêm phương tiện', style: AppTypography.headingMd),
+              const SizedBox(height: AppSpacing.lg),
+              TextField(controller: plateCtrl, decoration: const InputDecoration(labelText: 'Biển số xe')),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(controller: brandCtrl, decoration: const InputDecoration(labelText: 'Hãng xe (VD: VinFast)')),
+              const SizedBox(height: AppSpacing.sm),
+              // modelName — API field (not "model")
+              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Mẫu xe (VD: VF8)')),
+              const SizedBox(height: AppSpacing.sm),
+              Row(children: [
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    value: year,
+                    decoration: const InputDecoration(labelText: 'Năm sản xuất'),
+                    items: List.generate(15, (i) => DateTime.now().year - i)
+                        .map((y) => DropdownMenuItem(value: y, child: Text('$y'))).toList(),
+                    onChanged: (v) => setModalState(() => year = v ?? DateTime.now().year),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextField(controller: colorCtrl, decoration: const InputDecoration(labelText: 'Màu xe')),
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(controller: battCtrl, decoration: const InputDecoration(labelText: 'Dung lượng pin (kWh)'), keyboardType: TextInputType.number),
+              const SizedBox(height: AppSpacing.xl),
+              EVButton(
+                label: 'Thêm phương tiện',
+                onPressed: () {
+                  final kwh = double.tryParse(battCtrl.text) ?? 0;
+                  if (plateCtrl.text.isEmpty || modelCtrl.text.isEmpty || brandCtrl.text.isEmpty) return;
+                  Navigator.pop(context);
+                  context.read<ProfileBloc>().add(VehicleAdd(
+                    plateNumber: plateCtrl.text,
+                    modelName: modelCtrl.text,
+                    brand: brandCtrl.text,
+                    year: year,
+                    color: colorCtrl.text.isNotEmpty ? colorCtrl.text : 'Khác',
+                    batteryCapacityKwh: kwh,
+                  ));
+                },
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -135,17 +151,43 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   void _showAutoChargeDialog(BuildContext context, VehicleEntity v) {
-    final ctrl = TextEditingController(text: v.macAddress ?? '');
-    showDialog(context: context, builder: (_) => AlertDialog(
-      title: const Text('Cấu hình AutoCharge'),
-      content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'MAC Address', hintText: 'XX:XX:XX:XX:XX:XX')),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Huỷ')),
-        TextButton(
-          onPressed: () { Navigator.pop(context); context.read<ProfileBloc>().add(VehicleSetAutoCharge(id: v.id, macAddress: ctrl.text)); },
-          child: const Text('Lưu'),
-        ),
-      ],
+    final macCtrl = TextEditingController(text: v.macAddress ?? '');
+    final vinCtrl = TextEditingController(text: v.vinNumber ?? '');
+    bool autochargeEnabled = v.autochargeEnabled;
+    showDialog(context: context, builder: (_) => StatefulBuilder(
+      builder: (ctx, setDialogState) => AlertDialog(
+        title: const Text('Cấu hình AutoCharge'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: macCtrl, decoration: const InputDecoration(
+            labelText: 'MAC Address', hintText: 'XX:XX:XX:XX:XX:XX')),
+          const SizedBox(height: 12),
+          TextField(controller: vinCtrl, decoration: const InputDecoration(
+            labelText: 'VIN Number (optional)')),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Bật AutoCharge'),
+            value: autochargeEnabled,
+            onChanged: (val) => setDialogState(() => autochargeEnabled = val),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Huỷ')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // vehicleId field (not "id") for VehicleSetAutoCharge
+              context.read<ProfileBloc>().add(VehicleSetAutoCharge(
+                vehicleId: v.id,
+                macAddress: macCtrl.text.isNotEmpty ? macCtrl.text : null,
+                vinNumber: vinCtrl.text.isNotEmpty ? vinCtrl.text : null,
+                autochargeEnabled: autochargeEnabled,
+              ));
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
     ));
   }
 }
@@ -177,7 +219,7 @@ class _VehicleCard extends StatelessWidget {
           ),
       ]),
       const SizedBox(height: 4),
-      Text('${vehicle.brand} ${vehicle.model} · ${vehicle.connectorType} · ${vehicle.batteryCapacityKwh}kWh',
+      Text('${vehicle.brand} ${vehicle.modelName} · ${vehicle.year} · ${vehicle.color} · ${vehicle.batteryCapacityKwh}kWh',
           style: AppTypography.caption.copyWith(color: AppColors.grey600)),
       if (vehicle.macAddress != null) ...[
         const SizedBox(height: 4),

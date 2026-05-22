@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+/// Full user profile entity — matches GET /api/v1/users/me response
 class UserProfileEntity extends Equatable {
   final String id;
   final String email;
@@ -8,6 +9,10 @@ class UserProfileEntity extends Equatable {
   final DateTime? dateOfBirth;
   final String role;
   final bool mfaEnabled;
+  final String? status;
+  final bool emailVerified;
+  final String? avatarUrl;
+  final String? address;
 
   const UserProfileEntity({
     required this.id,
@@ -17,37 +22,56 @@ class UserProfileEntity extends Equatable {
     this.dateOfBirth,
     required this.role,
     required this.mfaEnabled,
+    this.status,
+    this.emailVerified = false,
+    this.avatarUrl,
+    this.address,
   });
 
   @override
-  List<Object?> get props => [id, email, fullName, mfaEnabled];
+  List<Object?> get props => [id, email, fullName, mfaEnabled, status, emailVerified, avatarUrl, address];
 }
 
+/// Vehicle entity — matches GET/POST /api/v1/users/me/vehicles response
+///
+/// Field names align exactly with API JSON keys:
+///   modelName, year, color, batteryCapacityKwh, macAddress, vinNumber, autochargeEnabled
 class VehicleEntity extends Equatable {
   final String id;
   final String plateNumber;
-  final String model;
+  // API returns "modelName" (not "model")
+  final String modelName;
   final String brand;
-  final String connectorType; // CCS | CHAdeMO | Type2 | GB/T | Other
+  final int year;
+  final String color;
+  final String connectorType; // CCS2 | CHAdeMO | Type2 | GB/T | Other
   final double batteryCapacityKwh;
   final bool isPrimary;
-  final String? macAddress; // for AutoCharge
+  // AutoCharge fields — PATCH /users/me/vehicles/:id/autocharge-setup
+  final String? macAddress;
+  final String? vinNumber;
+  final bool autochargeEnabled;
 
   const VehicleEntity({
     required this.id,
     required this.plateNumber,
-    required this.model,
+    required this.modelName,
     required this.brand,
+    required this.year,
+    required this.color,
     required this.connectorType,
     required this.batteryCapacityKwh,
     required this.isPrimary,
     this.macAddress,
+    this.vinNumber,
+    this.autochargeEnabled = false,
   });
 
   @override
-  List<Object?> get props => [id, plateNumber, isPrimary];
+  List<Object?> get props => [id, plateNumber, isPrimary, vinNumber, autochargeEnabled];
 }
 
+/// Login device/session entity — matches GET /api/v1/auth/sessions
 class SessionDeviceEntity extends Equatable {
   final String id;
   final String ipAddress;
