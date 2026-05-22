@@ -63,8 +63,8 @@ export default function LoginPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-gradient mb-5 shadow-glow">
-            <Zap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-5">
+            <img src="/EVoltBoard.png" alt="EVoltBoard Logo" className="w-16 h-16 object-contain" />
           </div>
           <h1 className="text-h2 font-bold text-white mb-1">{t('brand.name')}</h1>
           <p className="text-text-secondary text-sm">{t('auth.platform_subtitle')}</p>

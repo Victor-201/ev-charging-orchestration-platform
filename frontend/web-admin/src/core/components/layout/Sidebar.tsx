@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useTranslation } from 'react-i18next';
 import {
   Zap, LayoutDashboard, MapPin, Battery, CreditCard,
-  Users, BarChart3, Bell, Settings, LogOut, ChevronRight,
+  Users, BarChart3, Bell, Settings, LogOut,
   Wrench, ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/core/utils/cn';
@@ -41,14 +41,28 @@ export default function Sidebar() {
       onMouseLeave={() => setExpanded(false)}
       className={cn(
         'fixed left-4 top-4 bottom-4 z-50 flex flex-col py-5 px-3 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-        'glass',
         expanded ? 'w-56' : 'w-[72px]'
       )}
+      style={{
+        background: 'var(--card-bg)',
+        backdropFilter: 'blur(60px)',
+        WebkitBackdropFilter: 'blur(60px)',
+        border: '1.5px solid var(--card-border)',
+        borderRadius: '28px',
+        boxShadow: 'var(--card-shadow)',
+        transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+      }}
     >
+      {/* Corner Markers */}
+      <div className="corner-marker cm-tl" />
+      <div className="corner-marker cm-tr" />
+      <div className="corner-marker cm-bl" />
+      <div className="corner-marker cm-br" />
+
       {/* Logo */}
       <div className="flex items-center gap-3 px-1 mb-8 overflow-hidden">
-        <div className="shrink-0 w-9 h-9 rounded-xl bg-brand-gradient flex items-center justify-center shadow-glow">
-          <Zap className="w-5 h-5 text-white" />
+        <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+          <img src="/EVoltBoard.png" alt="EVoltBoard Logo" className="w-8 h-8 object-contain" />
         </div>
         <AnimatePresence>
           {expanded && (
@@ -57,7 +71,8 @@ export default function Sidebar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.18 }}
-              className="font-bold text-white text-sm tracking-tight whitespace-nowrap"
+              className="font-bold text-sm tracking-tight whitespace-nowrap"
+              style={{ color: 'var(--text-main)' }}
             >
               {t('brand.name')}
             </motion.span>
@@ -73,14 +88,14 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={cn(
-                'flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-180 group overflow-hidden',
-                active
-                  ? 'bg-cyan/10 border border-cyan/20 text-cyan'
-                  : 'text-text-muted hover:text-white hover:bg-white/5'
-              )}
+              className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-all duration-200 group overflow-hidden"
+              style={{
+                background: active ? 'rgba(16, 191, 201, 0.12)' : 'transparent',
+                border: active ? '1px solid rgba(16, 191, 201, 0.25)' : '1px solid transparent',
+                color: active ? '#10bfc9' : 'var(--text-faded)',
+              }}
             >
-              <Icon className={cn('shrink-0 w-5 h-5 transition-colors', active ? 'text-cyan' : '')} />
+              <Icon className="shrink-0 w-5 h-5 transition-colors" />
               <AnimatePresence>
                 {expanded && (
                   <motion.span
@@ -100,18 +115,23 @@ export default function Sidebar() {
       </nav>
 
       {/* User + Logout */}
-      <div className="pt-4 border-t border-white/5 overflow-hidden">
+      <div className="pt-4 overflow-hidden" style={{ borderTop: '1px solid var(--card-border)' }}>
         {expanded && (
-          <div className="mb-3 px-2.5 py-2 rounded-xl bg-white/5">
-            <p className="text-[12px] font-semibold text-white truncate">{user?.fullName || user?.email}</p>
-            <p className="text-[11px] text-text-muted truncate">
+          <div className="mb-3 px-2.5 py-2 rounded-xl" style={{ background: 'var(--sq-3-bg)' }}>
+            <p className="text-[12px] font-semibold truncate" style={{ color: 'var(--text-main)' }}>
+              {user?.fullName || user?.email}
+            </p>
+            <p className="text-[11px] truncate" style={{ color: 'var(--text-faded)' }}>
               {user?.roles?.map(r => t(`roles.${r}`, { defaultValue: r })).join(', ')}
             </p>
           </div>
         )}
         <button
           onClick={() => logout()}
-          className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl w-full text-text-muted hover:text-danger hover:bg-danger/8 transition-all duration-180"
+          className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl w-full transition-all duration-200"
+          style={{ color: 'var(--text-faded)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-faded)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
           <LogOut className="shrink-0 w-5 h-5" />
           <AnimatePresence>

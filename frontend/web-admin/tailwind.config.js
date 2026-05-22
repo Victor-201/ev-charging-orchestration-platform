@@ -3,28 +3,36 @@ module.exports = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class',
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        brand: '#121212',
         cyan: '#10bfc9',
         lime: '#9aed57',
         danger: '#ef4444',
         warning: '#f59e0b',
         success: '#22c55e',
         info: '#3b82f6',
-        white: '#ffffff',
-        'text-muted': '#7d7d7d',
-        'text-secondary': '#b8b8b8',
+        // Theme-aware using CSS variables
+        'text-main': 'var(--text-main)',
+        'text-faded': 'var(--text-faded)',
+        'card-border': 'var(--card-border)',
+        'pill-text': 'var(--pill-text)',
       },
       backgroundImage: {
         'brand-gradient': 'linear-gradient(135deg, #10bfc9 0%, #9aed57 100%)',
-        'dark-radial': 'radial-gradient(circle at center, rgba(30,30,30,0.5) 0%, rgba(18,18,18,1) 100%)',
+        'sq-shine': 'var(--sq-shine)',
       },
       boxShadow: {
         'glow': '0 0 20px rgba(16, 191, 201, 0.5)',
         'glow-sm': '0 0 10px rgba(16, 191, 201, 0.3)',
+        'card': 'var(--card-shadow)',
+        'token': 'var(--token-shadow)',
+        'pill': 'var(--pill-shadow)',
+      },
+      borderRadius: {
+        'card': '36px',
+        'pill': '16px',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out forwards',

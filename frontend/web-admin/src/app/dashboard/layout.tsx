@@ -30,10 +30,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Still verifying the token — show a spinner, do NOT redirect yet.
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-color)' }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-2 border-cyan border-t-transparent animate-spin" />
-          <p className="text-text-muted text-sm">{t('auth.verifying')}</p>
+          <p className="text-sm" style={{ color: 'var(--text-faded)' }}>{t('auth.verifying')}</p>
         </div>
       </div>
     );
@@ -46,8 +46,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-[#121212] bg-grid flex">
-        <div className="absolute inset-0 bg-dark-radial pointer-events-none" />
+      <div className="min-h-screen flex" style={{ background: 'var(--bg-color)', transition: 'background 0.4s ease' }}>
+        {/* Radial ambient overlay */}
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 15% 20%, var(--bg-gradient-1) 0%, transparent 40%), radial-gradient(circle at 85% 85%, var(--bg-gradient-1) 0%, transparent 40%)',
+          }}
+        />
         <Sidebar />
         <div className="flex-1 ml-[88px] flex flex-col min-h-screen">
           <Topbar />
