@@ -33,6 +33,7 @@ import {
   TransactionReconciliationJob,
 } from '../../application/use-cases/payment.use-cases';
 import { PaymentController } from './payment.controller';
+import { BillingController } from './billing.controller';
 import { WALLET_REPOSITORY } from '../../domain/repositories/wallet.repository.interface';
 import { TRANSACTION_REPOSITORY } from '../../domain/repositories/transaction.repository.interface';
 import { Logger } from '@nestjs/common';
@@ -74,7 +75,7 @@ class PaymentReconciliationScheduler {
       UserReadModelOrmEntity, SubscriptionOrmEntity, PlanOrmEntity,
     ]),
   ],
-  controllers: [PaymentController],
+  controllers: [PaymentController, BillingController],
   providers: [
     // Repository bindings
     { provide: WALLET_REPOSITORY,      useClass: WalletRepository },
