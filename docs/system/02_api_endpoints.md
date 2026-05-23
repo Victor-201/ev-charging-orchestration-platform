@@ -1,4 +1,4 @@
-# API Endpoints — EV Charging Platform
+﻿# API Endpoints — EV Charging Platform
 
 ## SERVICE: IAM Service
 
@@ -609,13 +609,25 @@
   ```
 - **Response (200 OK):** Array of StationDto (with distanceKm)
 
-### [37] [GET] /api/v1/stations/cities
+### [37] [GET] /api/v1/stations/by-charger/:chargerId
+
+- **Auth:** Public | **Roles:** —
+- **Name:** Lấy thông tin trạm theo chargerId (lookup ngược)
+- **Request (Path Params):**
+  ```json
+  {
+    "chargerId": "uuid"
+  }
+  ```
+- **Response (200 OK):** Station JSON + charger detail
+
+### [38] [GET] /api/v1/stations/cities
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Danh sách các thành phố có trạm sạc
 - **Request:** Empty
 - **Response (200 OK):** Array of CityDto { id, name, stationCount }
-### [38] [GET] /api/v1/stations/:id
+### [39] [GET] /api/v1/stations/:id
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Chi tiết trạm
@@ -627,7 +639,19 @@
   ```
 - **Response (200 OK):** Station JSON + "chargers" array
 
-### [39] [PATCH] /api/v1/stations/:id
+### [40] [GET] /api/v1/stations/:stationId/chargers
+
+- **Auth:** Public | **Roles:** —
+- **Name:** Danh sách charger của một trạm
+- **Request (Path Params):**
+  ```json
+  {
+    "stationId": "uuid"
+  }
+  ```
+- **Response (200 OK):** Array of ChargerDto
+
+### [41] [PATCH] /api/v1/stations/:id
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Cập nhật thông tin trạm
@@ -646,7 +670,7 @@
   ```
 - **Response (200 OK):** Updated Station JSON
 
-### [40] [DELETE] /api/v1/stations/:id
+### [42] [DELETE] /api/v1/stations/:id
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Vô hiệu hóa trạm
@@ -658,7 +682,7 @@
   ```
 - **Response (204 No Content):** Empty
 
-### [41] [POST] /api/v1/stations/:stationId/chargers
+### [43] [POST] /api/v1/stations/:stationId/chargers
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Thêm charger vào trạm
@@ -689,7 +713,7 @@
   }
   ```
 
-### [42] [PATCH] /api/v1/stations/:stationId/chargers/:chargerId/status
+### [44] [PATCH] /api/v1/stations/:stationId/chargers/:chargerId/status
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Cập nhật trạng thái charger
@@ -707,7 +731,7 @@
   ```
 - **Response (200 OK):** Updated Charger JSON
 
-### [43] [GET] /api/v1/stations/:stationId/chargers/:chargerId/pricing
+### [45] [GET] /api/v1/stations/:stationId/chargers/:chargerId/pricing
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Xem báo giá sạc
@@ -734,7 +758,7 @@
   }
   ```
 
-### [44] [POST] /api/v1/stations/:stationId/chargers/:chargerId/pricing/calculate-session-fee
+### [46] [POST] /api/v1/stations/:stationId/chargers/:chargerId/pricing/calculate-session-fee
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Tính phí session thực tế (internal)
@@ -762,7 +786,7 @@
   }
   ```
 
-### [45] [GET] /api/v1/stations/pricing-rules
+### [47] [GET] /api/v1/stations/pricing-rules
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Danh sách pricing rules
@@ -789,7 +813,7 @@
   ]
   ```
 
-### [46] [POST] /api/v1/stations/pricing-rules
+### [48] [POST] /api/v1/stations/pricing-rules
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Tạo pricing rule mới (TOU/Idle)
@@ -811,7 +835,7 @@
   ```
 - **Response (201 Created):** Pricing Rule JSON
 
-### [47] [PATCH] /api/v1/stations/pricing-rules/:ruleId
+### [49] [PATCH] /api/v1/stations/pricing-rules/:ruleId
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Cập nhật pricing rule
@@ -825,7 +849,7 @@
   ```
 - **Response (200 OK):** Updated Pricing Rule JSON
 
-### [48] [PATCH] /api/v1/stations/pricing-rules/:ruleId/deactivate
+### [50] [PATCH] /api/v1/stations/pricing-rules/:ruleId/deactivate
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Vô hiệu hóa pricing rule
@@ -836,7 +860,7 @@
   }
   ```
 - **Response (204 No Content):** Empty
-### [49] [GET] /api/v1/stations/incidents
+### [51] [GET] /api/v1/stations/incidents
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Danh sách sự cố trạm sạc
@@ -851,7 +875,7 @@
   ```
 - **Response (200 OK):** IncidentDto Array
 
-### [50] [POST] /api/v1/stations/incidents
+### [52] [POST] /api/v1/stations/incidents
 
 - **Auth:** Bearer | **Roles:** Staff/User
 - **Name:** Báo cáo sự cố mới
@@ -867,7 +891,7 @@
   ```
 - **Response (201 Created):** IncidentDto
 
-### [51] [PATCH] /api/v1/stations/incidents/:id
+### [53] [PATCH] /api/v1/stations/incidents/:id
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Xử lý sự cố
@@ -880,7 +904,7 @@
   ```
 - **Response (200 OK):** IncidentDto
 
-### [52] [GET] /api/v1/stations/maintenance
+### [54] [GET] /api/v1/stations/maintenance
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Lịch bảo trì trạm sạc
@@ -893,7 +917,7 @@
   ```
 - **Response (200 OK):** MaintenanceDto Array
 
-### [53] [POST] /api/v1/stations/maintenance
+### [55] [POST] /api/v1/stations/maintenance
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Lên lịch bảo trì
@@ -916,7 +940,7 @@
 
 **Base paths:** `/api/v1/bookings`, `/api/v1/charging` | **Container:** `ev-session` | **Port:** 3004
 
-### [54] [GET] /api/v1/bookings/availability
+### [56] [GET] /api/v1/bookings/availability
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Xem lịch trống/bận theo ngày
@@ -939,7 +963,7 @@
   ]
   ```
 
-### [55] [GET] /api/v1/bookings/me
+### [57] [GET] /api/v1/bookings/me
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Lịch đặt của tôi
@@ -971,7 +995,7 @@
   }
   ```
 
-### [56] [POST] /api/v1/bookings
+### [58] [POST] /api/v1/bookings
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Tạo booking mới (auto trừ tiền cọc)
@@ -1001,7 +1025,7 @@
   }
   ```
 
-### [57] [GET] /api/v1/bookings/:id
+### [59] [GET] /api/v1/bookings/:id
 
 - **Auth:** Bearer | **Roles:** User/Admin
 - **Name:** Chi tiết booking
@@ -1013,7 +1037,7 @@
   ```
 - **Response (200 OK):** Booking JSON (giống item của /bookings/me)
 
-### [58] [DELETE] /api/v1/bookings/:id
+### [60] [DELETE] /api/v1/bookings/:id
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Hủy booking (hoàn tiền cọc 100%)
@@ -1030,7 +1054,7 @@
   ```
 - **Response (204 No Content):** Empty
 
-### [59] [POST] /api/v1/bookings/queue
+### [61] [POST] /api/v1/bookings/queue
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Vào hàng đợi khi trạm đầy
@@ -1050,7 +1074,7 @@
   }
   ```
 
-### [60] [DELETE] /api/v1/bookings/queue/:chargerId
+### [62] [DELETE] /api/v1/bookings/queue/:chargerId
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Rời hàng đợi
@@ -1062,7 +1086,7 @@
   ```
 - **Response (204 No Content):** Empty
 
-### [61] [GET] /api/v1/bookings/queue/:chargerId/position
+### [63] [GET] /api/v1/bookings/queue/:chargerId/position
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Xem vị trí trong hàng đợi
@@ -1080,7 +1104,7 @@
   }
   ```
 
-### [61b] [GET] /api/v1/bookings/suggest
+### [64] [GET] /api/v1/bookings/suggest
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Đề xuất trạm sạc tối ưu (Suggest Charger & DP Optimizer)
@@ -1108,7 +1132,7 @@
   ```
 
 
-### [62] [POST] /api/v1/charging/start
+### [65] [POST] /api/v1/charging/start
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Bắt đầu phiên sạc (có/không booking)
@@ -1135,7 +1159,7 @@
   }
   ```
 
-### [63] [POST] /api/v1/charging/stop/:id
+### [66] [POST] /api/v1/charging/stop/:id
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Dừng phiên sạc (self-service)
@@ -1164,7 +1188,7 @@
   }
   ```
 
-### [64] [POST] /api/v1/charging/admin/stop/:id
+### [67] [POST] /api/v1/charging/admin/stop/:id
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Dừng phiên sạc khẩn cấp (admin)
@@ -1182,7 +1206,7 @@
   ```
 - **Response (200 OK):** SessionDto JSON
 
-### [65] [POST] /api/v1/charging/telemetry/:id
+### [68] [POST] /api/v1/charging/telemetry/:id
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Nhập telemetry thủ công
@@ -1208,7 +1232,7 @@
   }
   ```
 
-### [66] [GET] /api/v1/charging/session/:id
+### [69] [GET] /api/v1/charging/session/:id
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Chi tiết phiên sạc
@@ -1220,7 +1244,7 @@
   ```
 - **Response (200 OK):** SessionDto JSON
 
-### [67] [GET] /api/v1/charging/charger/:chargerId/active
+### [70] [GET] /api/v1/charging/charger/:chargerId/active
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Session đang active của charger
@@ -1232,7 +1256,7 @@
   ```
 - **Response (200 OK):** SessionDto JSON
 
-### [68] [GET] /api/v1/charging/history
+### [71] [GET] /api/v1/charging/history
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Lịch sử sạc
@@ -1251,7 +1275,7 @@
 
 **Base path:** `http://localhost:8000/api/v1` | **Container:** `ev-billing` | **Port:** 3007
 
-### [69] [POST] /api/v1/payments/create
+### [72] [POST] /api/v1/payments/create
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Tạo VNPay payment URL
@@ -1272,7 +1296,7 @@
   }
   ```
 
-### [70] [POST] /api/v1/payments/pay
+### [73] [POST] /api/v1/payments/pay
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Wallet-first orchestrator (ưu tiên ví, fallback VNPay)
@@ -1297,7 +1321,7 @@
   }
   ```
 
-### [71] [GET] /api/v1/payments/vnpay-return
+### [74] [GET] /api/v1/payments/vnpay-return
 
 - **Auth:** Public | **Roles:** —
 - **Name:** VNPay IPN callback
@@ -1322,7 +1346,7 @@
   }
   ```
 
-### [72] [GET] /api/v1/payments/:id
+### [75] [GET] /api/v1/payments/:id
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Chi tiết giao dịch
@@ -1346,7 +1370,7 @@
   }
   ```
 
-### [73] [POST] /api/v1/payments/:id/refund
+### [76] [POST] /api/v1/payments/:id/refund
 
 - **Auth:** Bearer | **Roles:** Admin/Staff
 - **Name:** Hoàn tiền giao dịch
@@ -1372,7 +1396,7 @@
   }
   ```
 
-### [74] [GET] /api/v1/wallet/balance
+### [77] [GET] /api/v1/wallet/balance
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Số dư ví
@@ -1386,7 +1410,7 @@
   }
   ```
 
-### [75] [POST] /api/v1/wallet/topup
+### [78] [POST] /api/v1/wallet/topup
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Nạp tiền vào ví qua VNPay
@@ -1405,7 +1429,7 @@
   }
   ```
 
-### [76] [POST] /api/v1/wallet/pay
+### [79] [POST] /api/v1/wallet/pay
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Thanh toán trực tiếp từ ví
@@ -1424,7 +1448,7 @@
   }
   ```
 
-### [77] [GET] /api/v1/transactions
+### [80] [GET] /api/v1/transactions
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Lịch sử giao dịch
@@ -1452,7 +1476,7 @@
   ```
 
 
-### [78] [GET] /api/v1/billing/arrears
+### [81] [GET] /api/v1/billing/arrears
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Quản lý công nợ hệ thống
@@ -1465,7 +1489,7 @@
   ```
 - **Response (200 OK):** ArrearsDto Array
 
-### [79] [POST] /api/v1/billing/arrears/:id/clear
+### [82] [POST] /api/v1/billing/arrears/:id/clear
 
 - **Auth:** Bearer | **Roles:** Admin/System
 - **Name:** Tất toán công nợ thủ công
@@ -1477,7 +1501,7 @@
   ```
 - **Response (200 OK):** ArrearsDto
 
-### [80] [GET] /api/v1/billing/plans
+### [83] [GET] /api/v1/billing/plans
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Danh sách gói dịch vụ
@@ -1485,7 +1509,7 @@
 - **Response (200 OK):** PlanDto Array
 
 
-### [81] [POST] /api/v1/billing/plans
+### [84] [POST] /api/v1/billing/plans
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Tạo gói dịch vụ mới
@@ -1500,7 +1524,7 @@
   ```
 - **Response (201 Created):** PlanDto
 
-### [82] [POST] /api/v1/billing/subscriptions
+### [85] [POST] /api/v1/billing/subscriptions
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Đăng ký gói dịch vụ
@@ -1519,7 +1543,7 @@
 
 **Base paths:** `/api/v1/notifications`, `/api/v1/devices`, `/api/v1/preferences` | **Container:** `ev-notify` | **Port:** 3008
 
-### [83] [GET] /api/v1/notifications
+### [86] [GET] /api/v1/notifications
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Danh sách thông báo (phân trang)
@@ -1545,7 +1569,7 @@
   ]
   ```
 
-### [84] [GET] /api/v1/notifications/unread
+### [87] [GET] /api/v1/notifications/unread
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Thông báo chưa đọc
@@ -1557,7 +1581,7 @@
   ```
 - **Response (200 OK):** Array of NotificationDto
 
-### [85] [PATCH] /api/v1/notifications/:id/read
+### [88] [PATCH] /api/v1/notifications/:id/read
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Đánh dấu đã đọc 1 thông báo
@@ -1569,7 +1593,7 @@
   ```
 - **Response (204 No Content):** Empty
 
-### [86] [PATCH] /api/v1/notifications/read-all
+### [89] [PATCH] /api/v1/notifications/read-all
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Đánh dấu tất cả đã đọc
@@ -1581,7 +1605,7 @@
   }
   ```
 
-### [87] [POST] /api/v1/devices/register
+### [90] [POST] /api/v1/devices/register
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Đăng ký FCM token
@@ -1600,7 +1624,7 @@
   }
   ```
 
-### [88] [DELETE] /api/v1/devices/:id
+### [91] [DELETE] /api/v1/devices/:id
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Hủy đăng ký thiết bị
@@ -1612,7 +1636,7 @@
   ```
 - **Response (204 No Content):** Empty
 
-### [89] [GET] /api/v1/devices
+### [92] [GET] /api/v1/devices
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Danh sách thiết bị đã đăng ký
@@ -1629,7 +1653,7 @@
   ]
   ```
 
-### [90] [GET] /api/v1/preferences
+### [93] [GET] /api/v1/preferences
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Lấy cài đặt thông báo
@@ -1645,7 +1669,7 @@
   }
   ```
 
-### [91] [PATCH] /api/v1/preferences
+### [94] [PATCH] /api/v1/preferences
 
 - **Auth:** Bearer | **Roles:** User
 - **Name:** Cập nhật cài đặt thông báo
@@ -1667,7 +1691,7 @@
 
 **Base path:** `http://localhost:8000/api/v1/analytics` | **Container:** `ev-analytics` | **Port:** 3002
 
-### [92] [GET] /api/v1/analytics/system
+### [95] [GET] /api/v1/analytics/system
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** KPI toàn platform (active sessions, revenue 30d, booking funnel)
@@ -1687,7 +1711,7 @@
   }
   ```
 
-### [93] [GET] /api/v1/analytics/revenue
+### [96] [GET] /api/v1/analytics/revenue
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Doanh thu theo tháng/ngày
@@ -1709,7 +1733,7 @@
   ]
   ```
 
-### [94] [GET] /api/v1/analytics/usage
+### [97] [GET] /api/v1/analytics/usage
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Thống kê sử dụng trạm
@@ -1732,7 +1756,7 @@
   ]
   ```
 
-### [95] [GET] /api/v1/analytics/peak-hours
+### [98] [GET] /api/v1/analytics/peak-hours
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Giờ cao điểm + dự báo nhu cầu
@@ -1755,7 +1779,7 @@
   ]
   ```
 
-### [96] [GET] /api/v1/analytics/users/:userId
+### [99] [GET] /api/v1/analytics/users/:userId
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Hành vi người dùng
@@ -1780,7 +1804,7 @@
   }
   ```
 
-### [97] [GET] /api/v1/analytics/stations/:stationId/metrics
+### [100] [GET] /api/v1/analytics/stations/:stationId/metrics
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Tóm tắt thống kê 1 trạm
@@ -1805,7 +1829,7 @@
   }
   ```
 
-### [98] [GET] /api/v1/analytics/dashboard
+### [101] [GET] /api/v1/analytics/dashboard
 
 - **Auth:** Bearer | **Roles:** Admin
 - **Name:** Dashboard tổng hợp (composite view)
@@ -1846,7 +1870,7 @@
 
 **Base path:** `http://localhost:8000/api/v1/telemetry` | **Container:** `ev-telemetry` | **Port:** 3009
 
-### [99] [POST] /api/v1/telemetry/ingest
+### [102] [POST] /api/v1/telemetry/ingest
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Thu thập telemetry từ charger (body)
@@ -1873,7 +1897,7 @@
   }
   ```
 
-### [100] [POST] /api/v1/telemetry/ingest/:chargerId/:sessionId
+### [103] [POST] /api/v1/telemetry/ingest/:chargerId/:sessionId
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Thu thập telemetry (path params)
@@ -1910,7 +1934,7 @@
 
 **Base path:** `http://localhost:8000/api/v1/ocpp` | **Container:** `ev-ocpp-gw` | **Port:** 3010 | **WebSocket:** `ws://localhost:3010/ocpp`
 
-### [101] [GET] /api/v1/ocpp/health
+### [104] [GET] /api/v1/ocpp/health
 
 - **Auth:** Public | **Roles:** —
 - **Name:** Trạng thái OCPP Gateway + danh sách charger kết nối
