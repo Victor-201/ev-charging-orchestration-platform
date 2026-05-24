@@ -16,9 +16,9 @@ export type NotificationType =
   | 'payment.completed' | 'payment.failed'
   | 'session.started' | 'session.completed'
   | 'queue.updated' | 'charger.fault' | 'system'
-  | 'billing.idle_fee_charged_v1'   // Idle fee charged
-  | 'billing.extra_charge_v1'       // Extra charge from wallet
-  | 'billing.refund_issued_v1';     // Deposit refund to wallet
+  | 'billing.idle_fee_charged'   // Idle fee charged
+  | 'billing.extra_charge'       // Extra charge from wallet
+  | 'billing.refund_issued';     // Deposit refund to wallet
 
 
 export type DevicePlatform = 'ios' | 'android' | 'web';

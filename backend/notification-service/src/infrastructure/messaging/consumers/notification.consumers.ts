@@ -466,7 +466,7 @@ export class FaultNotificationConsumer {
 }
 
 // BillingNotificationConsumer
-// billing.idle_fee_charged_v1 | billing.extra_charge_v1 | billing.refund_issued_v1
+// billing.idle_fee_charged | billing.extra_charge | billing.refund_issued
 
 @Injectable()
 export class BillingNotificationConsumer {
@@ -480,19 +480,19 @@ export class BillingNotificationConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey:   'billing.idle_fee_charged_v1',
+    routingKey:   'billing.idle_fee_charged',
     queue:        'notification.billing.idle_fee',
     queueOptions: buildQueueOpts('dlq.notification.billing.idle_fee'),
   })
   async onIdleFeeCharged(payload: BillingIdleFeeChargedEvent): Promise<void> {
     const eventId = payload.eventId ?? `billing.idle_fee:${payload.sessionId}:${payload.transactionId}`;
     if (await this.engine.isProcessed(eventId, this.peRepo)) return;
-    await this.engine.markProcessed(eventId, 'billing.idle_fee_charged_v1', this.peRepo);
+    await this.engine.markProcessed(eventId, 'billing.idle_fee_charged', this.peRepo);
 
-    const tpl = NOTIFICATION_TEMPLATES['billing.idle_fee_charged_v1'];
+    const tpl = NOTIFICATION_TEMPLATES['billing.idle_fee_charged'];
     await this.engine.dispatch({
       userId:   payload.userId,
-      type:     'billing.idle_fee_charged_v1',
+      type:     'billing.idle_fee_charged',
       channels: ['push', 'in_app'],
       title:    tpl.title(payload),
       body:     tpl.body(payload),
@@ -513,19 +513,19 @@ export class BillingNotificationConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey:   'billing.extra_charge_v1',
+    routingKey:   'billing.extra_charge',
     queue:        'notification.billing.extra_charge',
     queueOptions: buildQueueOpts('dlq.notification.billing.extra_charge'),
   })
   async onExtraCharge(payload: BillingExtraChargeEvent): Promise<void> {
     const eventId = payload.eventId ?? `billing.extra_charge:${payload.sessionId}:${payload.transactionId}`;
     if (await this.engine.isProcessed(eventId, this.peRepo)) return;
-    await this.engine.markProcessed(eventId, 'billing.extra_charge_v1', this.peRepo);
+    await this.engine.markProcessed(eventId, 'billing.extra_charge', this.peRepo);
 
-    const tpl = NOTIFICATION_TEMPLATES['billing.extra_charge_v1'];
+    const tpl = NOTIFICATION_TEMPLATES['billing.extra_charge'];
     await this.engine.dispatch({
       userId:   payload.userId,
-      type:     'billing.extra_charge_v1',
+      type:     'billing.extra_charge',
       channels: ['push', 'in_app'],
       title:    tpl.title(payload),
       body:     tpl.body(payload),
@@ -545,19 +545,19 @@ export class BillingNotificationConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey:   'billing.refund_issued_v1',
+    routingKey:   'billing.refund_issued',
     queue:        'notification.billing.refund',
     queueOptions: buildQueueOpts('dlq.notification.billing.refund'),
   })
   async onRefundIssued(payload: BillingRefundIssuedEvent): Promise<void> {
     const eventId = payload.eventId ?? `billing.refund:${payload.sessionId}:${payload.transactionId}`;
     if (await this.engine.isProcessed(eventId, this.peRepo)) return;
-    await this.engine.markProcessed(eventId, 'billing.refund_issued_v1', this.peRepo);
+    await this.engine.markProcessed(eventId, 'billing.refund_issued', this.peRepo);
 
-    const tpl = NOTIFICATION_TEMPLATES['billing.refund_issued_v1'];
+    const tpl = NOTIFICATION_TEMPLATES['billing.refund_issued'];
     await this.engine.dispatch({
       userId:   payload.userId,
-      type:     'billing.refund_issued_v1',
+      type:     'billing.refund_issued',
       channels: ['push', 'in_app'],
       title:    tpl.title(payload),
       body:     tpl.body(payload),

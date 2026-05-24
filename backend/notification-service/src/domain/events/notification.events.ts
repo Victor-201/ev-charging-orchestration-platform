@@ -108,7 +108,7 @@ export interface QueueUpdatedEvent {
 // Billing Notification Events
 
 export interface BillingIdleFeeChargedEvent {
-  eventType:             'billing.idle_fee_charged_v1';
+  eventType:             'billing.idle_fee_charged';
   eventId:               string;
   sessionId:             string;
   userId:                string;
@@ -120,7 +120,7 @@ export interface BillingIdleFeeChargedEvent {
 }
 
 export interface BillingExtraChargeEvent {
-  eventType:       'billing.extra_charge_v1';
+  eventType:       'billing.extra_charge';
   eventId:         string;
   sessionId:       string;
   userId:          string;
@@ -131,7 +131,7 @@ export interface BillingExtraChargeEvent {
 }
 
 export interface BillingRefundIssuedEvent {
-  eventType:        'billing.refund_issued_v1';
+  eventType:        'billing.refund_issued';
   eventId:          string;
   sessionId:        string;
   userId:           string;
@@ -204,21 +204,21 @@ export const NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate> = {
         ? `Đến lượt bạn! Hãy đến trạm sạc ngay.`
         : `Vị trí của bạn trong hàng đợi: #${p.position}. Chờ khoảng ${p.estimatedWaitMinutes} phút.`,
   },
-  'billing.idle_fee_charged_v1': {
+  'billing.idle_fee_charged': {
     title: ()        => 'Phí chiếm dụng trụ sạc',
     body:  (p: BillingIdleFeeChargedEvent) =>
       `Xe bạn đã cắm súng ${p.chargeableIdleMinutes + p.idleGraceMinutes} phút sau khi sạc đầy ` +
       `(${p.idleGraceMinutes} phút miễn phí). Phí chiếm dụng: ${p.idleFeeVnd.toLocaleString('vi-VN')} VND ` +
       `(${p.idleFeePerMinuteVnd.toLocaleString('vi-VN')} VND/phút × ${p.chargeableIdleMinutes} phút). Vui lòng rút súng!`,
   },
-  'billing.extra_charge_v1': {
+  'billing.extra_charge': {
     title: ()        => 'Trừ thêm từ ví',
     body:  (p: BillingExtraChargeEvent) =>
       `Phiên sạc của bạn tốn tổng ${p.totalFeeVnd.toLocaleString('vi-VN')} VND ` +
       `(cọc: ${p.depositAmount.toLocaleString('vi-VN')} VND). ` +
       `Đã trừ thêm ${p.extraAmountVnd.toLocaleString('vi-VN')} VND từ ví.`,
   },
-  'billing.refund_issued_v1': {
+  'billing.refund_issued': {
     title: ()        => 'Hoàn tiền vào ví',
     body:  (p: BillingRefundIssuedEvent) =>
       `Phiên sạc hoàn tất. Tổng phí: ${p.totalFeeVnd.toLocaleString('vi-VN')} VND. ` +
