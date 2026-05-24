@@ -18,6 +18,7 @@ import {
   getPricing,
   createVnpayPayment,
   CHARGER_ID,
+  resolveKioskIdentifiers,
 } from '../api';
 
 export type { SessionStatus };
@@ -80,6 +81,9 @@ export const useSessionStateMachine = (): StateMachineReturn => {
   useEffect(() => {
     const initializeKiosk = async () => {
       if (status !== 'INIT') return;
+
+      // Resolve identifiers if POINT_ID is used
+      await resolveKioskIdentifiers();
 
       const isMock = import.meta.env.VITE_ENABLE_MOCK_DATA === 'true';
       const scenario = new URLSearchParams(window.location.search).get('scenario');

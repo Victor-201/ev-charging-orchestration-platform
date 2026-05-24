@@ -15,8 +15,18 @@ import type {
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-const CHARGER_ID = import.meta.env.VITE_CHARGER_ID || 'CHG-001-A';
-const STATION_ID = import.meta.env.VITE_STATION_ID || 'EV-HN-0012';
+
+export let STATION_ID = new URLSearchParams(window.location.search).get('stationId') ||
+  import.meta.env.VITE_STATION_ID ||
+  '55555555-0000-4000-8000-000000000168';
+
+export let POINT_ID = new URLSearchParams(window.location.search).get('pointId') ||
+  import.meta.env.VITE_POINT_ID ||
+  'cccccccc-0000-4000-8000-000000001011';
+
+export let CHARGER_ID = new URLSearchParams(window.location.search).get('chargerId') ||
+  import.meta.env.VITE_CHARGER_ID ||
+  'c0c0c0c0-0000-4000-8000-000000001607';
 
 // Axios instance — kiosk runs as a "system" client (no user JWT for walk-in)
 const http = axios.create({
@@ -24,9 +34,39 @@ const http = axios.create({
   timeout: 10_000,
   headers: {
     'Content-Type': 'application/json',
-    'X-Kiosk-Device': CHARGER_ID,
   },
 });
+
+// Set dynamic header on every request
+http.interceptors.request.use((config) => {
+  if (config.headers) {
+    config.headers['X-Kiosk-Device'] = CHARGER_ID;
+  }
+  return config;
+});
+
+// Function to dynamically initialize and resolve IDs if POINT_ID is used instead of CHARGER_ID
+export async function resolveKioskIdentifiers(): Promise<{ stationId: string; pointId: string; chargerId: string }> {
+  // If POINT_ID is a point and CHARGER_ID is not set or is identical to POINT_ID or is empty/default
+  if (POINT_ID && POINT_ID.startsWith('cccccccc') && (CHARGER_ID === POINT_ID || CHARGER_ID.startsWith('cccccccc') || !CHARGER_ID || CHARGER_ID === 'CHG-001-A')) {
+    try {
+      // Fetch chargers for this station to resolve the connector
+      const { data } = await http.get<any[]>(`/stations/${STATION_ID}/chargers`);
+      const matchedPoint = data.find((p: any) => p.id === POINT_ID);
+      if (matchedPoint && matchedPoint.connectors && matchedPoint.connectors.length > 0) {
+        CHARGER_ID = matchedPoint.connectors[0].id;
+        console.log(`[Kiosk] Resolved POINT_ID ${POINT_ID} to connector ${CHARGER_ID}`);
+      }
+    } catch (err) {
+      console.warn(`[Kiosk] Could not resolve POINT_ID to connector via backend, using fallback:`, err);
+      // Fallback mapping for HCM station 1
+      if (POINT_ID === 'cccccccc-0000-4000-8000-000000001011') {
+        CHARGER_ID = 'c0c0c0c0-0000-4000-8000-000000001607';
+      }
+    }
+  }
+  return { stationId: STATION_ID, pointId: POINT_ID, chargerId: CHARGER_ID };
+}
 
 // ---- Session Service ----
 
@@ -146,5 +186,3 @@ export async function getChargerState(): Promise<ChargerState | null> {
     return null;
   }
 }
-
-export { CHARGER_ID, STATION_ID };
