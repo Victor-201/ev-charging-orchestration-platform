@@ -81,8 +81,11 @@ export class BookingRepository implements IBookingRepository {
   async findByChargerAndDate(chargerId: string, date: Date): Promise<Booking[]> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setDate(startOfDay.getDate() - 1);
+    
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setDate(endOfDay.getDate() + 1);
 
     const entities = await this.repo
       .createQueryBuilder('b')

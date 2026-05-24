@@ -320,26 +320,4 @@ export class OutboxOrmEntity {
   processedAt: Date | null;
 }
 
-// user_debt_read_models
-// Read-model synced from User Service via event.
-// Used by ArrearsGuard to check hasOutstandingDebt without remote call.
-// Updated by:
-//   - WalletArrearsCreatedConsumer   -> hasOutstandingDebt = true
-//   - WalletArrearsClearedConsumer   -> hasOutstandingDebt = false
-
-@Entity('user_debt_read_models')
-export class UserDebtReadModelOrmEntity {
-  @PrimaryColumn({ name: 'user_id', type: 'uuid' })
-  userId: string;
-
-  /** Bad debt flag - true = block all booking features */
-  @Column({ name: 'has_outstanding_debt', default: false })
-  hasOutstandingDebt: boolean;
-
-  /** Total outstanding debt amount (VND) */
-  @Column({ name: 'arrears_amount', type: 'numeric', precision: 12, scale: 0, default: 0 })
-  arrearsAmount: number;
-
-  @Column({ name: 'synced_at', type: 'timestamptz', default: () => 'NOW()' })
-  syncedAt: Date;
-}
+// user_debt_read_models is defined in session.orm-entities.ts and shared

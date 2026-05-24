@@ -117,53 +117,7 @@ export class ChargerStateOrmEntity {
   updatedAt: Date;
 }
 
-// processed_events
-
-@Entity('processed_events')
-export class ProcessedEventOrmEntity {
-  @PrimaryColumn({ name: 'event_id', length: 255 })
-  eventId: string;
-
-  @Column({ name: 'event_type', type: 'varchar', length: 100 })
-  eventType: string;
-
-  @CreateDateColumn({ name: 'processed_at', type: 'timestamptz' })
-  processedAt: Date;
-}
-
-// event_outbox
-
-@Entity('event_outbox')
-@Index('idx_outbox_pending', ['status', 'createdAt'], { where: `status = 'pending'` })
-export class OutboxOrmEntity {
-  @PrimaryColumn('uuid')
-  id: string;
-
-  @Column({ name: 'aggregate_type', type: 'varchar', length: 100 })
-  aggregateType: string;
-
-  @Column({ name: 'aggregate_id', type: 'uuid' })
-  aggregateId: string;
-
-  @Column({ name: 'event_type', type: 'varchar', length: 100 })
-  eventType: string;
-
-  @Column({ type: 'jsonb' })
-  payload: object;
-
-  @Column({
-    type: 'enum',
-    enum: ['pending', 'published', 'failed'],
-    default: 'pending',
-  })
-  status: string;
-
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
-
-  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
-  publishedAt: Date | null;
-}
+export { ProcessedEventOrmEntity, OutboxOrmEntity } from './booking.orm-entities';
 
 // user_debt_read_models
 // Read-model sync from Payment Service (wallet.arrears events).
