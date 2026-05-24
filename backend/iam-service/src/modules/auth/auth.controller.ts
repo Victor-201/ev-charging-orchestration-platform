@@ -4,6 +4,9 @@ import {
   HttpException, Param, ParseUUIDPipe, Logger, Query,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UsersCacheOrmEntity } from '../../infrastructure/persistence/typeorm/entities/user.orm-entities';
 import {
   RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
   ChangePasswordUseCase, AssignRoleUseCase, RevokeRoleUseCase,
@@ -34,6 +37,8 @@ export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
   constructor(
+    @InjectRepository(UsersCacheOrmEntity)
+    private readonly usersCacheRepo: Repository<UsersCacheOrmEntity>,
     private readonly registerUC: RegisterUseCase,
     private readonly loginUC: LoginUseCase,
     private readonly refreshUC: RefreshTokenUseCase,
@@ -82,7 +87,27 @@ export class AuthController {
       deviceFingerprint: req.headers['x-device-fingerprint'] as string,
     };
     try {
-      return await this.loginUC.execute(cmd);
+      const result = await this.loginUC.execute(cmd);
+      if (result.userId) {
+        const cache = await this.usersCacheRepo.findOne({ where: { userId: result.userId } });
+        return {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn,
+          sessionId: result.sessionId,
+          user: {
+            id: result.userId,
+            email: dto.email,
+            fullName: cache?.fullName ?? '',
+            phone: cache?.phone ?? null,
+            role: cache?.roleName ?? 'user',
+            mfaEnabled: cache?.emailVerified ?? false,
+            hasArrears: cache?.hasOutstandingDebt ?? false,
+            arrearsAmount: Number(cache?.arrearsAmount ?? 0),
+          }
+        };
+      }
+      return result;
     } catch (e) {
       if (e instanceof RateLimitExceededException) throw new HttpException(e.message, HttpStatus.TOO_MANY_REQUESTS);
       if (e instanceof AccountLockedException) throw new ForbiddenException(e.message);
@@ -123,7 +148,18 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: AuthenticatedUser) {
-    return { id: user.id, email: user.email, roles: user.roles };
+    const cache = await this.usersCacheRepo.findOne({ where: { userId: user.id } });
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: cache?.fullName ?? '',
+      phone: cache?.phone ?? null,
+      role: cache?.roleName ?? (user.roles[0] ?? 'user'),
+      roles: user.roles,
+      mfaEnabled: user.roles.includes('admin') ? false : cache?.emailVerified ?? false,
+      hasArrears: cache?.hasOutstandingDebt ?? false,
+      arrearsAmount: Number(cache?.arrearsAmount ?? 0),
+    };
   }
 
 

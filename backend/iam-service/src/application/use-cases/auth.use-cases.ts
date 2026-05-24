@@ -41,6 +41,7 @@ export interface TokenPair {
   expiresIn: number;
   sessionId: string;
   mfaRequired?: boolean;  // true if MFA step needed
+  userId?: string;
 }
 
 export interface RegisterCommand {
@@ -260,7 +261,7 @@ export class LoginUseCase {
     }
 
     this.logger.log(`Login: user=${user.id} session=${session.id} risk=${risk.level}`);
-    return { accessToken, refreshToken: rawRefreshToken, expiresIn, sessionId: session.id };
+    return { accessToken, refreshToken: rawRefreshToken, expiresIn, sessionId: session.id, userId: user.id };
   }
 
   private async checkIpRateLimit(ip: string): Promise<void> {

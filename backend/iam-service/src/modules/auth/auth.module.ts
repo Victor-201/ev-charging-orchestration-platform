@@ -8,6 +8,7 @@ import {
   RolePermissionOrmEntity, UserRoleOrmEntity, EmailVerificationTokenOrmEntity,
   PasswordResetTokenOrmEntity, OutboxOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/auth.orm-entities';
+import { UsersCacheOrmEntity } from '../../infrastructure/persistence/typeorm/entities/user.orm-entities';
 import { UserRepository } from '../../infrastructure/persistence/typeorm/repositories/user.repository';
 import { SessionRepository } from '../../infrastructure/persistence/typeorm/repositories/session.repository';
 import { RoleRepository } from '../../infrastructure/persistence/typeorm/repositories/role.repository';
@@ -34,6 +35,7 @@ import { RiskScoringService } from '../../domain/services/risk-scoring.service';
       UserOrmEntity, SessionOrmEntity, RoleOrmEntity, PermissionOrmEntity,
       RolePermissionOrmEntity, UserRoleOrmEntity, EmailVerificationTokenOrmEntity,
       PasswordResetTokenOrmEntity, OutboxOrmEntity,
+      UsersCacheOrmEntity,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
