@@ -81,7 +81,7 @@ describe('Booking Aggregate - Auto-confirm FSM', () => {
     expect(booking.depositAmount).toBe(50_000);
     // create() emits 2 events: booking.created + booking.deposit_requested
     expect(booking.domainEvents).toHaveLength(2);
-    expect(booking.domainEvents[0].eventType).toBe('session.booking_created_v1');
+    expect(booking.domainEvents[0].eventType).toBe('session.booking_created');
     expect(booking.domainEvents[1].eventType).toBe('session.reserved');
   });
 

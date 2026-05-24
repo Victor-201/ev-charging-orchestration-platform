@@ -147,7 +147,7 @@ describe('Booking Aggregate FSM - Auto-confirm model', () => {
     });
     expect(b.status).toBe(BookingStatus.PENDING_PAYMENT);
     expect(b.depositAmount).toBe(DEPOSIT);
-    expect(b.domainEvents[0].eventType).toBe('session.booking_created_v1');
+    expect(b.domainEvents[0].eventType).toBe('session.booking_created');
   });
 
   it('PENDING_PAYMENT → CONFIRMED via confirmWithPayment()', () => {
