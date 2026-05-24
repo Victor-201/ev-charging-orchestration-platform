@@ -61,8 +61,8 @@ export class SessionReservedConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey: 'session.reserved_v1',
-    queue: 'billing-svc.session.reserved_v1',
+    routingKey: 'session.reserved',
+    queue: 'billing-svc.session.reserved',
     queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
@@ -81,7 +81,7 @@ export class SessionReservedConsumer {
       this.logger.debug(`[SAGA] Duplicate event ${eventId}, skipping`);
       return;
     }
-    await this.peRepo.save({ eventId, eventType: 'session.reserved_v1' });
+    await this.peRepo.save({ eventId, eventType: 'session.reserved' });
 
     await this.dataSource.transaction(async (manager: EntityManager) => {
       const wallet = await this.walletRepo.findByUserId(payload.userId);
@@ -152,8 +152,8 @@ export class BookingCancelledConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey: 'session.cancelled_v1',
-    queue: 'billing-svc.session.cancelled_v1',
+    routingKey: 'booking.cancelled',
+    queue: 'billing-svc.session.cancelled',
     queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
@@ -234,8 +234,8 @@ export class BookingNoShowConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey: 'session.no_show_v1',
-    queue: 'billing-svc.session.no_show_v1',
+    routingKey: 'booking.no_show',
+    queue: 'billing-svc.session.no_show',
     queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
@@ -332,8 +332,8 @@ export class SessionCompletedBillingConsumer {
 
   @RabbitSubscribe({
     exchange:     'ev.charging',
-    routingKey:   'session.completed_v1',
-    queue:        'billing-svc.session.completed_v1',
+    routingKey:   'session.completed',
+    queue:        'billing-svc.session.completed',
     queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {

@@ -34,7 +34,7 @@ export class WalletRepository implements IWalletRepository {
   async getBalance(walletId: string, manager?: EntityManager): Promise<number> {
     const em = manager ?? this.repo.manager;
     const result: { balance: string }[] = await em.query(
-      `SELECT COALESCE(MAX(balance_after), 0) AS balance
+      `SELECT COALESCE(SUM(delta_amount), 0) AS balance
        FROM wallet_ledger WHERE wallet_id = $1`,
       [walletId],
     );
@@ -49,8 +49,8 @@ export class WalletRepository implements IWalletRepository {
   }
 
   /**
-   * Calls DB stored procedure credit_wallet.
-   * Returns updated balance.
+   * Adds credit to the wallet ledger.
+   * Requires wallet to be locked first (lockForUpdate).
    */
   async credit(
     walletId: string,
@@ -58,13 +58,21 @@ export class WalletRepository implements IWalletRepository {
     amount: number,
     manager: EntityManager,
   ): Promise<number> {
-    await manager.query(`SELECT credit_wallet($1, $2, $3)`, [walletId, transactionId, amount]);
-    return this.getBalance(walletId, manager);
+    const currentBalance = await this.getBalance(walletId, manager);
+    const newBalance = currentBalance + amount;
+    
+    await manager.query(
+      `INSERT INTO wallet_ledger (wallet_id, transaction_id, delta_amount, balance_after)
+       VALUES ($1, $2, $3, $4)`,
+      [walletId, transactionId, amount, newBalance]
+    );
+    
+    return newBalance;
   }
 
   /**
-   * Calls DB stored procedure debit_wallet.
-   * DB will raise exception on insufficient balance — propagated as error.
+   * Deducts from the wallet ledger.
+   * Requires wallet to be locked first (lockForUpdate).
    */
   async debit(
     walletId: string,
@@ -72,8 +80,21 @@ export class WalletRepository implements IWalletRepository {
     amount: number,
     manager: EntityManager,
   ): Promise<number> {
-    await manager.query(`SELECT debit_wallet($1, $2, $3)`, [walletId, transactionId, amount]);
-    return this.getBalance(walletId, manager);
+    const currentBalance = await this.getBalance(walletId, manager);
+    
+    if (currentBalance < amount) {
+      throw new Error(`Insufficient balance: current=${currentBalance}, requested=${amount}`);
+    }
+    
+    const newBalance = currentBalance - amount;
+    
+    await manager.query(
+      `INSERT INTO wallet_ledger (wallet_id, transaction_id, delta_amount, balance_after)
+       VALUES ($1, $2, $3, $4)`,
+      [walletId, transactionId, -amount, newBalance]
+    );
+    
+    return newBalance;
   }
 
   private toOrm(w: Wallet): WalletOrmEntity {

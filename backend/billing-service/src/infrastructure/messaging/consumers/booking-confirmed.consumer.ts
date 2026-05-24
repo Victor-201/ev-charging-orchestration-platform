@@ -27,7 +27,7 @@ export class BookingConfirmedConsumer {
     exchange: 'ev.charging',
     routingKey: 'booking.confirmed',
     queue: 'payment-svc.booking.confirmed',
-    queueOptions: { durable: true },
+    queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
     eventId: string;
