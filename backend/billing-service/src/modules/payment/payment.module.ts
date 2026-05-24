@@ -31,6 +31,7 @@ import {
   PaymentOrchestratorUseCase,
   RefundUseCase,
   TransactionReconciliationJob,
+  PayArrearsUseCase,
 } from '../../application/use-cases/payment.use-cases';
 import { PaymentController } from './payment.controller';
 import { BillingController } from './billing.controller';
@@ -102,6 +103,7 @@ class PaymentReconciliationScheduler {
     PaymentOrchestratorUseCase,
     RefundUseCase,
     TransactionReconciliationJob,
+    PayArrearsUseCase,
     // Cron scheduler
     PaymentReconciliationScheduler,
   ],

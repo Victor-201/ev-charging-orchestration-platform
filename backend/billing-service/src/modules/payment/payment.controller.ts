@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Body, Param, Query, Req, Headers,
+  Controller, Post, Get, Body, Param, Query, Req, Headers, Header,
   HttpCode, HttpStatus, ParseUUIDPipe, Logger,
   BadRequestException, NotFoundException, UseGuards,
 } from '@nestjs/common';
@@ -13,6 +13,7 @@ import {
   GetPaymentUseCase,
   PaymentOrchestratorUseCase,
   RefundUseCase,
+  PayArrearsUseCase,
 } from '../../application/use-cases/payment.use-cases';
 import {
   CreatePaymentDto, WalletTopupDto, WalletPayDto,
@@ -24,6 +25,7 @@ import { RolesGuard }               from '../../shared/guards/roles.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { Roles, Public } from '../../shared/decorators/roles.decorator';
 import type { AuthenticatedUser }   from '../../shared/guards/jwt-auth.guard';
+import { WalletDomainException }    from '../../domain/entities/wallet.aggregate';
 
 /**
  * PaymentController — Auth policy:
@@ -53,6 +55,7 @@ export class PaymentController {
     private readonly getPayment:          GetPaymentUseCase,
     private readonly paymentOrchestrator: PaymentOrchestratorUseCase,
     private readonly refund:              RefundUseCase,
+    private readonly payArrears:          PayArrearsUseCase,
   ) {}
 
   /**
@@ -157,6 +160,7 @@ export class PaymentController {
    * GET /api/v1/wallet/balance
    */
   @Get('wallet/balance')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
   async getWalletBalance(@CurrentUser() user: AuthenticatedUser) {
     return this.getBalance.execute(user.id);
   }
@@ -189,17 +193,47 @@ export class PaymentController {
     @Body() dto: WalletPayDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.walletPay.execute({
-      userId:    user.id,
-      bookingId: dto.bookingId,
-      amount:    dto.amount,
-    });
+    try {
+      return await this.walletPay.execute({
+        userId:    user.id,
+        bookingId: dto.bookingId,
+        amount:    dto.amount,
+      });
+    } catch (err) {
+      if (err instanceof WalletDomainException) {
+        // Insufficient balance / wallet not active → 400
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * POST /api/v1/wallet/pay-arrears
+   * Settle outstanding arrears using wallet balance.
+   */
+  @Post('wallet/pay-arrears')
+  @HttpCode(HttpStatus.OK)
+  async payArrearsFromWallet(
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    try {
+      return await this.payArrears.execute({
+        userId: user.id,
+      });
+    } catch (err: any) {
+      if (err instanceof WalletDomainException) {
+        throw new BadRequestException(err.message);
+      }
+      throw new BadRequestException(err.message || 'Payment failed');
+    }
   }
 
   /**
    * GET /api/v1/transactions
    */
   @Get('transactions')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate')
   async getTransactionHistory(
     @Query() query: GetTransactionHistoryDto,
     @CurrentUser() user: AuthenticatedUser,

@@ -3,10 +3,10 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction } from '../../domain/entities/transaction.aggregate';
-import { Wallet } from '../../domain/entities/wallet.aggregate';
+import { Wallet, WalletDomainException } from '../../domain/entities/wallet.aggregate';
 import {
   PaymentCompletedEvent, PaymentFailedEvent,
-  WalletTopupCompletedEvent,
+  WalletTopupCompletedEvent, WalletArrearsClearedEvent,
 } from '../../domain/events/payment.events';
 import {
   IWalletRepository, WALLET_REPOSITORY,
@@ -113,6 +113,7 @@ export class HandleVNPayCallbackUseCase {
 
   constructor(
     @Inject(TRANSACTION_REPOSITORY) private readonly txRepo: ITransactionRepository,
+    @Inject(WALLET_REPOSITORY)      private readonly walletRepo: IWalletRepository,
     @Inject(EVENT_BUS)              private readonly eventBus: IPaymentEventBus,
     private readonly vnpay: VNPayService,
     private readonly dataSource: DataSource,
@@ -151,6 +152,18 @@ export class HandleVNPayCallbackUseCase {
         events.push(new PaymentCompletedEvent(
           tx.id, tx.userId, tx.amount, tx.relatedId, tx.relatedType,
         ));
+        if (tx.type === 'topup') {
+          const wallet = await this.walletRepo.findByUserId(tx.userId);
+          if (wallet) {
+            await this.walletRepo.credit(wallet.id, tx.id, tx.amount, manager);
+            events.push(new WalletTopupCompletedEvent(
+              tx.id,
+              tx.userId,
+              tx.amount,
+              'VNPay Topup',
+            ));
+          }
+        }
       } else {
         tx.fail(`VNPay responseCode=${result.responseCode}`);
         events.push(new PaymentFailedEvent(tx.id, tx.userId, `VNPay code ${result.responseCode}`));
@@ -320,13 +333,33 @@ export class WalletPayUseCase {
 export class GetWalletBalanceUseCase {
   constructor(
     @Inject(WALLET_REPOSITORY) private readonly walletRepo: IWalletRepository,
+    @InjectRepository(InvoiceOrmEntity)
+    private readonly invoiceRepo: Repository<InvoiceOrmEntity>,
   ) {}
 
-  async execute(userId: string): Promise<{ walletId: string; balance: number; currency: string }> {
+  async execute(userId: string): Promise<{ walletId: string; balance: number; currency: string; hasArrears: boolean; arrearsAmount: number }> {
     const wallet = await this.walletRepo.findByUserId(userId);
-    if (!wallet) return { walletId: '', balance: 0, currency: 'VND' };
+    if (!wallet) return { walletId: '', balance: 0, currency: 'VND', hasArrears: false, arrearsAmount: 0 };
     const balance = await this.walletRepo.getBalance(wallet.id);
-    return { walletId: wallet.id, balance, currency: wallet.currency };
+
+    // Treat unpaid/overdue invoices as arrears
+    const unpaidInvoices = await this.invoiceRepo.find({
+      where: [
+        { userId, status: 'unpaid' },
+        { userId, status: 'overdue' },
+      ],
+    });
+
+    const hasArrears = unpaidInvoices.length > 0;
+    const arrearsAmount = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
+
+    return {
+      walletId: wallet.id,
+      balance,
+      currency: wallet.currency,
+      hasArrears,
+      arrearsAmount,
+    };
   }
 }
 
@@ -541,6 +574,80 @@ export class TransactionReconciliationJob {
     }
 
     this.logger.log(`Reconciliation complete: cancelled ${stuckTxns.length} stuck transactions`);
+  }
+}
+
+
+@Injectable()
+export class PayArrearsUseCase {
+  private readonly logger = new Logger(PayArrearsUseCase.name);
+
+  constructor(
+    @Inject(WALLET_REPOSITORY)      private readonly walletRepo: IWalletRepository,
+    @Inject(TRANSACTION_REPOSITORY) private readonly txRepo: ITransactionRepository,
+    @Inject(EVENT_BUS)              private readonly eventBus: IPaymentEventBus,
+    private readonly dataSource: DataSource,
+    @InjectRepository(InvoiceOrmEntity)
+    private readonly invoiceRepo: Repository<InvoiceOrmEntity>,
+  ) {}
+
+  async execute(cmd: { userId: string }): Promise<{ success: boolean; clearedAmount: number }> {
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const wallet = await this.walletRepo.findByUserId(cmd.userId);
+      if (!wallet) throw new Error('Wallet not found');
+
+      // Lock wallet row
+      await this.walletRepo.lockForUpdate(wallet.id, manager);
+
+      // Find all unpaid/overdue invoices
+      const unpaidInvoices = await manager.find(InvoiceOrmEntity, {
+        where: [
+          { userId: cmd.userId, status: 'unpaid' },
+          { userId: cmd.userId, status: 'overdue' },
+        ],
+      });
+
+      if (unpaidInvoices.length === 0) {
+        return { success: true, clearedAmount: 0 };
+      }
+
+      const totalArrears = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
+      const balance = await this.walletRepo.getBalance(wallet.id, manager);
+
+      if (balance < totalArrears) {
+        throw new WalletDomainException(`Insufficient balance to pay arrears. Required: ${totalArrears}, Available: ${balance}`);
+      }
+
+      // Create transaction
+      const txn = Transaction.create({
+        userId:      cmd.userId,
+        type:        'payment',
+        amount:      totalArrears,
+        method:      'wallet',
+        relatedId:   unpaidInvoices[0].id,
+        relatedType: 'charging_session',
+      });
+      await this.txRepo.save(txn, manager);
+
+      // Debit wallet
+      const balanceAfter = await this.walletRepo.debit(wallet.id, txn.id, totalArrears, manager);
+
+      txn.complete();
+      await this.txRepo.save(txn, manager);
+
+      // Mark invoices as paid
+      for (const invoice of unpaidInvoices) {
+        invoice.status = 'paid';
+        await manager.save(InvoiceOrmEntity, invoice);
+      }
+
+      // Publish WalletArrearsClearedEvent
+      const clearEvent = new WalletArrearsClearedEvent(cmd.userId, wallet.id);
+      await this.eventBus.publishAll([clearEvent], manager);
+
+      this.logger.log(`Arrears settled: user=${cmd.userId} amount=${totalArrears} balance=${balanceAfter}`);
+      return { success: true, clearedAmount: totalArrears };
+    });
   }
 }
 

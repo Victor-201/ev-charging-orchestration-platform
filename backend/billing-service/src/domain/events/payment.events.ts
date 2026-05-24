@@ -66,7 +66,7 @@ export class WalletArrearsClearedEvent extends PaymentDomainEvent {
 
 /** Emitted by billing-service when wallet deduction succeeds (session.reserved consumed). */
 export class BillingDeductedEvent extends PaymentDomainEvent {
-  readonly eventType = 'billing.deducted_v1';
+  readonly eventType = 'billing.deducted';
   constructor(
     public readonly bookingId: string,
     public readonly userId: string,
@@ -78,7 +78,7 @@ export class BillingDeductedEvent extends PaymentDomainEvent {
 
 /** Emitted by billing-service when wallet deduction fails — triggers session-service compensation. */
 export class BillingDeductionFailedEvent extends PaymentDomainEvent {
-  readonly eventType = 'billing.deduction_failed_v1';
+  readonly eventType = 'billing.deduction_failed';
   constructor(
     public readonly bookingId: string,
     public readonly userId: string,
@@ -94,7 +94,7 @@ export class BillingDeductionFailedEvent extends PaymentDomainEvent {
  * Informs the user about penalties for occupying the charger beyond the allowed time.
  */
 export class IdleFeeChargedEvent extends PaymentDomainEvent {
-  readonly eventType = 'billing.idle_fee_charged_v1';
+  readonly eventType = 'billing.idle_fee_charged';
   constructor(
     public readonly sessionId: string,
     public readonly userId: string,
@@ -111,7 +111,7 @@ export class IdleFeeChargedEvent extends PaymentDomainEvent {
  * Notification-service informs the user to ensure transparency regarding the extra deduction.
  */
 export class ExtraChargeDebitedEvent extends PaymentDomainEvent {
-  readonly eventType = 'billing.extra_charge_v1';
+  readonly eventType = 'billing.extra_charge';
   constructor(
     public readonly sessionId: string,
     public readonly userId: string,
@@ -127,7 +127,7 @@ export class ExtraChargeDebitedEvent extends PaymentDomainEvent {
  * Notification-service informs the user about the refunded amount.
  */
 export class RefundIssuedEvent extends PaymentDomainEvent {
-  readonly eventType = 'billing.refund_issued_v1';
+  readonly eventType = 'billing.refund_issued';
   constructor(
     public readonly sessionId: string,
     public readonly userId: string,
