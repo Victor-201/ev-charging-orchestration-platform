@@ -49,7 +49,7 @@ function buildOutboxEntry(
     eventType:     event.eventType,
     payload:       { ...event } as object,
     status:        'pending',
-    publishedAt:   null,
+    processedAt:   null,
   });
 }
 
@@ -408,7 +408,7 @@ export class RecordTelemetryUseCase {
         eventType:     event.eventType,
         payload:       { ...event } as object,
         status:        'pending',
-        publishedAt:   null,
+        processedAt:   null,
       }),
     );
 
@@ -460,7 +460,7 @@ export class BookingConfirmedConsumer {
     exchange: 'ev.charging',
     routingKey: 'booking.confirmed',
     queue: 'charging-ctrl.booking.confirmed',
-    queueOptions: { durable: true },
+    queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
     eventId: string;
@@ -524,7 +524,7 @@ export class PaymentCompletedConsumer {
     exchange: 'ev.charging',
     routingKey: 'payment.completed',
     queue: 'charging-ctrl.payment.completed',
-    queueOptions: { durable: true },
+    queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handle(payload: {
     eventId?: string;

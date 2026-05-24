@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reflector } from '@nestjs/core';
-import { UserDebtReadModelOrmEntity } from '../../infrastructure/persistence/typeorm/entities/booking.orm-entities';
+import { UserDebtReadModelOrmEntity } from '../../infrastructure/persistence/typeorm/entities/session.orm-entities';
 
 export const SKIP_ARREARS_CHECK = 'skipArrearsCheck';
 

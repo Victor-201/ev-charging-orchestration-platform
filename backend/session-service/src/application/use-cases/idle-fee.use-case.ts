@@ -141,7 +141,7 @@ export class StoppedSessionBillingJob {
           eventType:     event.eventType,
           payload:       { ...event } as object,
           status:        'pending',
-          publishedAt:   null,
+          processedAt:   null,
         }),
       );
 

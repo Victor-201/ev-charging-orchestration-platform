@@ -23,7 +23,7 @@ function buildOutboxEntry(
     eventType:     event.eventType,
     payload:       { ...event } as object,
     status:        'pending',
-    publishedAt:   null,
+    processedAt:   null,
   });
 }
 

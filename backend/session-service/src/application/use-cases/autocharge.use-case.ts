@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -26,7 +25,7 @@ function buildOutboxEntry(
     eventType:     event.eventType,
     payload:       { ...event } as object,
     status:        'pending',
-    publishedAt:   null,
+    processedAt:   null,
   });
 }
 
@@ -55,7 +54,6 @@ export class AutoChargeUseCase {
     private readonly outboxRepo: Repository<OutboxOrmEntity>,
     @InjectRepository(ProcessedEventOrmEntity)
     private readonly peRepo: Repository<ProcessedEventOrmEntity>,
-    private readonly amqp: AmqpConnection,
     private readonly ds: DataSource,
   ) {}
 
