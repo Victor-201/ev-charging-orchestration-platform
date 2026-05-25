@@ -6,6 +6,9 @@ import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import 'mfa_setup_wizard_screen.dart';
 
 /// Security Settings Screen
@@ -19,9 +22,12 @@ class SecuritySettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Bảo mật'),
+      child: LiquidGlassScaffold(
+        extendBodyBehindAppBar: true,
+        appBar: EVHeader(
+          title: 'Bảo mật',
+          showBackButton: true,
+          onBackTapped: () => Navigator.pop(context),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Mật khẩu'),
@@ -30,16 +36,19 @@ class SecuritySettingsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: BlocConsumer<ProfileBloc, ProfileState>(
-          listener: (context, state) {
-            if (state is ProfileError) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.error));
-            if (state is ProfileSuccess) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.chargerAvailable));
-          },
-          builder: (context, state) => TabBarView(children: [
-            _ChangePasswordTab(),
-            _MFATab(state: state),
-            _SessionsTab(state: state),
-          ]),
+        child: SafeArea(
+          bottom: false,
+          child: BlocConsumer<ProfileBloc, ProfileState>(
+            listener: (context, state) {
+              if (state is ProfileError) EVToast.show(context, message: state.message, isError: true);
+              if (state is ProfileSuccess) EVToast.show(context, message: state.message, isError: false);
+            },
+            builder: (context, state) => TabBarView(children: [
+              _ChangePasswordTab(),
+              _MFATab(state: state),
+              _SessionsTab(state: state),
+            ]),
+          ),
         ),
       ),
     );
@@ -62,7 +71,12 @@ class _ChangePasswordTabState extends State<_ChangePasswordTab> {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(AppSpacing.xl),
+    padding: EdgeInsets.fromLTRB(
+      AppLayout.sidePadding,
+      AppLayout.topPadding(context) + 48.0,
+      AppLayout.sidePadding,
+      AppLayout.bottomPadding(context),
+    ),
     child: Form(
       key: _formKey,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -119,8 +133,13 @@ class _MFATab extends StatelessWidget {
     final profile = state is ProfileLoaded ? (state as ProfileLoaded).profile : null;
     final mfaEnabled = profile?.mfaEnabled ?? false;
 
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.sidePadding,
+        AppLayout.topPadding(context) + 48.0,
+        AppLayout.sidePadding,
+        AppLayout.bottomPadding(context),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -190,7 +209,12 @@ class _SessionsTabState extends State<_SessionsTab> {
     return Column(children: [
       if (sessions.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(
+            AppLayout.sidePadding,
+            AppLayout.topPadding(context) + 48.0,
+            AppLayout.sidePadding,
+            0,
+          ),
           child: EVButton(
             label: 'Đăng xuất tất cả thiết bị',
             variant: EVButtonVariant.danger,
@@ -200,9 +224,17 @@ class _SessionsTabState extends State<_SessionsTab> {
         ),
       Expanded(
         child: sessions.isEmpty
-            ? const Center(child: Text('Không có phiên đăng nhập nào'))
+            ? Padding(
+                padding: EdgeInsets.only(top: !sessions.isNotEmpty ? AppLayout.topPadding(context) + 48.0 : 0),
+                child: const Center(child: Text('Không có phiên đăng nhập nào')),
+              )
             : ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: EdgeInsets.fromLTRB(
+                  AppLayout.sidePadding,
+                  sessions.isNotEmpty ? AppSpacing.md : AppLayout.topPadding(context) + 48.0,
+                  AppLayout.sidePadding,
+                  AppLayout.bottomPadding(context),
+                ),
                 itemCount: sessions.length,
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (_, i) {

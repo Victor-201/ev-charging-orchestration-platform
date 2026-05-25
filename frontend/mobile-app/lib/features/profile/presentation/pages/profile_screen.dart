@@ -9,6 +9,7 @@ import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/design_system/widgets/glass_square.dart';
 import '../../../../core/design_system/widgets/liquid_glass_card.dart';
 import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import 'audit_log_screen.dart';
@@ -33,14 +34,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
-            );
+            EVToast.show(context, message: state.message, isError: true);
           }
           if (state is ProfileSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.chargerAvailable),
-            );
+            EVToast.show(context, message: state.message, isError: false);
           }
         },
         builder: (context, state) {

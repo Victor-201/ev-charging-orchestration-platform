@@ -7,6 +7,9 @@ import '../../domain/repositories/i_profile_repository.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 
 class MfaSetupWizardScreen extends StatefulWidget {
   final bool isCurrentlyEnabled;
@@ -62,9 +65,7 @@ class _MfaSetupWizardScreenState extends State<MfaSetupWizardScreen> {
     result.fold(
       (failure) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message), backgroundColor: AppColors.error),
-        );
+        EVToast.show(context, message: failure.message, isError: true);
       },
       (data) {
         setState(() {
@@ -87,9 +88,7 @@ class _MfaSetupWizardScreenState extends State<MfaSetupWizardScreen> {
     result.fold(
       (failure) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message), backgroundColor: AppColors.error),
-        );
+        EVToast.show(context, message: failure.message, isError: true);
         for (final c in _controllers) {
           c.clear();
         }
@@ -116,16 +115,12 @@ class _MfaSetupWizardScreenState extends State<MfaSetupWizardScreen> {
     result.fold(
       (failure) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message), backgroundColor: AppColors.error),
-        );
+        EVToast.show(context, message: failure.message, isError: true);
       },
       (_) {
         setState(() => _isLoading = false);
         context.read<ProfileBloc>().add(const ProfileLoad());
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã tắt bảo mật 2 lớp thành công.'), backgroundColor: AppColors.chargerAvailable),
-        );
+        EVToast.show(context, message: 'Đã tắt bảo mật 2 lớp thành công.', isError: false);
         Navigator.pop(context);
       },
     );
@@ -135,20 +130,22 @@ class _MfaSetupWizardScreenState extends State<MfaSetupWizardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isCurrentlyEnabled ? 'Tắt bảo mật 2 lớp' : 'Thiết lập bảo mật 2 lớp'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
+    return LiquidGlassScaffold(
+      extendBodyBehindAppBar: true,
+      appBar: EVHeader(
+        title: widget.isCurrentlyEnabled ? 'Tắt bảo mật 2 lớp' : 'Thiết lập bảo mật 2 lớp',
+        showBackButton: true,
+        onBackTapped: () => Navigator.pop(context),
       ),
-      body: _isLoading && _secret == null
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: widget.isCurrentlyEnabled ? _buildDisableFlow(theme) : _buildSetupFlow(theme),
-            ),
+      child: SafeArea(
+        bottom: false,
+        child: _isLoading && _secret == null
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : SingleChildScrollView(
+                padding: AppLayout.paddingWithHeaderAndNavbar(context),
+                child: widget.isCurrentlyEnabled ? _buildDisableFlow(theme) : _buildSetupFlow(theme),
+              ),
+      ),
     );
   }
 

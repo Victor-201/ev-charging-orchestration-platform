@@ -5,6 +5,9 @@ import '../../domain/entities/profile_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import 'vehicle_audit_log_screen.dart';
 
 /// Vehicles Registration and Management Screen
@@ -25,56 +28,62 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Phương tiện của tôi'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () => _showAddVehicleDialog(context),
-          ),
-        ],
+    return LiquidGlassScaffold(
+      extendBodyBehindAppBar: true,
+      appBar: EVHeader(
+        title: 'Phương tiện của tôi',
+        showBackButton: true,
+        onBackTapped: () => Navigator.pop(context),
+        action: IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: () => _showAddVehicleDialog(context),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
       ),
-      body: BlocConsumer<ProfileBloc, ProfileState>(
-        listener: (context, state) {
-          if (state is ProfileError) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.error));
-          if (state is ProfileSuccess) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.chargerAvailable));
-        },
-        builder: (context, state) {
-          if (state is ProfileLoading) return const Center(child: CircularProgressIndicator());
-          final vehicles = state is ProfileLoaded ? state.vehicles : <VehicleEntity>[];
-          if (vehicles.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.electric_car_outlined, size: 72, color: AppColors.grey400),
-              const SizedBox(height: AppSpacing.lg),
-              Text('Chưa có phương tiện', style: AppTypography.headingMd.copyWith(color: AppColors.grey600)),
-              const SizedBox(height: AppSpacing.xl),
-              EVButton(label: 'Thêm phương tiện', icon: Icons.add, onPressed: () => _showAddVehicleDialog(context)),
-            ]));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: vehicles.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (_, i) => _VehicleCard(
-              vehicle: vehicles[i],
-              onSetPrimary: () => context.read<ProfileBloc>().add(VehicleSetPrimary(id: vehicles[i].id)),
-              onDelete: () => _confirmDelete(context, vehicles[i]),
-              onAutoCharge: () => _showAutoChargeDialog(context, vehicles[i]),
-              onHistory: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VehicleAuditLogScreen(
-                      vehicleId: vehicles[i].id,
-                      plateNumber: vehicles[i].plateNumber,
+      child: SafeArea(
+        bottom: false,
+        child: BlocConsumer<ProfileBloc, ProfileState>(
+          listener: (context, state) {
+            if (state is ProfileError) EVToast.show(context, message: state.message, isError: true);
+            if (state is ProfileSuccess) EVToast.show(context, message: state.message, isError: false);
+          },
+          builder: (context, state) {
+            if (state is ProfileLoading) return const Center(child: CircularProgressIndicator());
+            final vehicles = state is ProfileLoaded ? state.vehicles : <VehicleEntity>[];
+            if (vehicles.isEmpty) {
+              return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.electric_car_outlined, size: 72, color: AppColors.grey400),
+                const SizedBox(height: AppSpacing.lg),
+                Text('Chưa có phương tiện', style: AppTypography.headingMd.copyWith(color: AppColors.grey600)),
+                const SizedBox(height: AppSpacing.xl),
+                EVButton(label: 'Thêm phương tiện', icon: Icons.add, onPressed: () => _showAddVehicleDialog(context)),
+              ]));
+            }
+            return ListView.separated(
+              padding: AppLayout.paddingWithHeaderAndNavbar(context),
+              itemCount: vehicles.length,
+              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (_, i) => _VehicleCard(
+                vehicle: vehicles[i],
+                onSetPrimary: () => context.read<ProfileBloc>().add(VehicleSetPrimary(id: vehicles[i].id)),
+                onDelete: () => _confirmDelete(context, vehicles[i]),
+                onAutoCharge: () => _showAutoChargeDialog(context, vehicles[i]),
+                onHistory: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => VehicleAuditLogScreen(
+                        vehicleId: vehicles[i].id,
+                        plateNumber: vehicles[i].plateNumber,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -5,6 +5,8 @@ import '../../domain/entities/profile_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
 
 class VehicleAuditLogScreen extends StatefulWidget {
   final String vehicleId;
@@ -29,48 +31,50 @@ class _VehicleAuditLogScreenState extends State<VehicleAuditLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Nhật ký xe ${widget.plateNumber}'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
+    return LiquidGlassScaffold(
+      extendBodyBehindAppBar: true,
+      appBar: EVHeader(
+        title: 'Nhật ký xe ${widget.plateNumber}',
+        showBackButton: true,
+        onBackTapped: () => Navigator.pop(context),
       ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
-        builder: (context, state) {
-          if (state is ProfileLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-          }
-
-          final logs = state is ProfileLoaded ? state.vehicleAuditLogs : <AuditLogEntity>[];
-
-          if (logs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history_toggle_off, size: 64, color: AppColors.grey400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Không có nhật ký hoạt động nào cho xe này',
-                    style: AppTypography.bodyMd.copyWith(color: AppColors.grey600),
-                  ),
-                ],
-              ),
+      child: SafeArea(
+        bottom: false,
+        child: BlocBuilder<ProfileBloc, ProfileState>(
+          builder: (context, state) {
+            if (state is ProfileLoading) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            }
+  
+            final logs = state is ProfileLoaded ? state.vehicleAuditLogs : <AuditLogEntity>[];
+  
+            if (logs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.history_toggle_off, size: 64, color: AppColors.grey400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Không có nhật ký hoạt động nào cho xe này',
+                      style: AppTypography.bodyMd.copyWith(color: AppColors.grey600),
+                    ),
+                  ],
+                ),
+              );
+            }
+  
+            return ListView.builder(
+              padding: AppLayout.paddingWithHeaderAndNavbar(context),
+              itemCount: logs.length,
+              itemBuilder: (context, index) {
+                final log = logs[index];
+                final isLast = index == logs.length - 1;
+                return _buildTimelineItem(context, log, isLast);
+              },
             );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            itemCount: logs.length,
-            itemBuilder: (context, index) {
-              final log = logs[index];
-              final isLast = index == logs.length - 1;
-              return _buildTimelineItem(context, log, isLast);
-            },
-          );
-        },
+          },
+        ),
       ),
     );
   }
