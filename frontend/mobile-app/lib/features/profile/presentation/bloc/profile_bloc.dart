@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/profile_entity.dart';
@@ -13,6 +14,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       : _repository = repository, super(const ProfileInitial()) {
     on<ProfileLoad>(_onLoad);
     on<ProfileUpdate>(_onUpdate);
+    on<ProfileUploadAvatar>(_onUploadAvatar);
     on<ProfileChangePassword>(_onChangePassword);
     on<ProfileLoadSessions>(_onLoadSessions);
     on<ProfileRevokeSession>(_onRevokeSession);
@@ -29,26 +31,81 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   Future<void> _onLoad(ProfileLoad e, Emitter<ProfileState> emit) async {
     emit(const ProfileLoading());
     final result = await _repository.getProfile();
-    result.fold(
-      (f) => emit(ProfileError(message: f.message)),
-      (p) => emit(ProfileLoaded(profile: p)),
+    await result.fold(
+      (f) async => emit(ProfileError(message: f.message)),
+      (p) async {
+        final vehicleResult = await _repository.getVehicles();
+        final vehicles = vehicleResult.fold(
+          (f) => <VehicleEntity>[],
+          (v) => v,
+        );
+        emit(ProfileLoaded(profile: p, vehicles: vehicles));
+      },
     );
   }
 
   Future<void> _onUpdate(ProfileUpdate e, Emitter<ProfileState> emit) async {
     final current = state;
     emit(const ProfileLoading());
-    // updateProfile only accepts avatarUrl and address
-    final result = await _repository.updateProfile(avatarUrl: e.avatarUrl, address: e.address);
+
+    String? avatarUrl = e.avatarUrl;
+
+    // Upload avatar first if new bytes provided
+    if (e.avatarBytes != null && e.avatarFilename != null) {
+      final uploadResult = await _repository.uploadAvatar(e.avatarBytes!, e.avatarFilename!);
+      final uploaded = uploadResult.fold<String?>(
+        (f) => null,
+        (url) => url,
+      );
+      if (uploaded == null) {
+        emit(const ProfileError(message: 'Tải ảnh đại diện thất bại'));
+        return;
+      }
+      avatarUrl = uploaded;
+    }
+
+    final result = await _repository.updateProfile(
+      avatarUrl: avatarUrl,
+      address: e.address,
+      phone: e.phone,
+      dateOfBirth: e.dateOfBirth,
+    );
     result.fold(
       (f) => emit(ProfileError(message: f.message)),
       (p) {
         if (current is ProfileLoaded) {
-          emit(current.copyWith(profile: p));
+          final mergedProfile = UserProfileEntity(
+            id: current.profile.id,
+            email: current.profile.email,
+            fullName: current.profile.fullName,
+            phone: p.phone ?? current.profile.phone,
+            dateOfBirth: p.dateOfBirth ?? current.profile.dateOfBirth,
+            role: current.profile.role,
+            mfaEnabled: current.profile.mfaEnabled,
+            status: current.profile.status,
+            emailVerified: current.profile.emailVerified,
+            avatarUrl: p.avatarUrl ?? current.profile.avatarUrl,
+            address: p.address ?? current.profile.address,
+            hasArrears: current.profile.hasArrears,
+            arrearsAmount: current.profile.arrearsAmount,
+          );
+          emit(current.copyWith(profile: mergedProfile));
         } else {
           emit(ProfileLoaded(profile: p));
         }
         emit(const ProfileSuccess(message: 'Cập nhật hồ sơ thành công'));
+        add(const ProfileLoad());
+      },
+    );
+  }
+
+  Future<void> _onUploadAvatar(ProfileUploadAvatar e, Emitter<ProfileState> emit) async {
+    final result = await _repository.uploadAvatar(e.bytes, e.filename);
+    await result.fold(
+      (f) async => emit(ProfileError(message: f.message)),
+      (_) async {
+        emit(const ProfileSuccess(message: 'Cập nhật ảnh đại diện thành công'));
+        add(const ProfileLoad());
       },
     );
   }
@@ -94,7 +151,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }
 
   Future<void> _onVehicleAdd(VehicleAdd e, Emitter<ProfileState> emit) async {
-    // addVehicle uses modelName/year/color — matches POST /users/me/vehicles API
+    final current = state;
+    if (current is! ProfileLoaded) return;
+
+    emit(const ProfileLoading());
     final result = await _repository.addVehicle(
       plateNumber: e.plateNumber,
       modelName: e.modelName,
@@ -105,9 +165,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       macAddress: e.macAddress,
       vinNumber: e.vinNumber,
     );
-    result.fold(
-      (f) => emit(ProfileError(message: f.message)),
-      (_) { add(const VehicleLoad()); emit(const ProfileSuccess(message: 'Đã thêm phương tiện')); },
+    
+    await result.fold(
+      (f) async => emit(ProfileError(message: f.message)),
+      (_) async {
+        final vehicleResult = await _repository.getVehicles();
+        vehicleResult.fold(
+          (f) => emit(ProfileError(message: f.message)),
+          (vehicles) {
+            emit(current.copyWith(vehicles: vehicles));
+            emit(const ProfileSuccess(message: 'Đã thêm phương tiện'));
+            emit(current.copyWith(vehicles: vehicles));
+          },
+        );
+      },
     );
   }
 
@@ -122,16 +193,30 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }
 
   Future<void> _onVehicleSetAutoCharge(VehicleSetAutoCharge e, Emitter<ProfileState> emit) async {
-    // setAutoCharge accepts macAddress, vinNumber, and autochargeEnabled
+    final current = state;
+    if (current is! ProfileLoaded) return;
+
+    emit(const ProfileLoading());
     final result = await _repository.setAutoCharge(
       e.vehicleId,
       macAddress: e.macAddress,
       vinNumber: e.vinNumber,
       autochargeEnabled: e.autochargeEnabled,
     );
-    result.fold(
-      (f) => emit(ProfileError(message: f.message)),
-      (_) { add(const VehicleLoad()); emit(const ProfileSuccess(message: 'Đã cấu hình AutoCharge')); },
+    
+    await result.fold(
+      (f) async => emit(ProfileError(message: f.message)),
+      (_) async {
+        final vehicleResult = await _repository.getVehicles();
+        vehicleResult.fold(
+          (f) => emit(ProfileError(message: f.message)),
+          (vehicles) {
+            emit(current.copyWith(vehicles: vehicles));
+            emit(const ProfileSuccess(message: 'Đã cấu hình AutoCharge'));
+            emit(current.copyWith(vehicles: vehicles));
+          },
+        );
+      },
     );
   }
 
