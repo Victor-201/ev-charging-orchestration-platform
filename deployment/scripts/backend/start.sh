@@ -17,7 +17,6 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
-NGROK_LOG="$(cd "$COMPOSE_DIR/.." && pwd)/ngrok.log"
 COMPOSE_FILE="$COMPOSE_DIR/docker-compose.yml"
 ENV_FILE="$COMPOSE_DIR/.env"
 NGROK_DOMAIN="impeditive-incredible-jordy.ngrok-free.dev"
@@ -93,15 +92,8 @@ if [[ "$NGROK" == "true" ]]; then
     sleep 1
     echo -e "${CYAN}[NGROK] Starting tunnel (domain: $NGROK_DOMAIN)...${NC}"
     
-    # Resolve Windows path for ngrok.log to redirect native Windows process logs
-    log_win_path=$(wslpath -w "$NGROK_LOG" 2>/dev/null || echo "E:/ProjectHub/ev-charging-orchestration-platform/deployment/ngrok.log")
-    log_win_path="${log_win_path//\\//}"
-    
-    # Clear log file before starting
-    > "$NGROK_LOG"
-    
     # Run ngrok.exe via Windows PowerShell to ensure it detaches completely and survives WSL terminal close
-    powershell.exe -NoProfile -Command "Start-Process ngrok.exe -ArgumentList 'http --domain=$NGROK_DOMAIN --log=stdout 8000' -RedirectStandardOutput '$log_win_path' -NoNewWindow" </dev/null &>/dev/null &
+    powershell.exe -NoProfile -Command "Start-Process ngrok.exe -ArgumentList 'http --domain=$NGROK_DOMAIN 8000' -NoNewWindow" </dev/null &>/dev/null &
     
     echo -e "${GREEN}[NGROK] Tunnel started in background.${NC}"
 fi

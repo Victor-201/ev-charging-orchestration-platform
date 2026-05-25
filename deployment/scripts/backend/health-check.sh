@@ -123,8 +123,7 @@ FAILED=$((FAILED + ep_failed))
 
 echo -e "\n${YELLOW}[4/4] Ngrok Tunnel...${NC}"
 if tasklist.exe /FI "IMAGENAME eq ngrok.exe" 2>/dev/null | grep -q "ngrok.exe"; then
-    log_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../ngrok.log"
-    pub_url=$(grep -o "url=https://[a-zA-Z0-9.-]*" "$log_file" 2>/dev/null | cut -d= -f2 | tail -n 1)
+    pub_url=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"[^"]*' | cut -d'"' -f4 | tail -n 1)
     if [[ -n "$pub_url" ]]; then
         echo -e "  [${GREEN}OK${NC}]   Ngrok tunnel active  ($pub_url)"
     else

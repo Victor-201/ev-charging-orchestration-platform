@@ -346,7 +346,7 @@ function Sub-Logs {
         Write-MenuItem "2" "Databases"        Yellow
         Write-MenuItem "3" "Infrastructure"   Magenta
         Write-MenuItem "4" "Select Service..." Cyan
-        Write-MenuItem "5" "Ngrok Traffic Logs" DarkYellow
+        Write-MenuItem "5" "Ngrok Tunnel Info" DarkYellow
         Write-Host ""
         Show-Separator
         Write-MenuItem -IsBack
@@ -359,11 +359,23 @@ function Sub-Logs {
             "3" { Run-WSL "logs.sh" "--infra" }
             "4" { Sub-Log-Service-Selector }
             "5" { 
-                $logPath = "$ProjectRoot\deployment\ngrok.log"
-                if (-not (Test-Path $logPath)) {
-                    $null = New-Item -Path $logPath -ItemType File -Force
+                Show-Header "NGROK TUNNELS"
+                try {
+                    $tunnels = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels" -ErrorAction Stop
+                    if ($tunnels.tunnels) {
+                        foreach ($t in $tunnels.tunnels) {
+                            Write-Host "  Name:       $($t.name)" -ForegroundColor Green
+                            Write-Host "  URL:        $($t.public_url)" -ForegroundColor Yellow
+                            Write-Host "  Forward to: $($t.config.addr)" -ForegroundColor White
+                            Write-Host ""
+                        }
+                    } else {
+                        Write-Host "  [!] No active tunnels found." -ForegroundColor Yellow
+                    }
+                } catch {
+                    Write-Host "  [!] Ngrok API is not reachable. Is Ngrok running?" -ForegroundColor Red
                 }
-                Start-Process powershell -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", "Set-Location '$ProjectRoot'; Write-Host '=== NGROK REALTIME TRAFFIC LOGS ===' -ForegroundColor Yellow; Get-Content -Path '$logPath' -Wait -Tail 50"
+                Pause-Key
             }
             "0" { return }
         }
