@@ -116,19 +116,26 @@ class WalletRepositoryImpl implements IWalletRepository {
   }
 
   TransactionEntity _parseTransaction(Map<String, dynamic> data) {
+    final rawMeta = data['meta'] ?? data['_meta'];
+    final Map<String, dynamic>? parsedMeta = rawMeta is Map<String, dynamic>
+        ? rawMeta
+        : null;
+
     return TransactionEntity(
       id: data['id']?.toString() ?? '',
-      // API types are lowercase (topup/payment/refund) — normalise to UPPER for UI
       type: (data['type']?.toString() ?? 'payment').toUpperCase(),
-      // PostgreSQL NUMERIC columns may arrive as String — parse safely
       amount: _parseNum(data['amount']) ?? 0,
-      status: (data['status']?.toString() ?? 'PENDING').toUpperCase(),
+      status: (data['status']?.toString() ?? data['_status']?.toString() ?? 'PENDING').toUpperCase(),
       createdAt: data['createdAt'] != null
           ? DateTime.parse(data['createdAt'].toString())
           : DateTime.now(),
-      // API returns 'referenceId' (booking/session uuid), use as description fallback
       description: (data['description'] ?? data['referenceId'])?.toString(),
       sessionId: data['sessionId']?.toString(),
+      method: (data['method']?.toString() ?? 'wallet'),
+      relatedId: (data['relatedId'] ?? data['_relatedId'])?.toString(),
+      relatedType: (data['relatedType'] ?? data['_relatedType'])?.toString(),
+      referenceCode: (data['referenceCode'] ?? data['_referenceCode'])?.toString(),
+      meta: parsedMeta,
     );
   }
 

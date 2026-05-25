@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../bloc/wallet_bloc.dart';
 import '../../domain/entities/wallet_entity.dart';
+import '../widgets/transaction_detail_sheet.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
@@ -62,6 +63,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
 
   Widget _buildContent(BuildContext context, WalletLoaded state) {
     final txList = state.transactions.where((tx) {
+      if (tx.status != 'COMPLETED') return false;
       if (_txFilter == 'ALL') return true;
       return tx.type == _txFilter;
     }).toList();
@@ -558,57 +560,66 @@ class _TransactionTile extends StatelessWidget {
     final color = isCredit ? AppColors.chargerAvailable : AppColors.error;
     final sign = isCredit ? '+' : '-';
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.5),
+    return GestureDetector(
+      onTap: () => TransactionDetailSheet.show(context, tx: tx),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.5),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCredit ? Icons.arrow_downward_outlined : Icons.arrow_upward_outlined,
+                color: color,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              isCredit ? Icons.arrow_downward_outlined : Icons.arrow_upward_outlined,
-              color: color,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tx.description ?? _translateType(tx.type),
+                    style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    ev_date.DateUtils.formatDateTime(tx.createdAt),
+                    style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '$sign${VndFormatter.format(tx.amount)}',
+              style: AppTypography.bodyMd.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark ? Colors.white38 : Colors.black26,
               size: 20,
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tx.description ?? _translateType(tx.type),
-                  style: AppTypography.bodyMd.copyWith(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  ev_date.DateUtils.formatDateTime(tx.createdAt),
-                  style: AppTypography.caption.copyWith(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '$sign${VndFormatter.format(tx.amount)}',
-            style: AppTypography.bodyMd.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

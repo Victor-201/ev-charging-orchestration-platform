@@ -25,6 +25,11 @@ class TransactionEntity extends Equatable {
   final DateTime createdAt;
   final String? description;
   final String? sessionId;
+  final String method;
+  final String? relatedId;
+  final String? relatedType;
+  final String? referenceCode;
+  final Map<String, dynamic>? meta;
 
   const TransactionEntity({
     required this.id,
@@ -34,13 +39,27 @@ class TransactionEntity extends Equatable {
     required this.createdAt,
     this.description,
     this.sessionId,
+    this.method = 'wallet',
+    this.relatedId,
+    this.relatedType,
+    this.referenceCode,
+    this.meta,
   });
 
   bool get isCredit =>
       type == 'TOPUP' || type == 'REFUND';
 
   @override
-  List<Object?> get props => [id, type, amount, status];
+  List<Object?> get props => [
+        id,
+        type,
+        amount,
+        status,
+        method,
+        relatedId,
+        relatedType,
+        referenceCode,
+      ];
 }
 
 class TopUpResultEntity extends Equatable {
