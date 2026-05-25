@@ -240,7 +240,7 @@ abstract class AppLayout {
       sidePadding,
       topPadding(context),
       sidePadding,
-      sidePadding,
+      0.0,
     );
   }
 
@@ -258,7 +258,7 @@ abstract class AppLayout {
   static EdgeInsets paddingWithNavbar(BuildContext context) {
     return EdgeInsets.fromLTRB(
       sidePadding,
-      sidePadding,
+      0.0,
       sidePadding,
       bottomPadding(context),
     );

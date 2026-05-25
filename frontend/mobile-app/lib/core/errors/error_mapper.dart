@@ -122,6 +122,12 @@ class ErrorMapper {
     if (lowerMsg.contains('vehicle model not found or invalid')) {
       return 'Mẫu xe không hợp lệ hoặc không được hỗ trợ';
     }
+    if (lowerMsg.contains('mac address') && lowerMsg.contains('already registered')) {
+      return 'Địa chỉ MAC này đã được đăng ký cho một phương tiện khác';
+    }
+    if (lowerMsg.contains('vin number') && lowerMsg.contains('already registered')) {
+      return 'Số VIN này đã được đăng ký cho một phương tiện khác';
+    }
 
     // Billing & Wallet (billing-service)
     if (lowerMsg.contains('insufficient balance')) {

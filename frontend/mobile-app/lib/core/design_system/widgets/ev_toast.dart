@@ -48,7 +48,7 @@ class EVToast {
       builder: (context) {
         final topPadding = MediaQuery.of(context).padding.top;
         return Positioned(
-          top: topPadding + 16,
+          top: topPadding + AppLayout.headerHeight + 16,
           left: 20,
           right: 20,
           child: _ToastWidget(
