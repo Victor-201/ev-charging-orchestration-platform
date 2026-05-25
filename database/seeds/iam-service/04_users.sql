@@ -12,7 +12,7 @@ BEGIN;
 INSERT INTO users (id, email, full_name, phone, date_of_birth, password_hash, status, email_verified, mfa_enabled, failed_login_count) VALUES
   ('a0a0a0a0-0000-4000-8000-000000000001', 'admin01@evcharging.vn', 'Admin Quản Trị 1', '0846655113', '1990-01-01', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('a0a0a0a0-0000-4000-8000-000000000002', 'admin02@evcharging.vn', 'Admin Quản Trị 2', '0840211596', '1990-01-01', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
-  ('11111111-0000-4000-8000-000000000001', 'vanthang@gmail.com', 'Nguyễn Văn Thắng', '0867652947', '1990-01-01', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
+  ('11111111-0000-4000-8000-000000000001', 'dotnhubotam@gmail.com', 'Nguyễn Văn Thắng', '0867652947', '1990-01-01', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000002', 'vanson@gmail.com', 'Trần Văn Sơn', '0881310573', '1991-02-02', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000003', 'vantuan@gmail.com', 'Lê Văn Tuấn', '0823222610', '1992-03-03', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000004', 'vanhoa@gmail.com', 'Phạm Văn Hòa', '0880461050', '1993-04-04', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
@@ -55,7 +55,7 @@ INSERT INTO users (id, email, full_name, phone, date_of_birth, password_hash, st
   ('11111111-0000-4000-8000-000000000041', 'quangtrung@gmail.com', 'Trịnh Quang Trung', '0872148323', '1990-05-13', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000042', 'quangdung@gmail.com', 'Đoàn Quang Dũng', '0896552402', '1991-06-14', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000043', 'quanghung@gmail.com', 'Lâm Quang Hùng', '0859326805', '1992-07-15', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
-  ('11111111-0000-4000-8000-000000000044', 'quangsang@gmail.com', 'Mai Quang Sang', '0854304281', '1993-08-16', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
+  ('11111111-0000-4000-8000-000000000044', 'quangsang@gmail.com', 'Mai Quang Sáng', '0854304281', '1993-08-16', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000045', 'thuquyen@gmail.com', 'Phùng Thu Quyên', '0895391304', '1994-09-17', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000046', 'thutuan@gmail.com', 'Tống Thu Tuấn', '0890024674', '1995-10-18', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),
   ('11111111-0000-4000-8000-000000000047', 'thuhoa@gmail.com', 'Nguyễn Thu Hoa', '0829676688', '1996-11-19', '$2b$10$VPk42B6xgQO4n4zTx5Aiae0xXMhk7plrPwLNB0OMj6nq33u8v3TGG', 'active', true, false, 0),

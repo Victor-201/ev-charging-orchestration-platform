@@ -10,7 +10,7 @@ BEGIN;
   TRUNCATE TABLE user_read_models CASCADE;
 
 INSERT INTO user_read_models (user_id, email, full_name, is_active) VALUES
-  ('11111111-0000-4000-8000-000000000001', 'vanthang@gmail.com', 'Nguyễn Văn Thắng', true),
+  ('11111111-0000-4000-8000-000000000001', 'dotnhubotam@gmail.com', 'Nguyễn Văn Thắng', true),
   ('11111111-0000-4000-8000-000000000002', 'vanson@gmail.com', 'Trần Văn Sơn', true),
   ('11111111-0000-4000-8000-000000000003', 'vantuan@gmail.com', 'Lê Văn Tuấn', true),
   ('11111111-0000-4000-8000-000000000004', 'vanhoa@gmail.com', 'Phạm Văn Hòa', true),
@@ -53,7 +53,7 @@ INSERT INTO user_read_models (user_id, email, full_name, is_active) VALUES
   ('11111111-0000-4000-8000-000000000041', 'quangtrung@gmail.com', 'Trịnh Quang Trung', true),
   ('11111111-0000-4000-8000-000000000042', 'quangdung@gmail.com', 'Đoàn Quang Dũng', true),
   ('11111111-0000-4000-8000-000000000043', 'quanghung@gmail.com', 'Lâm Quang Hùng', true),
-  ('11111111-0000-4000-8000-000000000044', 'quangsang@gmail.com', 'Mai Quang Sang', true),
+  ('11111111-0000-4000-8000-000000000044', 'quangsang@gmail.com', 'Mai Quang Sáng', true),
   ('11111111-0000-4000-8000-000000000045', 'thuquyen@gmail.com', 'Phùng Thu Quyên', true),
   ('11111111-0000-4000-8000-000000000046', 'thutuan@gmail.com', 'Tống Thu Tuấn', true),
   ('11111111-0000-4000-8000-000000000047', 'thuhoa@gmail.com', 'Nguyễn Thu Hoa', true),
