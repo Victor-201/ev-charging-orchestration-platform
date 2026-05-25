@@ -18,6 +18,7 @@ import '../../features/notification/data/repositories/notification_repository_im
 import '../../features/notification/domain/repositories/i_notification_repository.dart';
 import '../../features/profile/data/repositories/profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/i_profile_repository.dart';
+import '../services/cloudinary_service.dart';
 
 import '../../features/map/domain/usecases/get_stations_usecase.dart';
 import '../../features/map/domain/usecases/search_stations_usecase.dart';
@@ -52,6 +53,9 @@ Future<void> configureDependencies() async {
     DioClient(secureStorage: secureStorage),
     // onLogout is wired in _EVoltAppState.initState() to avoid circular deps
   );
+
+  // ── Cloud Storage Services ─────────────────────────────────────────
+  getIt.registerLazySingleton<CloudinaryService>(() => CloudinaryService());
 
   // ── Repositories ─────────────────────────────────────────────────────
   getIt.registerLazySingleton<IAuthRepository>(() =>

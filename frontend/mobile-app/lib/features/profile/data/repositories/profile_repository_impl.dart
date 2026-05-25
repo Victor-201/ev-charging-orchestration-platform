@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import '../../domain/entities/profile_entity.dart';
@@ -80,14 +81,32 @@ class ProfileRepositoryImpl implements IProfileRepository {
   Future<Either<Failure, UserProfileEntity>> updateProfile({
     String? avatarUrl,
     String? address,
+    String? phone,
+    String? dateOfBirth,
   }) async {
     try {
-      // PATCH /api/v1/users/me only accepts avatarUrl and address
       final r = await _client.patch(ApiPaths.userProfile, data: {
         if (avatarUrl != null) 'avatarUrl': avatarUrl,
         if (address != null) 'address': address,
+        if (phone != null) 'phone': phone,
+        if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
       });
       return Right(_parseProfile(_extract(r.data)));
+    } on DioException catch (e) { return Left(ErrorMapper.fromDioException(e)); }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadAvatar(Uint8List bytes, String filename) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+        ),
+      });
+      final r = await _client.post('${ApiPaths.userProfile}/avatar', data: formData);
+      final data = _extract(r.data);
+      return Right(data['avatarUrl'] as String);
     } on DioException catch (e) { return Left(ErrorMapper.fromDioException(e)); }
   }
 
@@ -249,12 +268,13 @@ class ProfileRepositoryImpl implements IProfileRepository {
         final d = e as Map<String, dynamic>;
         return AuditLogEntity(
           action: d['action']?.toString() ?? '',
-          changedAt: d['changedAt'] != null
-              ? DateTime.parse(d['changedAt'].toString())
-              : (d['createdAt'] != null ? DateTime.parse(d['createdAt'].toString()) : DateTime.now()),
-          details: d['details'] is Map<String, dynamic>
-              ? d['details'] as Map<String, dynamic>
+          changedAt: d['createdAt'] != null
+              ? DateTime.parse(d['createdAt'].toString())
+              : DateTime.now(),
+          details: d['changes'] is Map<String, dynamic>
+              ? d['changes'] as Map<String, dynamic>
               : <String, dynamic>{},
+          changedBy: d['changedBy']?.toString(),
         );
       }).toList());
     } on DioException catch (e) { return Left(ErrorMapper.fromDioException(e)); }

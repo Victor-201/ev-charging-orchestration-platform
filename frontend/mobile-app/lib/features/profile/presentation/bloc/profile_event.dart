@@ -10,15 +10,35 @@ class ProfileLoad extends ProfileEvent {
   const ProfileLoad();
 }
 
-/// Update mutable display fields — API only accepts avatarUrl and address
+class ProfileUploadAvatar extends ProfileEvent {
+  final Uint8List bytes;
+  final String filename;
+  const ProfileUploadAvatar({required this.bytes, required this.filename});
+
+  @override
+  List<Object?> get props => [bytes, filename];
+}
+
+/// Update mutable display fields
 class ProfileUpdate extends ProfileEvent {
   final String? avatarUrl;
   final String? address;
+  final String? phone;
+  final String? dateOfBirth;
+  final Uint8List? avatarBytes;
+  final String? avatarFilename;
 
-  const ProfileUpdate({this.avatarUrl, this.address});
+  const ProfileUpdate({
+    this.avatarUrl,
+    this.address,
+    this.phone,
+    this.dateOfBirth,
+    this.avatarBytes,
+    this.avatarFilename,
+  });
 
   @override
-  List<Object?> get props => [avatarUrl, address];
+  List<Object?> get props => [avatarUrl, address, phone, dateOfBirth, avatarBytes, avatarFilename];
 }
 
 class ProfileChangePassword extends ProfileEvent {

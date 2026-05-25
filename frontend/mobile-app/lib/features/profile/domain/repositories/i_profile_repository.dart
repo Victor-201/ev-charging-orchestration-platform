@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/profile_entity.dart';
@@ -13,12 +14,17 @@ abstract class IProfileRepository {
   /// Retrieves detailed contact and settings metadata for the current user profile.
   Future<Either<Failure, UserProfileEntity>> getProfile();
 
-  /// Updates mutable profile display fields — only avatarUrl and address are accepted
-  /// by PATCH /api/v1/users/me. fullName/phone are set at registration only.
+  /// Updates mutable profile display fields.
   Future<Either<Failure, UserProfileEntity>> updateProfile({
     String? avatarUrl,
     String? address,
+    String? phone,
+    String? dateOfBirth,
   });
+
+  /// Uploads an avatar image file to the backend.
+  /// Returns the new avatar URL on success.
+  Future<Either<Failure, String>> uploadAvatar(Uint8List bytes, String filename);
 
   /// Changes the user's password credential.
   Future<Either<Failure, void>> changePassword({
