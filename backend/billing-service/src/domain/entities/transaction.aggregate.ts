@@ -147,4 +147,23 @@ export class Transaction {
   get referenceCode(): string | null   { return this._referenceCode; }
   get meta():          object | null   { return this._meta; }
   get updatedAt():     Date            { return this._updatedAt; }
+
+  toJSON() {
+    return {
+      id:            this.id,
+      userId:        this.userId,
+      type:          this.type,
+      amount:        this.amount,
+      currency:      this.currency,
+      method:        this.method,
+      relatedId:     this.relatedId,
+      relatedType:   this.relatedType,
+      status:        this.status,
+      externalId:    this.externalId,
+      referenceCode: this.referenceCode,
+      meta:          this.meta,
+      createdAt:     this.createdAt,
+      updatedAt:     this.updatedAt,
+    };
+  }
 }
