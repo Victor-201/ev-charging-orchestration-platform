@@ -226,6 +226,8 @@ export class UserController {
     } catch (e) {
       if (e instanceof VehicleNotFoundException) throw new NotFoundException(e.message);
       if (e instanceof VehicleOwnershipException) throw new BadRequestException(e.message);
+      if (e instanceof DuplicateMacAddressException) throw new ConflictException(e.message);
+      if (e instanceof DuplicateVinNumberException) throw new ConflictException(e.message);
       throw e;
     }
   }

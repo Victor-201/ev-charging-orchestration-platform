@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
 import { Vehicle, VehicleModelInfo, VehicleStatus } from '../../../../domain/entities/vehicle.aggregate';
 import { IVehicleRepository } from '../../../../domain/repositories/vehicle.repository.interface';
 import { VehicleOrmEntity, VehicleModelOrmEntity } from '../entities/user.orm-entities';
+import { DuplicateMacAddressException, DuplicateVinNumberException } from '../../../../domain/exceptions/user.exceptions';
 
 @Injectable()
 export class VehicleRepository implements IVehicleRepository {
@@ -91,7 +92,22 @@ export class VehicleRepository implements IVehicleRepository {
   }
 
   async save(vehicle: Vehicle): Promise<void> {
-    await this.repo.save(this.vehicleToOrm(vehicle) as VehicleOrmEntity);
+    try {
+      await this.repo.save(this.vehicleToOrm(vehicle) as VehicleOrmEntity);
+    } catch (e) {
+      if (e instanceof QueryFailedError) {
+        const error = e as any;
+        if (error.code === '23505') { // postgres unique_violation code
+          if (error.detail?.includes('mac_address')) {
+            throw new DuplicateMacAddressException(vehicle.macAddress ?? '');
+          }
+          if (error.detail?.includes('vin_number')) {
+            throw new DuplicateVinNumberException(vehicle.vinNumber ?? '');
+          }
+        }
+      }
+      throw e;
+    }
   }
 
   async unsetPrimaryForUser(ownerId: string): Promise<void> {

@@ -44,3 +44,15 @@ export class InvalidVehicleModelException extends DomainException {
     super('Vehicle model not found or invalid', 'INVALID_VEHICLE_MODEL');
   }
 }
+
+export class DuplicateMacAddressException extends DomainException {
+  constructor(mac: string) {
+    super(`MAC address '${mac}' is already registered to another vehicle`, 'DUPLICATE_MAC_ADDRESS');
+  }
+}
+
+export class DuplicateVinNumberException extends DomainException {
+  constructor(vin: string) {
+    super(`VIN number '${vin}' is already registered to another vehicle`, 'DUPLICATE_VIN_NUMBER');
+  }
+}
