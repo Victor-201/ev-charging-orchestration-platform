@@ -7,6 +7,7 @@ import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
 
 /// Charging Session Transaction Summary Screen
 ///
@@ -45,12 +46,13 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
   Widget build(BuildContext context) {
     final s = widget.session;
 
-    return Scaffold(
-      body: FadeTransition(
+    return LiquidGlassScaffold(
+      child: FadeTransition(
         opacity: _fadeIn,
         child: SafeArea(
+          bottom: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: AppLayout.paddingWithNavbar(context),
             child: Column(children: [
               const SizedBox(height: AppSpacing.xxxl),
 

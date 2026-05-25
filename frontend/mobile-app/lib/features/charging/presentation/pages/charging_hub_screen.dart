@@ -10,6 +10,7 @@ import '../../../../core/design_system/widgets/glass_pill.dart';
 import '../../../../core/design_system/widgets/glass_square.dart';
 import '../../../../core/design_system/widgets/liquid_glass_card.dart';
 import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 
 /// Unified Charging Hub Main Dashboard Screen
@@ -27,63 +28,50 @@ class _ChargingHubScreenState extends State<ChargingHubScreen> {
   Widget build(BuildContext context) {
     return LiquidGlassScaffold(
       child: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sạc điện',
-                        style: AppTypography.headingLg.copyWith(fontWeight: FontWeight.w700),
+            EVHeader(
+              title: 'Sạc điện',
+              action: GestureDetector(
+                onTap: () => context.push('/charging/scan'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.cyanLimeGradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.cyan.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () => context.push('/charging/scan'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.cyanLimeGradient,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.cyan.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.qr_code_scanner, color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Quét QR',
+                        style: AppTypography.labelMd.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.qr_code_scanner, color: Colors.white, size: 18),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Quét QR',
-                            style: AppTypography.labelMd.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
 
             // ── Tab Pills ────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppLayout.sidePadding),
               child: Row(
                 children: [
                   Expanded(
@@ -221,8 +209,8 @@ class _ActiveSessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxxl),
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.sidePadding, 0, AppLayout.sidePadding, AppLayout.bottomPadding(context)),
       child: Column(
         children: [
           // ── 4 GlassSquare tiles ──────────────────────────────

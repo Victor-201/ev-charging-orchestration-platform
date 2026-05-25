@@ -9,6 +9,9 @@ import '../../../../core/design_system/widgets/live_meter_widget.dart';
 import '../../../../core/design_system/widgets/alert_banner.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
+import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 
 /// Active Charging Session Real-Time Telemetry Screen
 ///
@@ -51,34 +54,37 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Phiên sạc'),
+    return LiquidGlassScaffold(
+      extendBodyBehindAppBar: true,
+      appBar: const EVHeader(
+        title: 'Phiên sạc',
+        showBackButton: false,
         automaticallyImplyLeading: false,
       ),
-      body: BlocConsumer<ChargingSessionBloc, ChargingState>(
-        listener: (context, state) {
-          if (state is ChargingCompleted) {
-            HapticFeedback.mediumImpact();
-            context.go(
-              '/charging/session/${state.session.id}/summary',
-              extra: state.session,
-            );
-          }
-          if (state is ChargingError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error));
-            setState(() => _stopping = false);
-          }
-        },
-        builder: (context, state) {
-          if (state is ChargingLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ChargingActive) return _buildActive(context, state);
-          return const Center(child: Text('Không có phiên sạc đang hoạt động'));
-        },
+      child: SafeArea(
+        bottom: false,
+        child: BlocConsumer<ChargingSessionBloc, ChargingState>(
+          listener: (context, state) {
+            if (state is ChargingCompleted) {
+              HapticFeedback.mediumImpact();
+              context.go(
+                '/charging/session/${state.session.id}/summary',
+                extra: state.session,
+              );
+            }
+            if (state is ChargingError) {
+              EVToast.show(context, message: state.message, isError: true);
+              setState(() => _stopping = false);
+            }
+          },
+          builder: (context, state) {
+            if (state is ChargingLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is ChargingActive) return _buildActive(context, state);
+            return const Center(child: Text('Không có phiên sạc đang hoạt động'));
+          },
+        ),
       ),
     );
   }
@@ -88,11 +94,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
     final isStopping = s.status == 'STOPPING';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: AppLayout.paddingWithHeaderAndNavbar(context),
       child: Column(children: [
         if (isStopping)
-          IdleFeeCountdownBanner(
-              remaining: const Duration(minutes: 15), projectedFeVnd: 0),
+          const IdleFeeCountdownBanner(
+              remaining: Duration(minutes: 15), projectedFeVnd: 0),
 
         const SizedBox(height: AppSpacing.lg),
 

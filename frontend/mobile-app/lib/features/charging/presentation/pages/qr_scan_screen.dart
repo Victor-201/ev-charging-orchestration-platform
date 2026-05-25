@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import '../../../../core/utils/qr_validator.dart';
 
 /// QR Scanning Camera Screen for Session Activation
@@ -63,13 +64,7 @@ class _QRScanScreenState extends State<QRScanScreen>
   }
 
   void _showSuccessAndNavigate(String qrToken, String bookingId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Quét QR thành công! Đang khởi động phiên sạc...'),
-        backgroundColor: AppColors.primary,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    EVToast.show(context, message: 'Quét QR thành công! Đang khởi động phiên sạc...', isError: false);
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         context.go('/charging/session/new',
@@ -79,12 +74,7 @@ class _QRScanScreenState extends State<QRScanScreen>
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-      ),
-    );
+    EVToast.show(context, message: message, isError: true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _scanned = false);
     });
