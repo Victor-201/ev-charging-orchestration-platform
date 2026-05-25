@@ -26,6 +26,7 @@ import {
   VehicleAuditLogOrmEntity,
   ProfileAuditLogOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/user.orm-entities';
+import { IUserRepository, USER_REPOSITORY } from '../../domain/repositories/auth.repository.interface';
 
 const MAX_VEHICLES_PER_USER = 10;
 
@@ -36,12 +37,14 @@ export class GetMyProfileUseCase {
   constructor(
     @Inject(USER_PROFILE_REPOSITORY) private readonly profileRepo: IUserProfileRepository,
     @Inject(USERS_CACHE_REPOSITORY) private readonly cacheRepo: IUsersCacheRepository,
+    @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
   ) {}
 
   async execute(userId: string) {
-    const [cache, profile] = await Promise.all([
+    const [cache, profile, user] = await Promise.all([
       this.cacheRepo.findByUserId(userId),
       this.profileRepo.findByUserId(userId),
+      this.userRepo.findById(userId),
     ]);
 
     if (!cache) throw new UserProfileNotFoundException(userId);
@@ -56,8 +59,10 @@ export class GetMyProfileUseCase {
       emailVerified: cache.emailVerified,
       avatarUrl: profile?.avatarUrl ?? null,
       address: profile?.address ?? null,
+      dateOfBirth: user?.dateOfBirth ?? null,
       hasOutstandingDebt: cache.hasOutstandingDebt ?? false,
       arrearsAmount: cache.arrearsAmount ?? 0,
+      mfaEnabled: user?.mfaEnabled ?? false,
     };
   }
 }
