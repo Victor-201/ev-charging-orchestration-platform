@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/booking_bloc.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
@@ -10,6 +11,7 @@ import '../../../../core/design_system/widgets/glass_pill.dart';
 import '../../../../core/design_system/widgets/glass_square.dart';
 import '../../../../core/design_system/widgets/liquid_glass_card.dart';
 import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../features/map/domain/entities/station_entity.dart';
 import '../../../../features/map/domain/repositories/i_station_repository.dart';
@@ -67,64 +69,53 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   Widget build(BuildContext context) {
     return LiquidGlassScaffold(
       child: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Đặt lịch',
-                          style: AppTypography.headingLg.copyWith(fontWeight: FontWeight.w700)),
+            EVHeader(
+              title: 'Đặt lịch',
+              action: GestureDetector(
+                onTap: () async {
+                  await context.push('/bookings/new');
+                  if (context.mounted) {
+                    context.read<BookingBloc>().add(const BookingLoadHistory());
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.cyanLimeGradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.cyan.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
-                   GestureDetector(
-                    onTap: () async {
-                      await context.push('/bookings/new');
-                      if (context.mounted) {
-                        context.read<BookingBloc>().add(const BookingLoadHistory());
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.cyanLimeGradient,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.cyan.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add, color: Colors.white, size: 18),
-                          const SizedBox(width: 4),
-                          Text('Đặt mới',
-                              style: AppTypography.labelMd.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              )),
-                        ],
-                      ),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, color: Colors.white, size: 18),
+                      const SizedBox(width: 4),
+                      Text('Đặt mới',
+                          style: AppTypography.labelMd.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          )),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
 
             // ── Status Filter Pills ──────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppLayout.sidePadding),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -255,6 +246,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                   return RefreshIndicator(
                     onRefresh: () async {
                       context.read<BookingBloc>().add(const BookingLoadHistory());
+                      context.read<AuthBloc>().add(const AuthCheckRequested());
                       setState(() {
                         _stationCache.clear();
                         _loadingChargerIds.clear();

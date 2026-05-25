@@ -81,7 +81,7 @@ class _PaymentBottomSheetState extends State<PaymentBottomSheet> {
           final bool loadingWallet = walletState is WalletLoading;
           final double balance = wallet?.balance ?? 0;
           final bool insufficientBalance =
-              _selectedMethod == 'wallet' && balance < depositAmount;
+              !loadingWallet && _selectedMethod == 'wallet' && balance < depositAmount;
 
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -196,7 +196,7 @@ class _PaymentBottomSheetState extends State<PaymentBottomSheet> {
                   return EVButton(
                     label: isLoading ? 'Đang xử lý...' : 'Xác nhận thanh toán',
                     isLoading: isLoading,
-                    onPressed: (insufficientBalance || isLoading) ? null : _onPay,
+                    onPressed: (loadingWallet || insufficientBalance || isLoading) ? null : _onPay,
                   );
                 },
               ),

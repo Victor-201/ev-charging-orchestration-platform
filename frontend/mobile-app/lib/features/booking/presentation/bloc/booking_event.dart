@@ -38,9 +38,10 @@ final class BookingCreate extends BookingEvent {
 
 final class BookingLoadDetail extends BookingEvent {
   final String id;
-  const BookingLoadDetail({required this.id});
+  final bool quiet;
+  const BookingLoadDetail({required this.id, this.quiet = false});
   @override
-  List<Object?> get props => [id];
+  List<Object?> get props => [id, quiet];
 }
 
 final class BookingCancel extends BookingEvent {

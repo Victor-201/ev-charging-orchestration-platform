@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/widgets/alert_banner.dart';
 import '../../../../core/design_system/widgets/glass_container.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 import '../../../../core/utils/vnd_formatter.dart';
@@ -18,6 +19,8 @@ class BookingSummaryPanel extends StatelessWidget {
   final bool isLoading;
   final bool canConfirm;
   final VoidCallback onConfirm;
+  final bool hasArrears;
+  final VoidCallback? onPayArrears;
 
   const BookingSummaryPanel({
     super.key,
@@ -29,6 +32,8 @@ class BookingSummaryPanel extends StatelessWidget {
     required this.isLoading,
     required this.canConfirm,
     required this.onConfirm,
+    this.hasArrears = false,
+    this.onPayArrears,
   });
 
   @override
@@ -300,6 +305,14 @@ class BookingSummaryPanel extends StatelessWidget {
                               fontStyle: FontStyle.italic),
                     ),
                   ),
+
+                if (hasArrears) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ArrearsAlertBanner(
+                    amount: 'Tài khoản đang có nợ tồn đọng',
+                    onTap: onPayArrears,
+                  ),
+                ],
 
                 const SizedBox(height: AppSpacing.lg),
 

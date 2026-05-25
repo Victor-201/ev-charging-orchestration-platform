@@ -8,9 +8,10 @@ import '../../domain/entities/booking_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
-import '../../../../core/design_system/widgets/alert_banner.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import '../../../../core/design_system/widgets/glass_container.dart';
 import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../map/domain/usecases/get_charger_pricing_usecase.dart';
@@ -129,6 +130,7 @@ class _BookingNewScreenState extends State<BookingNewScreen>
           chargerId: widget.chargerId,
           date: _selectedDate,
         ));
+    context.read<AuthBloc>().add(const AuthCheckRequested());
   }
 
   Future<void> _fetchPricingEstimate() async {
@@ -322,12 +324,7 @@ class _BookingNewScreenState extends State<BookingNewScreen>
           }
         }
         if (conflict) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Khoảng giờ chứa ô đã bận hoặc quá giờ!'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          EVToast.show(context, message: 'Khoảng giờ chứa ô đã bận hoặc quá giờ!', isError: true);
         } else {
           setState(() { _rangeEnd = slot; });
           _fetchPricingEstimate();
@@ -365,14 +362,9 @@ class _BookingNewScreenState extends State<BookingNewScreen>
     // Guard: no charger selected
     if (widget.chargerId.isEmpty) {
       return LiquidGlassScaffold(
-        appBar: AppBar(
-          title: const Text('Đặt lịch sạc'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.pop(),
-          ),
+        appBar: const EVHeader(
+          title: 'Đặt lịch sạc',
+          showBackButton: true,
         ),
         child: SafeArea(
           child: Center(
@@ -412,30 +404,19 @@ class _BookingNewScreenState extends State<BookingNewScreen>
 
     return LiquidGlassScaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Đặt lịch sạc'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
-        ),
+      appBar: const EVHeader(
+        title: 'Đặt lịch sạc',
+        showBackButton: true,
       ),
       child: SafeArea(
         child: BlocConsumer<BookingBloc, BookingState>(
           listener: (context, state) {
             if (state is BookingCreated) {
               HapticFeedback.heavyImpact();
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Đặt lịch thành công! Vui lòng thanh toán.'),
-                backgroundColor: AppColors.primary,
-              ));
+              EVToast.show(context, message: 'Đặt lịch thành công! Vui lòng thanh toán.', isError: false);
               context.pushReplacement('/bookings/${state.booking.id}');
             } else if (state is BookingError) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-              ));
+              EVToast.show(context, message: state.message, isError: true);
             } else if (state is BookingAvailabilityLoaded) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _scrollToFirstAvailableSlot(state.slots);
@@ -451,12 +432,6 @@ class _BookingNewScreenState extends State<BookingNewScreen>
                 // ── Main Content Column ──
                 Column(
                   children: [
-                    if (hasArrears)
-                      ArrearsAlertBanner(
-                        amount: 'Nợ tồn đọng — không thể đặt lịch',
-                        onTap: () => context.go('/wallet'),
-                      ),
-
                     // ── Date selector ──────────────────────────────────
                     BookingDateSelector(
                       selected: _selectedDate,
@@ -477,7 +452,7 @@ class _BookingNewScreenState extends State<BookingNewScreen>
                     if (!_isCustomMode)
                       const Padding(
                         padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xs),
+                            AppLayout.sidePadding, 0, AppLayout.sidePadding, AppSpacing.xs),
                         child: BookingLegend(),
                       ),
 
@@ -553,6 +528,11 @@ class _BookingNewScreenState extends State<BookingNewScreen>
                           _pricingError == null &&
                           _rangeStart != null,
                       onConfirm: _confirmBooking,
+                      hasArrears: hasArrears,
+                      onPayArrears: () async {
+                        await context.push('/profile/arrears');
+                        _loadSlots();
+                      },
                     ),
                   ),
                 ),
@@ -586,10 +566,10 @@ class _BookingNewScreenState extends State<BookingNewScreen>
         key: _gridKey,
         controller: _gridScrollController,
         padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
+            AppLayout.sidePadding,
             AppSpacing.xs,
-            AppSpacing.lg,
-            showSummary ? 260.0 : AppSpacing.lg),
+            AppLayout.sidePadding,
+            showSummary ? 260.0 : AppLayout.sidePadding),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
           childAspectRatio: 1.7,
@@ -600,7 +580,7 @@ class _BookingNewScreenState extends State<BookingNewScreen>
         itemBuilder: (_, i) {
           final slot = state.slots[i];
           final isPast = slot.startTime.isBefore(now);
-          final isAvailable = slot.isAvailable && !isPast && !hasArrears;
+          final isAvailable = slot.isAvailable && !isPast;
           final isSelected = _isSlotInRange(slot);
 
           Color? cardBgColor;
@@ -645,13 +625,13 @@ class _BookingNewScreenState extends State<BookingNewScreen>
                 ? () => _handleSlotTap(slot, state.slots)
                 : () {
                     HapticFeedback.mediumImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(isPast
+                    EVToast.show(
+                      context,
+                      message: isPast
                           ? 'Khung giờ này đã trôi qua!'
-                          : 'Khung giờ này đã được đặt trước!'),
-                      duration: const Duration(seconds: 1),
-                      backgroundColor: AppColors.error.withValues(alpha: 0.9),
-                    ));
+                          : 'Khung giờ này đã được đặt trước!',
+                      isError: true,
+                    );
                   },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
@@ -750,10 +730,10 @@ class _BookingNewScreenState extends State<BookingNewScreen>
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
+          AppLayout.sidePadding,
           AppSpacing.xs,
-          AppSpacing.lg,
-          showSummary ? 260.0 : AppSpacing.lg),
+          AppLayout.sidePadding,
+          showSummary ? 260.0 : AppLayout.sidePadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

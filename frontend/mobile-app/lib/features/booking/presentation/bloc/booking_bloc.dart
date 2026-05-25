@@ -75,10 +75,16 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onLoadDetail(
       BookingLoadDetail event, Emitter<BookingState> emit) async {
-    emit(const BookingLoading());
+    if (!event.quiet) {
+      emit(const BookingLoading());
+    }
     final result = await _repository.getBookingById(event.id);
     result.fold(
-      (f) => emit(BookingError(message: f.message)),
+      (f) {
+        if (!event.quiet) {
+          emit(BookingError(message: f.message));
+        }
+      },
       (booking) => emit(BookingDetailLoaded(booking: booking)),
     );
   }
@@ -98,7 +104,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       BookingStartPolling event, Emitter<BookingState> emit) {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      add(BookingLoadDetail(id: event.id));
+      add(BookingLoadDetail(id: event.id, quiet: true));
     });
   }
 

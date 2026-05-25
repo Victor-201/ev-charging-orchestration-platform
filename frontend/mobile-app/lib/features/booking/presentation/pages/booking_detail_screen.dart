@@ -8,8 +8,10 @@ import '../bloc/booking_bloc.dart';
 import '../../domain/entities/booking_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
+import '../../../../core/design_system/widgets/ev_header.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
+import '../../../../core/design_system/widgets/ev_toast.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/utils/vnd_formatter.dart';
 import '../../../../core/utils/date_utils.dart' as ev_date;
@@ -32,6 +34,7 @@ class BookingDetailScreen extends StatefulWidget {
 }
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  late BookingBloc _bookingBloc;
   Timer? _timer;
   Duration _qrRemaining = Duration.zero;
   bool _qrValid = false;
@@ -48,7 +51,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<BookingBloc>().add(BookingLoadDetail(id: widget.bookingId));
+    _bookingBloc = context.read<BookingBloc>();
+    _bookingBloc.add(BookingLoadDetail(id: widget.bookingId));
   }
 
   Future<void> _loadStationDetails(BookingEntity booking) async {
@@ -152,9 +156,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể mở ứng dụng bản đồ.')),
-        );
+        EVToast.show(context, message: 'Không thể mở ứng dụng bản đồ.', isError: true);
       }
     }
   }
@@ -185,6 +187,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _bookingBloc.add(const BookingStopPolling());
     super.dispose();
   }
 
@@ -192,21 +195,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget build(BuildContext context) {
     return LiquidGlassScaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Chi tiết đặt lịch'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(true),
-        ),
+      appBar: EVHeader(
+        title: 'Chi tiết đặt lịch',
+        showBackButton: true,
+        onBackTapped: () => context.pop(true),
       ),
       child: SafeArea(
+        bottom: false,
         child: BlocConsumer<BookingBloc, BookingState>(
           listener: (context, state) {
             if (state is BookingDetailLoaded) {
               _startCountdown(state.booking);
               _loadStationDetails(state.booking);
+              if (!state.booking.isPendingPayment) {
+                _bookingBloc.add(const BookingStopPolling());
+              }
               if (state.booking.isPendingPayment && !_didShowPayment) {
                 _didShowPayment = true;
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -217,8 +220,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               }
             }
             if (state is BookingCancelled) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Đã hủy thành công!'), backgroundColor: AppColors.primary));
+              EVToast.show(context, message: 'Đã hủy thành công!', isError: false);
               // Capture router before async gap to avoid lint warning
               final router = GoRouter.of(context);
               // Introduce a tiny delay so backend event bus can process cancellation state
@@ -237,10 +239,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 _isBottomSheetOpen = false;
                 if (Navigator.canPop(context)) Navigator.pop(context);
               }
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-              ));
+              EVToast.show(context, message: state.message, isError: true);
             }
             if (state is BookingPaymentInitiated) {
               if (_isBottomSheetOpen) {
@@ -248,35 +247,20 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 if (Navigator.canPop(context)) Navigator.pop(context);
               }
               if (state.paymentResult.method == 'gateway' && state.paymentResult.paymentUrl != null) {
-                // Capture the bloc reference before the async gap to avoid
-                // use_build_context_synchronously lint warning.
-                final bloc = context.read<BookingBloc>();
                 launchUrl(Uri.parse(state.paymentResult.paymentUrl!), mode: LaunchMode.externalApplication).then((_) {
-                  // After returning from browser, reload booking detail to check status after a short delay
-                  Future.delayed(const Duration(milliseconds: 1000), () {
-                    bloc.add(BookingLoadDetail(id: widget.bookingId));
-                  });
+                  // After returning from browser, start polling to update status automatically
+                  if (mounted) {
+                    _bookingBloc.add(BookingStartPolling(id: widget.bookingId));
+                  }
                 });
               } else {
                 if (state.paymentResult.status == 'completed') {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Thanh toán thành công!'),
-                    backgroundColor: AppColors.primary,
-                  ));
+                  EVToast.show(context, message: 'Thanh toán thành công!', isError: false);
+                  _bookingBloc.add(BookingStartPolling(id: widget.bookingId));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Thanh toán thất bại, vui lòng thử lại.'),
-                    backgroundColor: AppColors.error,
-                  ));
+                  EVToast.show(context, message: 'Thanh toán thất bại, vui lòng thử lại.', isError: true);
+                  _bookingBloc.add(BookingLoadDetail(id: widget.bookingId));
                 }
-                // Capture the bloc reference before the async gap to avoid lint warning
-                final bloc = context.read<BookingBloc>();
-                // Introduce a tiny delay so backend event bus can process booking state
-                Future.delayed(const Duration(milliseconds: 800), () {
-                  if (mounted) {
-                    bloc.add(BookingLoadDetail(id: widget.bookingId));
-                  }
-                });
               }
             }
           },
@@ -435,14 +419,17 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             icon: Icons.cancel_outlined,
             onPressed: () => showDialog(
               context: context,
-              builder: (_) => AlertDialog(
+              builder: (dialogContext) => AlertDialog(
                 title: const Text('Xác nhận hủy?'),
                 content: const Text('Bạn sẽ được hoàn 100% tiền đặt cọc.'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Không')),
+                  TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Không')),
                   TextButton(
-                    onPressed: () { Navigator.pop(context); context.read<BookingBloc>().add(BookingCancel(id: b.id)); },
-                    child: Text('Hủy', style: const TextStyle(color: AppColors.error)),
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      context.read<BookingBloc>().add(BookingCancel(id: b.id));
+                    },
+                    child: const Text('Hủy', style: TextStyle(color: AppColors.error)),
                   ),
                 ],
               ),
