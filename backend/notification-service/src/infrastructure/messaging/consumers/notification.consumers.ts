@@ -446,8 +446,8 @@ export class FaultNotificationConsumer {
         userId:   payload.affectedUserId,
         type:     'charger.fault',
         channels: ['push', 'in_app'],
-        title:    'Sá»± cá»‘ tráº¡m sáº¡c',
-        body:     `Tráº¡m sáº¡c Ä‘ang gáº·p sá»± cá»‘ (mÃ£: ${payload.errorCode}). NhÃ¢n viÃªn Ä‘ang xá»­ lÃ½.`,
+        title:    'Sự cố trạm sạc',
+        body:     `Trạm sạc đang gặp sự cố (mã: ${payload.errorCode}). Nhân viên đang xử lý.`,
         metadata: { chargerId: payload.chargerId, errorCode: payload.errorCode },
         realtimePayload: {
           chargingUpdate: {

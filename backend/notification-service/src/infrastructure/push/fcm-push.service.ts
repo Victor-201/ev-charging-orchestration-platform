@@ -59,11 +59,9 @@ export class FcmPushService {
     }
   }
 
-  // Public API
-
   /**
-   * Send push notification to ALL registered devices of the user.
-   * Invalid tokens will be automatically removed from DB.
+   * Send push notification to all registered devices of the user.
+   * Purges invalid tokens automatically.
    */
   async sendToUser(params: {
     userId: string;
@@ -92,7 +90,6 @@ export class FcmPushService {
     const failures  = results.filter((r) => !r.success);
     const successes = results.filter((r) => r.success);
 
-    // Clean up stale tokens
     const staleTokens = failures
       .filter((r) => this.isStaleTokenError(r.error))
       .map((r) => r.token);
@@ -113,9 +110,6 @@ export class FcmPushService {
     };
   }
 
-  /**
-   * Send push directly to a specific FCM token (for testing / internal use).
-   */
   async sendToToken(params: {
     token:  string;
     title:  string;
@@ -129,8 +123,6 @@ export class FcmPushService {
       data:  params.data,
     });
   }
-
-  // Private: Concurrency Control
 
   private async sendAll(messages: FcmMessage[]): Promise<FcmResult[]> {
     if (this.stubMode) {
@@ -148,8 +140,6 @@ export class FcmPushService {
 
     return results;
   }
-
-  // Private: Single Send
 
   private async sendSingle(message: FcmMessage): Promise<FcmResult> {
     if (this.stubMode || !this.messaging) {
@@ -188,8 +178,6 @@ export class FcmPushService {
       return { token: message.token, success: false, error: code };
     }
   }
-
-  // Private: Stale Token Cleanup
 
   private isStaleTokenError(error?: string): boolean {
     if (!error) return false;
