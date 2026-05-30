@@ -26,8 +26,8 @@ plugins:
     enabled: true
     config:
       origins:
-        - "http://localhost:3000"
-        - "http://localhost:8080"
+        - "http://localhost:5000"   # Web-admin (Next.js)
+        - "http://localhost:5001"   # Kiosk (Vite)
         - "https://ev-platform.yourdomain.com"
       methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
       headers:
@@ -38,6 +38,7 @@ plugins:
         - X-Correlation-ID
         - Idempotency-Key
         - ngrok-skip-browser-warning
+        - X-Kiosk-Key
       exposed_headers:
         - X-Correlation-ID
         - X-Request-ID
@@ -156,6 +157,27 @@ services:
         strip_path: false
         preserve_host: false
         plugins: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SESSION SOCKET.IO ROUTE FOR KIOSK TELEMETRY
+  # ─────────────────────────────────────────────────────────────────────────
+  - name: session-ws-service
+    host: ev-session
+    port: 3004
+    protocol: http
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    retries: 2
+    routes:
+      - name: charging-ws-route
+        paths: ["/socket.io/charging"]
+        protocols: [http, https]
+        strip_path: false
+        preserve_host: true
+        request_buffering: false
+        response_buffering: false
+
 
   # ─────────────────────────────────────────────────────────────────────────
   # EV INFRASTRUCTURE SERVICE (stations, chargers, geo — mostly public reads)
