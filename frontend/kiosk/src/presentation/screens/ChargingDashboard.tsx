@@ -27,7 +27,7 @@ import {
   Thermometer,
   Clock,
 } from "lucide-react";
-import type { TelemetryData, ChargingSession, PricingInfo } from "../types";
+import type { TelemetryData, ChargingSession, PricingInfo } from "../../domain/entities/entities";
 import HudMetric from "./widgets/HudMetric";
 import BillingRow from "./widgets/BillingRow";
 import MetricChip from "./widgets/MetricChip";

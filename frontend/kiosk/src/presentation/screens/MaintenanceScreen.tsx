@@ -7,7 +7,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Hammer, AlertCircle, Phone, Info, ZapOff } from "lucide-react";
-import { CHARGER_ID } from "../api";
+import { CHARGER_ID } from "../../data/sources/localStorage";
 
 const MaintenanceScreen: React.FC = () => {
   return (

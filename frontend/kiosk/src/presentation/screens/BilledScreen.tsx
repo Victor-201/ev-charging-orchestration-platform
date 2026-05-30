@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, Zap, RotateCcw } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
-import type { StopSessionResponse } from '../types';
+import type { StopSessionResponse } from '../../domain/entities/entities';
 
 interface BilledScreenProps {
   summary: StopSessionResponse;
