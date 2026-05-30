@@ -6,6 +6,7 @@ import '../bloc/wallet_bloc.dart';
 import '../../domain/entities/wallet_entity.dart';
 import '../widgets/transaction_detail_sheet.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_layout.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/design_system/widgets/glass_pill.dart';
@@ -153,7 +154,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
           // ── Cyberpunk EVolt Credit Card & Arrears ───────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(AppLayout.sidePadding),
+              padding: AppLayout.paddingWithNavbar(context).copyWith(bottom: 0),
               child: Column(
                 children: [
                   // Futuristic EVolt Credit Card layout
@@ -408,7 +409,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
           // ── Transaction Filter Pills ─────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppLayout.sidePadding),
+              padding: AppLayout.paddingWithNavbar(context).copyWith(bottom: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -438,7 +439,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
           if (txList.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppLayout.sidePadding),
+                padding: AppLayout.paddingWithNavbar(context),
                 child: Column(
                   children: [
                     LiquidGlassCard(
@@ -452,14 +453,13 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
                         ],
                       ),
                     ),
-                    SizedBox(height: AppLayout.bottomPadding(context)), // Bottom padding to prevent navbar overlap
                   ],
                 ),
               ),
             )
           else ...[
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(AppLayout.sidePadding, 0, AppLayout.sidePadding, 0),
+              padding: AppLayout.paddingWithNavbar(context).copyWith(top: 0, bottom: 0),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => Padding(
@@ -472,7 +472,7 @@ class _WalletDashboardScreenState extends State<WalletDashboardScreen> {
             ),
             // Substantial bottom padding to prevent items from being covered by translucent bottom navigation bar
             SliverToBoxAdapter(
-              child: SizedBox(height: AppLayout.bottomPadding(context)),
+              child: SizedBox(height: AppLayout.paddingWithNavbar(context).bottom),
             ),
           ],
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../domain/entities/wallet_entity.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_layout.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/design_system/widgets/ev_toast.dart';
@@ -60,12 +61,7 @@ class TransactionDetailSheet extends StatelessWidget {
           )
         ],
       ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 16,
-        bottom: MediaQuery.of(context).padding.bottom + 24,
-      ),
+      padding: AppLayout.paddingWithNavbar(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

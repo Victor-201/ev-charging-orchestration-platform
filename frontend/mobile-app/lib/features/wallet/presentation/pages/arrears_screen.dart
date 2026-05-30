@@ -5,6 +5,7 @@ import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../bloc/wallet_bloc.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_layout.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_button.dart';
 import '../../../../core/design_system/widgets/glass_container.dart';
