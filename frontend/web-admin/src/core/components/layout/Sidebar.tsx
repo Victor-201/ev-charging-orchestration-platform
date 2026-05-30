@@ -40,7 +40,7 @@ export default function Sidebar() {
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       className={cn(
-        'fixed left-4 top-4 bottom-4 z-50 flex flex-col py-5 px-3 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'fixed left-4 top-4 bottom-4 z-50 flex flex-col py-5 px-3 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] glass-shine',
         expanded ? 'w-56' : 'w-[72px]'
       )}
       style={{
@@ -61,8 +61,8 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="flex items-center gap-3 px-1 mb-8 overflow-hidden">
-        <div className="shrink-0 w-9 h-9 flex items-center justify-center">
-          <img src="/EVoltBoard.png" alt="EVoltBoard Logo" className="w-8 h-8 object-contain" />
+        <div className="shrink-0 w-11 h-11 flex items-center justify-center">
+          <img src="/EVoltBoard.png" alt="EVoltBoard Logo" className="w-10 h-10 object-contain" />
         </div>
         <AnimatePresence>
           {expanded && (
@@ -92,6 +92,7 @@ export default function Sidebar() {
               style={{
                 background: active ? 'rgba(16, 191, 201, 0.12)' : 'transparent',
                 border: active ? '1px solid rgba(16, 191, 201, 0.25)' : '1px solid transparent',
+                borderLeft: active ? '4px solid var(--brand-cyan)' : '1px solid transparent',
                 color: active ? '#10bfc9' : 'var(--text-faded)',
               }}
             >
