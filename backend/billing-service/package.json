@@ -1,7 +1,7 @@
 {
     "name": "payment-service",
     "version": "1.0.0",
-    "description": "EV Charging Ã¢â‚¬â€ Payment Service (VNPay + Wallet)",
+    "description": "EV Charging — Payment Service (VNPay + Wallet)",
     "dependencies": {
         "@golevelup/nestjs-rabbitmq": "^5.6.0",
         "@nestjs/common": "^10.4.0",

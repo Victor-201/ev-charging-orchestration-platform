@@ -67,7 +67,7 @@ export class VNPayService {
 
   /**
    * Build VNPay payment URL.
-   * Amount must be VND integer — VNPay multiplies by 100 internally.
+   * VNPay requires amount as VND integer multiplied by 100.
    */
   buildPaymentUrl(params: VNPayParams): string {
     const now       = new Date();
@@ -83,7 +83,7 @@ export class VNPayService {
       vnp_TxnRef:     params.txnRef,
       vnp_OrderInfo:  params.orderInfo,
       vnp_OrderType:  params.orderType,
-      vnp_Amount:     String(params.amount * 100),  // VNPay requires ×100
+      vnp_Amount:     String(params.amount * 100),
       vnp_ReturnUrl:  params.returnUrl,
       vnp_IpAddr:     params.ipAddr ?? '127.0.0.1',
       vnp_CreateDate: createDate,
@@ -103,15 +103,12 @@ export class VNPayService {
 
   /**
    * Verify VNPay return/IPN callback.
-   * Returns parsed result only if signature is valid.
    *
-   * @throws Error if checksum is invalid (do NOT process payment)
+   * @throws Error if checksum is invalid (blocking review finding)
    */
   verifyCallback(returnParams: VNPayReturnParams): VNPayResult {
-    // Exclude hash fields before recomputing signature
     const { vnp_SecureHash, ...rest } = returnParams;
 
-    // Remove hash-related fields before recomputing
     const paramsToVerify = this.sortParams(
       Object.fromEntries(
         Object.entries(rest).filter(
@@ -127,7 +124,7 @@ export class VNPayService {
       throw new Error('INVALID_CHECKSUM');
     }
 
-    const amount = Math.round(parseInt(returnParams.vnp_Amount) / 100); // Remove ×100
+    const amount = Math.round(parseInt(returnParams.vnp_Amount) / 100);
 
     return {
       isSuccess:     returnParams.vnp_ResponseCode === VNPAY_SUCCESS_CODE,
@@ -141,7 +138,7 @@ export class VNPayService {
     };
   }
 
-  /** Sort params alphabetically (VNPay requirement for signature) */
+  /** Sort params alphabetically for VNPay signature requirement. */
   private sortParams(params: Record<string, string>): Record<string, string> {
     return Object.fromEntries(
       Object.entries(params)

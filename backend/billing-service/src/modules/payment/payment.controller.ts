@@ -21,6 +21,7 @@ import {
 } from '../../application/dtos/payment.dto';
 import { VNPayReturnParams } from '../../infrastructure/vnpay/vnpay.service';
 import { JwtAuthGuard }             from '../../shared/guards/jwt-auth.guard';
+import { CompositeAuthGuard }       from '../../shared/guards/composite-auth.guard';
 import { RolesGuard }               from '../../shared/guards/roles.guard';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { Roles, Public } from '../../shared/decorators/roles.decorator';
@@ -41,7 +42,7 @@ import { WalletDomainException }    from '../../domain/entities/wallet.aggregate
  *   GET  /transactions             → @JwtAuthGuard
  */
 @Controller()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(CompositeAuthGuard, RolesGuard)
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
 
