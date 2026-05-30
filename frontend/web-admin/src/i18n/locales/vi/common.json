@@ -28,10 +28,10 @@
     "mfa_placeholder": "000000",
     "login_btn": "Đăng nhập",
     "login_loading": "Đang đăng nhập...",
-    "footer_text": "Hệ thống Quản lý Sạc v2.0 — Bảo mật bởi JWT + MFA",
+    "footer_text": "© 2026 EVolt. Nền tảng điều phối sạc xe điện thông minh",
     "verifying": "Đang xác thực...",
     "mfa_required_toast": "Vui lòng nhập mã xác thực 2 yếu tố (MFA)",
-    "platform_subtitle": "Nền tảng Quản lý Sạc Xe điện"
+    "platform_subtitle": "Nền tảng Điều phối Sạc Xe điện"
   },
   "common": {
     "loading": "Đang tải...",

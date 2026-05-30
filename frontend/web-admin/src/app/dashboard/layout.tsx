@@ -8,6 +8,7 @@ import Topbar from '@/core/components/layout/Topbar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import Background from '@/core/theme/Background';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -30,8 +31,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Still verifying the token — show a spinner, do NOT redirect yet.
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-color)' }}>
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+        <Background />
+        <div className="flex flex-col items-center gap-4 relative z-10">
           <div className="w-12 h-12 rounded-full border-2 border-cyan border-t-transparent animate-spin" />
           <p className="text-sm" style={{ color: 'var(--text-faded)' }}>{t('auth.verifying')}</p>
         </div>
@@ -46,17 +48,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex" style={{ background: 'var(--bg-color)', transition: 'background 0.4s ease' }}>
-        {/* Radial ambient overlay */}
-        <div
-          className="fixed inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 15% 20%, var(--bg-gradient-1) 0%, transparent 40%), radial-gradient(circle at 85% 85%, var(--bg-gradient-1) 0%, transparent 40%)',
-          }}
-        />
+      <div className="min-h-screen flex relative overflow-hidden">
+        <Background />
         <Sidebar />
-        <div className="flex-1 ml-[88px] flex flex-col min-h-screen">
+        <div className="flex-1 ml-[88px] flex flex-col min-h-screen relative z-10">
           <Topbar />
           <main className="flex-1 p-6 relative z-10">{children}</main>
         </div>

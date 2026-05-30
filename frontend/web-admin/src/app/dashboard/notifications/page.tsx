@@ -27,13 +27,14 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 export default function NotificationsPage() {
   const { t } = useTranslation(['dashboard', 'common']);
 
-  const { data: notifications, isLoading } = useQuery<Notification[]>({
+  const { data: responseData, isLoading } = useQuery<{ items: Notification[]; unreadCount: number }>({
     queryKey: ['notifications'],
     queryFn: async () =>
       (await apiClient.get('/notifications', { params: { limit: 50 } })).data,
     refetchInterval: 15_000,
   });
 
+  const notifications = responseData?.items;
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   return (

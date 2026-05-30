@@ -12,6 +12,7 @@ import {
   AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
   BarChart, Bar,
 } from 'recharts';
+import GlassCard from '@/core/theme/GlassCard';
 
 interface DashboardData {
   latestKpi: { activeSessions: number; revenue30d: number; newUsers30d: number };
@@ -47,30 +48,15 @@ function MetricCard({
   icon: React.ElementType; gradient: string; glow: string; trend?: number;
 }) {
   return (
-    <motion.div
+    <GlassCard
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden"
-      style={{
-        background: 'var(--card-bg)',
-        backdropFilter: 'blur(60px)',
-        WebkitBackdropFilter: 'blur(60px)',
-        border: '1.5px solid var(--card-border)',
-        borderRadius: '28px',
-        padding: '24px',
-        boxShadow: 'var(--card-shadow)',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-      }}
-      whileHover={{ translateY: -4, transition: { duration: 0.2 } }}
+      whileHover={{ translateY: -4 }}
+      transition={{ duration: 0.2 }}
+      className="p-6"
+      showShine
+      showMarkers
     >
-      {/* Corner markers */}
-      <div className="corner-marker cm-tl" />
-      <div className="corner-marker cm-tr" />
-      {/* Shine overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none rounded-[28px]"
-        style={{ background: 'var(--sq-shine)' }}
-      />
       <div className="flex items-start justify-between mb-4">
         <div
           className="w-11 h-11 rounded-2xl flex items-center justify-center relative overflow-hidden"
@@ -91,34 +77,7 @@ function MetricCard({
         <p className="text-2xl font-bold" style={{ color: 'var(--text-main)', letterSpacing: '-0.5px' }}>{value}</p>
         {sub && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faded)' }}>{sub}</p>}
       </div>
-    </motion.div>
-  );
-}
-
-function GlassPanel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`relative overflow-hidden ${className ?? ''}`}
-      style={{
-        background: 'var(--card-bg)',
-        backdropFilter: 'blur(60px)',
-        WebkitBackdropFilter: 'blur(60px)',
-        border: '1.5px solid var(--card-border)',
-        borderRadius: '28px',
-        boxShadow: 'var(--card-shadow)',
-        padding: '28px',
-        transition: 'border-color 0.4s ease',
-      }}
-    >
-      {/* Corner markers */}
-      <div className="corner-marker cm-tl" />
-      <div className="corner-marker cm-tr" />
-      <div className="corner-marker cm-bl" />
-      <div className="corner-marker cm-br" />
-      {/* Shine */}
-      <div className="absolute inset-0 pointer-events-none rounded-[28px]" style={{ background: 'var(--sq-shine)' }} />
-      <div className="relative z-10">{children}</div>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -193,7 +152,7 @@ export default function DashboardPage() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <GlassPanel className="lg:col-span-2">
+        <GlassCard className="lg:col-span-2 p-7" showShine showMarkers>
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-semibold" style={{ color: 'var(--text-main)' }}>{t('dashboard:home.charts.revenue_title')}</h3>
@@ -216,9 +175,9 @@ export default function DashboardPage() {
               <Area type="monotone" dataKey="totalRevenueVnd" stroke="#10bfc9" strokeWidth={2} fill="url(#revenueGrad)" />
             </AreaChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </GlassCard>
 
-        <GlassPanel>
+        <GlassCard className="p-7" showShine showMarkers>
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-semibold" style={{ color: 'var(--text-main)' }}>{t('dashboard:home.charts.peak_title')}</h3>
@@ -245,11 +204,11 @@ export default function DashboardPage() {
               <Bar dataKey="avgSessions" fill="#9aed57" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </GlassPanel>
+        </GlassCard>
       </div>
 
       {/* Top Stations */}
-      <GlassPanel>
+      <GlassCard className="p-7" showShine showMarkers>
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--text-main)' }}>{t('dashboard:home.charts.top_stations_title')}</h3>
@@ -299,7 +258,7 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </GlassPanel>
+      </GlassCard>
     </div>
   );
 }

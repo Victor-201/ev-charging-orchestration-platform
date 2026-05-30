@@ -28,7 +28,7 @@
     "mfa_placeholder": "000000",
     "login_btn": "Sign In",
     "login_loading": "Signing in...",
-    "footer_text": "EV Charging Platform v2.0 — Secured by JWT + MFA",
+    "footer_text": "© 2026 EVolt. Intelligent EV Charging Orchestration Platform",
     "verifying": "Authenticating...",
     "mfa_required_toast": "Please enter your 2FA (MFA) code",
     "platform_subtitle": "EV Charging Orchestration Platform"
