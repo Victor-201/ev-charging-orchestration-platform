@@ -212,7 +212,7 @@ export class GetSystemMetricsUseCase {
     const [latestKpi, sessionStats, revenueStats, bookingStats, topUsers] =
       await Promise.all([
         // Latest hourly KPI snapshot
-        this.kpiRepo.findOne({ order: { capturedAt: 'DESC' } }),
+        this.kpiRepo.findOne({ where: {}, order: { capturedAt: 'DESC' } }),
 
         // Total sessions (30 days)
         this.ds.query(`
@@ -393,9 +393,9 @@ export class DashboardUseCase {
   ) {}
 
   async execute() {
-    const [latestKpi, topStations, peakHours, revenueRows] = await Promise.all([
+    const [latestKpi, topStations, peakHours, revenueRows, activeUsersRow] = await Promise.all([
       // Latest KPI snapshot
-      this.kpiRepo.findOne({ order: { capturedAt: 'DESC' } }),
+      this.kpiRepo.findOne({ where: {}, order: { capturedAt: 'DESC' } }),
 
       // Top 5 stations by total sessions (last 30 days)
       this.ds.query(`
@@ -403,7 +403,8 @@ export class DashboardUseCase {
           station_id,
           SUM(total_sessions)    AS total_sessions,
           SUM(total_kwh)         AS total_kwh,
-          SUM(total_revenue_vnd) AS total_revenue_vnd
+          SUM(total_revenue_vnd) AS total_revenue_vnd,
+          COALESCE(AVG(utilization_rate), 0) * 100 AS utilization_rate
         FROM daily_station_metrics
         WHERE metric_date >= NOW() - INTERVAL '30 days'
         GROUP BY station_id
@@ -425,10 +426,26 @@ export class DashboardUseCase {
         GROUP BY metric_date
         ORDER BY metric_date DESC
       `),
+
+      // Unique active users (last 30 days) for newUsers30d KPI
+      this.ds.query(`
+        SELECT COUNT(DISTINCT user_id) AS cnt
+        FROM daily_user_metrics
+        WHERE metric_date >= NOW() - INTERVAL '30 days'
+      `),
     ]);
 
+    const newUsers30d = parseInt(activeUsersRow[0]?.cnt ?? '0');
+    const totalRevenue30d = revenueRows.reduce(
+      (sum: number, r: any) => sum + parseInt(r.revenue_vnd ?? '0'), 0
+    );
+
     return {
-      latestKpi: latestKpi ?? null,
+      latestKpi: {
+        activeSessions: latestKpi?.activeSessions ?? 0,
+        revenue30d:     totalRevenue30d,
+        newUsers30d:    newUsers30d,
+      },
       revenue30d: revenueRows.map((r: any) => ({
         date:       r.metric_date,
         revenueVnd: parseInt(r.revenue_vnd ?? '0'),
@@ -440,6 +457,8 @@ export class DashboardUseCase {
         totalSessions:  parseInt(s.total_sessions ?? '0'),
         totalKwh:       parseFloat(s.total_kwh ?? '0'),
         totalRevenueVnd: parseInt(s.total_revenue_vnd ?? '0'),
+        revenue:        parseInt(s.total_revenue_vnd ?? '0'),
+        utilizationRate: parseFloat(s.utilization_rate ?? '0'),
       })),
     };
   }
