@@ -151,13 +151,13 @@
             <mxPoint x="360" y="408" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="id-08ea3fc4" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="insert(ChargingSession)\nupdate(Booking.status = CHECKED_IN)">
+        <mxCell id="id-08ea3fc4" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="insert(ChargingSession)\nupdate(Booking.status = COMPLETED)">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="1200" y="456" as="sourcePoint" />
             <mxPoint x="1480" y="456" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="id-57ecd4ef" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="ChargingSession { status: IN_PROGRESS }">
+        <mxCell id="id-57ecd4ef" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="ChargingSession { status: ACTIVE }">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="1200" y="504" as="sourcePoint" />
             <mxPoint x="920" y="504" as="targetPoint" />
@@ -250,7 +250,7 @@
             <mxPoint x="1699" y="898" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="id-ea9bfb86" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="update(Session.status = COMPLETED, endMeter)">
+        <mxCell id="id-ea9bfb86" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=14;fontStyle=1;fillColor=#fff2cc;strokeColor=light-dark(#000000, #6d5100);" value="update(Session.status = STOPPED, endMeterWh)">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="1200" y="964" as="sourcePoint" />
             <mxPoint x="1480" y="964" as="targetPoint" />
