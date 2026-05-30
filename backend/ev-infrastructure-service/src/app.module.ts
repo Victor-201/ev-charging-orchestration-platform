@@ -62,7 +62,7 @@ import { StationModule }   from './modules/station/station.module';
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    15,
-        connectTimeoutMS: 3000,
+        connectTimeoutMS: 15000,
       }),
       inject: [ConfigService],
     }),

@@ -48,7 +48,6 @@ import { v4 as uuidv4 } from 'uuid';
             return { statusCode: res.statusCode };
           },
         },
-        // Attach X-Request-ID to every request automatically
         genReqId: (req: any) => {
           const existing = req.headers['x-request-id'];
           if (existing) return existing;
@@ -56,23 +55,19 @@ import { v4 as uuidv4 } from 'uuid';
           req.headers['x-request-id'] = id;
           return id;
         },
-        // Add X-Request-ID to response headers
         customReceivedMessage: (req: any) =>
           `-> ${req.method} ${req.url}`,
         customSuccessMessage: (req: any, res: any) =>
           `<- ${req.method} ${req.url} ${res.statusCode}`,
         customErrorMessage: (req: any, res: any, err: Error) =>
           `[ERROR] ${req.method} ${req.url} ${res.statusCode}: ${err.message}`,
-        // Skip logging for /health endpoints to reduce noise
         autoLogging: {
           ignore: (req: any) => req.url?.includes('/health'),
         },
-        // Add service name to every log line
         base: {
           service: process.env.npm_package_name ?? 'ev-service',
           env:     process.env.NODE_ENV ?? 'development',
         },
-        // Redact sensitive information from logs
         redact: {
           paths:  ['req.headers.authorization', 'req.headers.cookie', '*.password', '*.token'],
           censor: '[REDACTED]',

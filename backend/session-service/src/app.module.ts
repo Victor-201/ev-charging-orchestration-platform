@@ -62,7 +62,7 @@ import { OutboxOrmEntity as OutboxEntity } from './infrastructure/messaging/outb
         synchronize: false,
         logging:     cfg.get('NODE_ENV') !== 'production',
         poolSize:    20,
-        connectTimeoutMS: 3000,
+        connectTimeoutMS: 15000,
       }),
       inject: [ConfigService],
     }),
