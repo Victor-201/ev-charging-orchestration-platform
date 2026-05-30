@@ -15,6 +15,13 @@ class StationEntity extends Equatable {
   final int totalChargers;
   final int availableChargers;
   final double? distanceKm;
+  
+  // AI Suggestion Metadata
+  final String? suggestedChargerId;
+  final String? suggestedConnectorType;
+  final double? suggestedMaxPowerKw;
+  final double? suggestedEstimatedPriceVnd;
+  final double? suggestedScore;
 
   const StationEntity({
     required this.id,
@@ -27,10 +34,30 @@ class StationEntity extends Equatable {
     this.totalChargers = 0,
     this.availableChargers = 0,
     this.distanceKm,
+    this.suggestedChargerId,
+    this.suggestedConnectorType,
+    this.suggestedMaxPowerKw,
+    this.suggestedEstimatedPriceVnd,
+    this.suggestedScore,
   });
 
   @override
-  List<Object?> get props => [id, name, latitude, longitude, status, totalChargers, availableChargers, chargers];
+  List<Object?> get props => [
+        id,
+        name,
+        latitude,
+        longitude,
+        status,
+        totalChargers,
+        availableChargers,
+        chargers,
+        distanceKm,
+        suggestedChargerId,
+        suggestedConnectorType,
+        suggestedMaxPowerKw,
+        suggestedEstimatedPriceVnd,
+        suggestedScore,
+      ];
 }
 
 /// Individual charger point representation mapping operational states (AVAILABLE, IN_USE, etc.).

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_layout.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
 import '../../../../core/design_system/widgets/ev_toast.dart';
 import '../../domain/entities/station_entity.dart';
@@ -73,8 +74,7 @@ class StationDetailSheet extends StatelessWidget {
                   Expanded(
                     child: ListView(
                       controller: scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg),
+                      padding: AppLayout.paddingWithNavbar(context),
                       children: [
                         // Header
                         Row(
@@ -231,7 +231,7 @@ class StationDetailSheet extends StatelessWidget {
                               final charger = currentStation.chargers[index];
                               final color =
                                   AppColors.forChargerStatus(charger.status);
-                              final isAvailable = charger.status.toUpperCase() == 'AVAILABLE';
+                              final isBookable = charger.status.toUpperCase() != 'FAULTED' && charger.status.toUpperCase() != 'OFFLINE';
                               
                               String statusText;
                               switch (charger.status.toUpperCase()) {
@@ -385,8 +385,8 @@ class StationDetailSheet extends StatelessWidget {
                                                 ),
                                                 InkWell(
                                                   onTap: () {
-                                                    if (!isAvailable) {
-                                                      EVToast.show(context, message: 'Trụ sạc này hiện không khả dụng để đặt lịch.', isError: true);
+                                                    if (!isBookable) {
+                                                      EVToast.show(context, message: 'Trụ sạc này hiện đang ngoại tuyến hoặc đang lỗi, không thể đặt lịch.', isError: true);
                                                       return;
                                                     }
                                                     Navigator.pop(context);
@@ -404,10 +404,10 @@ class StationDetailSheet extends StatelessWidget {
                                                   child: Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                                     decoration: BoxDecoration(
-                                                      gradient: isAvailable ? AppColors.primaryGradient : null,
-                                                      color: isAvailable ? null : AppColors.outlineLight,
+                                                      gradient: isBookable ? AppColors.primaryGradient : null,
+                                                      color: isBookable ? null : AppColors.outlineLight,
                                                       borderRadius: BorderRadius.circular(AppRadius.md),
-                                                      boxShadow: isAvailable ? [
+                                                      boxShadow: isBookable ? [
                                                         BoxShadow(
                                                           color: AppColors.primaryCyan.withValues(alpha: 0.3),
                                                           blurRadius: 6,

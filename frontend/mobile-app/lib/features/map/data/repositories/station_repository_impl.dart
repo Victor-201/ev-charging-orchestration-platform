@@ -23,6 +23,11 @@ class StationModel extends StationEntity {
     super.totalChargers,
     super.availableChargers,
     super.distanceKm,
+    super.suggestedChargerId,
+    super.suggestedConnectorType,
+    super.suggestedMaxPowerKw,
+    super.suggestedEstimatedPriceVnd,
+    super.suggestedScore,
   });
 
   factory StationModel.fromJson(Map<String, dynamic> json) {
@@ -268,8 +273,8 @@ class StationRepositoryImpl implements IStationRepository {
       final response = await _client.get(
         ApiPaths.bookingSuggest,
         queryParameters: {
-          'lat': lat,
-          'lng': lng,
+          'latitude': lat,
+          'longitude': lng,
           if (connectorType != null) 'connectorType': connectorType,
         },
       );
@@ -292,7 +297,30 @@ class StationRepositoryImpl implements IStationRepository {
       }
       
       // Fetch details of this optimal station containing the recommended charger
-      return await getStationByChargerId(chargerId);
+      final stationResult = await getStationByChargerId(chargerId);
+      return stationResult.fold(
+        (failure) => Left(failure),
+        (station) {
+          final model = StationModel(
+            id: station.id,
+            name: station.name,
+            address: station.address,
+            latitude: station.latitude,
+            longitude: station.longitude,
+            status: station.status,
+            chargers: station.chargers,
+            totalChargers: station.totalChargers,
+            availableChargers: station.availableChargers,
+            distanceKm: double.tryParse(topSuggestion['distanceKm']?.toString() ?? '') ?? station.distanceKm,
+            suggestedChargerId: chargerId,
+            suggestedConnectorType: topSuggestion['connectorType']?.toString() ?? connectorType,
+            suggestedMaxPowerKw: double.tryParse(topSuggestion['maxPowerKw']?.toString() ?? ''),
+            suggestedEstimatedPriceVnd: double.tryParse(topSuggestion['estimatedPriceVnd']?.toString() ?? ''),
+            suggestedScore: double.tryParse(topSuggestion['score']?.toString() ?? ''),
+          );
+          return Right(model);
+        },
+      );
     } on DioException catch (e) {
       return Left(ErrorMapper.fromDioException(e));
     }

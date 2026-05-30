@@ -9,7 +9,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:get_it/get_it.dart';
 
 import '../bloc/map_bloc.dart';
+import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
+import '../../../../core/design_system/theme/app_layout.dart';
 import '../../domain/entities/station_entity.dart';
 import '../../domain/usecases/search_stations_usecase.dart';
 import '../../domain/usecases/suggest_optimal_station_usecase.dart';
@@ -38,6 +41,10 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   final MapController _mapController = MapController();
 
   static const LatLng _defaultCenter = LatLng(21.0285, 105.8542);
+
+  /// Cross-session GPS cache: survives widget rebuilds / tab switches.
+  static LatLng? _lastKnownLocation;
+
   LatLng? _userLocation;
 
   String? _selectedConnector;
@@ -84,12 +91,23 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Defer GPS permission check until after the first frame is rendered.
-    // This prevents the blocking getCurrentPosition() call from delaying
-    // the initial map paint (was causing 30k ms startup lag).
+
+    // Pre-fill from cross-session cache so the map snaps to the right spot
+    // instantly (even before fresh GPS resolves).
+    if (_lastKnownLocation != null) {
+      _userLocation = _lastKnownLocation;
+    }
+
+    // After the first frame, move map to cached position then refresh GPS.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _checkLocationPermission();
+      if (!mounted) return;
+      // Move immediately to cached location if available.
+      if (_userLocation != null) {
+        _mapController.move(_userLocation!, 15.0);
+      }
+      _checkLocationPermission();
     });
+
     // Periodically re-scan the current viewport to update station availability.
     _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (!mounted) return;
@@ -131,6 +149,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
     );
     if (mounted) {
       final loc = LatLng(pos.latitude, pos.longitude);
+      // Update cross-session cache so future visits snap here immediately.
+      _lastKnownLocation = loc;
       setState(() {
         _userLocation = loc;
       });
@@ -316,15 +336,29 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
       ),
     );
 
+    String? connectorType = _selectedConnector;
+    if (connectorType == null) {
+      try {
+        final profileState = context.read<ProfileBloc>().state;
+        if (profileState is ProfileLoaded && profileState.vehicles.isNotEmpty) {
+          final primaryVehicle = profileState.vehicles.firstWhere(
+            (v) => v.isPrimary,
+            orElse: () => profileState.vehicles.first,
+          );
+          connectorType = primaryVehicle.connectorType;
+        }
+      } catch (_) {}
+    }
+
     final usecase = GetIt.instance<SuggestOptimalStationUseCase>();
     final center = _mapController.camera.center;
     final result = await usecase(
       lat: _userLocation?.latitude ?? center.latitude,
       lng: _userLocation?.longitude ?? center.longitude,
-      connectorType: _selectedConnector,
+      connectorType: connectorType,
     );
 
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
 
     result.fold(
       (failure) {
@@ -347,13 +381,49 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
         ));
   }
 
-  void _recenterMap() {
-    final center = _userLocation ?? _defaultCenter;
-    _mapController.move(center, 15);
+  /// Re-center the map on the user's live GPS position.
+  /// Always requests a fresh fix so the button feels responsive.
+  Future<void> _recenterMap() async {
+    // Snap to cached location instantly for immediate feedback.
+    if (_userLocation != null) {
+      _mapController.move(_userLocation!, 15.0);
+    }
+
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        // Fallback: use last known or default.
+        final center = _userLocation ?? _defaultCenter;
+        if (mounted) _mapController.move(center, 15.0);
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
+      );
+
+      if (!mounted) return;
+      final loc = LatLng(pos.latitude, pos.longitude);
+      _lastKnownLocation = loc;
+      setState(() => _userLocation = loc);
+      _mapController.move(loc, 15.0);
+      context.read<MapBloc>().add(
+        MapLocationUpdated(lat: pos.latitude, lng: pos.longitude),
+      );
+    } catch (_) {
+      // Timeout or error — stay at cached position.
+      if (mounted && _userLocation != null) {
+        _mapController.move(_userLocation!, 15.0);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoggedIn = context.watch<AuthBloc>().state is AuthAuthenticated;
+
     return Scaffold(
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -629,32 +699,33 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
             ),
           ),
 
-          Positioned(
-            bottom: 176,
-            right: AppLayout.sidePadding,
-            child: GestureDetector(
-              key: const ValueKey('ai_optimizer_btn'),
-              onTap: _getAiSuggestion,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primaryCyan, AppColors.primaryLime],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryCyan.withValues(alpha: 0.5),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
+          if (isLoggedIn)
+            Positioned(
+              bottom: 176,
+              right: AppLayout.sidePadding,
+              child: GestureDetector(
+                key: const ValueKey('ai_optimizer_btn'),
+                onTap: _getAiSuggestion,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryCyan, AppColors.primaryLime],
                     ),
-                  ],
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryCyan.withValues(alpha: 0.5),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
                 ),
-                child: const Icon(Icons.psychology_outlined, color: Colors.white, size: 24),
               ),
             ),
-          ),
 
           Positioned(
             bottom: 120,
