@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 export type TxType   = 'topup' | 'payment' | 'refund';
 export type TxMethod = 'wallet' | 'bank_transfer' | 'cash';
 export type TxStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
-export type TxRelatedType = 'subscription' | 'booking' | 'charging_session' | 'guest_charging';
+export type TxRelatedType = 'subscription' | 'booking' | 'charging_session' | 'guest_charging' | 'arrears';
 
 export class TransactionException extends Error {
   constructor(message: string) {

@@ -51,4 +51,12 @@ export class GetTransactionHistoryDto {
   @Type(() => Number)
   @IsNumber()
   offset?: number = 0;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
 }

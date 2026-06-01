@@ -19,7 +19,7 @@ import {
   EVENT_BUS, IPaymentEventBus,
 } from '../../infrastructure/messaging/outbox-event-bus';
 import {
-  ProcessedEventOrmEntity, InvoiceOrmEntity,
+  ProcessedEventOrmEntity, InvoiceOrmEntity, TransactionOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/payment.orm-entities';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -157,12 +157,31 @@ export class HandleVNPayCallbackUseCase {
           if (wallet) {
             await this.walletRepo.credit(wallet.id, tx.id, tx.amount, manager);
             events.push(new WalletTopupCompletedEvent(
-              tx.id,
+              wallet.id,
               tx.userId,
               tx.amount,
-              'VNPay Topup',
+              tx.id,
             ));
           }
+        }
+
+        // ── Arrears direct payment: mark all unpaid/overdue invoices as paid ──
+        if (tx.type === 'payment' && (tx.relatedType === 'arrears' || (tx.meta as any)?.type === 'arrears')) {
+          const unpaidInvoices = await manager.find(InvoiceOrmEntity, {
+            where: [
+              { userId: tx.userId, status: 'unpaid' },
+              { userId: tx.userId, status: 'overdue' },
+            ],
+          });
+          for (const invoice of unpaidInvoices) {
+            invoice.status = 'paid';
+            await manager.save(InvoiceOrmEntity, invoice);
+          }
+          const wallet = await this.walletRepo.findByUserId(tx.userId);
+          if (wallet) {
+            events.push(new WalletArrearsClearedEvent(tx.userId, wallet.id));
+          }
+          this.logger.log(`Arrears settled via VNPay: user=${tx.userId} amount=${tx.amount} invoices=${unpaidInvoices.length}`);
         }
       } else {
         tx.fail(`VNPay responseCode=${result.responseCode}`);
@@ -335,11 +354,31 @@ export class GetWalletBalanceUseCase {
     @Inject(WALLET_REPOSITORY) private readonly walletRepo: IWalletRepository,
     @InjectRepository(InvoiceOrmEntity)
     private readonly invoiceRepo: Repository<InvoiceOrmEntity>,
+    @InjectRepository(TransactionOrmEntity)
+    private readonly txRepo: Repository<TransactionOrmEntity>,
   ) {}
 
-  async execute(userId: string): Promise<{ walletId: string; balance: number; currency: string; hasArrears: boolean; arrearsAmount: number }> {
+  async execute(userId: string): Promise<{
+    walletId: string;
+    balance: number;
+    currency: string;
+    hasArrears: boolean;
+    arrearsAmount: number;
+    totalTransactionsCount: number;
+    totalTopUpAmount: number;
+  }> {
     const wallet = await this.walletRepo.findByUserId(userId);
-    if (!wallet) return { walletId: '', balance: 0, currency: 'VND', hasArrears: false, arrearsAmount: 0 };
+    if (!wallet) {
+      return {
+        walletId: '',
+        balance: 0,
+        currency: 'VND',
+        hasArrears: false,
+        arrearsAmount: 0,
+        totalTransactionsCount: 0,
+        totalTopUpAmount: 0.0,
+      };
+    }
     const balance = await this.walletRepo.getBalance(wallet.id);
 
     // Treat unpaid/overdue invoices as arrears
@@ -353,12 +392,28 @@ export class GetWalletBalanceUseCase {
     const hasArrears = unpaidInvoices.length > 0;
     const arrearsAmount = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
 
+    // Calculate database stats
+    const totalTransactionsCount = await this.txRepo.count({
+      where: { userId, status: 'completed' as any },
+    });
+
+    const topupSumResult = await this.txRepo
+      .createQueryBuilder('t')
+      .select('SUM(t.amount)', 'sum')
+      .where('t.user_id = :userId', { userId })
+      .andWhere('t.type = :type', { type: 'topup' })
+      .andWhere('t.status = :status', { status: 'completed' })
+      .getRawOne();
+    const totalTopUpAmount = Number(topupSumResult?.sum ?? 0);
+
     return {
       walletId: wallet.id,
       balance,
       currency: wallet.currency,
       hasArrears,
       arrearsAmount,
+      totalTransactionsCount,
+      totalTopUpAmount,
     };
   }
 }
@@ -371,8 +426,11 @@ export class GetTransactionHistoryUseCase {
     @Inject(TRANSACTION_REPOSITORY) private readonly txRepo: ITransactionRepository,
   ) {}
 
-  async execute(userId: string, limit = 20, offset = 0): Promise<Transaction[]> {
-    return this.txRepo.findByUserId(userId, limit, offset);
+  async execute(userId: string, limit = 20, offset = 0, isAdmin = false, type?: string, status?: string): Promise<Transaction[]> {
+    if (isAdmin) {
+      return this.txRepo.findAll(limit, offset, type, status);
+    }
+    return this.txRepo.findByUserId(userId, limit, offset, type, status);
   }
 }
 
@@ -651,3 +709,78 @@ export class PayArrearsUseCase {
   }
 }
 
+
+/**
+ * Initiate a direct VNPay payment to settle all outstanding arrears.
+ * The user pays the exact total debt via VNPay gateway;
+ * their EVolt wallet balance is NOT affected.
+ * HandleVNPayCallbackUseCase settles the invoices after the VNPay callback.
+ */
+@Injectable()
+export class PayArrearsVNPayInitUseCase {
+  private readonly logger = new Logger(PayArrearsVNPayInitUseCase.name);
+
+  constructor(
+    @Inject(WALLET_REPOSITORY)      private readonly walletRepo: IWalletRepository,
+    @Inject(TRANSACTION_REPOSITORY) private readonly txRepo: ITransactionRepository,
+    private readonly vnpay: VNPayService,
+    private readonly config: ConfigService,
+    @InjectRepository(InvoiceOrmEntity)
+    private readonly invoiceRepo: Repository<InvoiceOrmEntity>,
+  ) {}
+
+  async execute(cmd: {
+    userId: string;
+    ipAddr?: string;
+    bankCode?: string;
+  }): Promise<{ transactionId: string; paymentUrl: string; totalArrears: number }> {
+    // Fetch all outstanding invoices
+    const unpaidInvoices = await this.invoiceRepo.find({
+      where: [
+        { userId: cmd.userId, status: 'unpaid' },
+        { userId: cmd.userId, status: 'overdue' },
+      ],
+    });
+
+    if (unpaidInvoices.length === 0) {
+      throw new Error('NO_ARREARS: User has no outstanding arrears to pay');
+    }
+
+    const totalArrears = unpaidInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount), 0);
+
+    if (totalArrears < 1000) {
+      throw new Error('ARREARS_TOO_SMALL: Arrears amount is below minimum VNPay threshold (1,000 VND)');
+    }
+
+    // Create a pending transaction to track this arrears payment
+    // NOTE: relatedId is null because arrears don't link to a single booking/session UUID.
+    // The arrears context is stored in meta.
+    const txn = Transaction.create({
+      userId:      cmd.userId,
+      type:        'payment',
+      amount:      totalArrears,
+      method:      'bank_transfer',
+      relatedId:   undefined,      // NOT a UUID, leave null
+      relatedType: undefined,      // 'arrears' not in DB enum, stored in meta
+    });
+
+    const txnRef   = `ARREARS${txn.id.replace(/-/g, '').substring(0, 12).toUpperCase()}`;
+    const returnUrl = this.config.get('VNPAY_RETURN_URL', 'http://localhost:3005/api/v1/payments/vnpay-return');
+
+    const paymentUrl = this.vnpay.buildPaymentUrl({
+      amount:    totalArrears,
+      orderInfo: `EV arrears payment user ${cmd.userId.substring(0, 8)}`,
+      orderType: 'billpayment',
+      txnRef,
+      returnUrl,
+      ipAddr:   cmd.ipAddr,
+      bankCode: cmd.bankCode,
+    });
+
+    txn.attachVNPayRef(txnRef, { type: 'arrears', invoiceCount: unpaidInvoices.length, vnpayTxnRef: txnRef });
+    await this.txRepo.save(txn);
+
+    this.logger.log(`Arrears VNPay initiated: user=${cmd.userId} total=${totalArrears} txnRef=${txnRef}`);
+    return { transactionId: txn.id, paymentUrl, totalArrears };
+  }
+}

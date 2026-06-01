@@ -43,11 +43,14 @@ export class BillingController {
     }
     
     if (userId) {
-      query.andWhere('invoice.userId = :userId', { userId });
+      query.andWhere('invoice.user_id = :userId', { userId });
     }
     
     const invoices = await query.getMany();
-    return invoices;
+    return invoices.map(inv => ({
+      ...inv,
+      status: inv.status === 'paid' ? 'SUCCESS' : 'PENDING',
+    }));
   }
 
   /**

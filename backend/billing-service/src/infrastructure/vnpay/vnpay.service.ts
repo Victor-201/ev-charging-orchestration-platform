@@ -169,16 +169,20 @@ export class VNPayService {
     }
   }
 
-  /** Format date as YYYYMMDDHHmmss (VNPay format) */
+  /** Format date as YYYYMMDDHHmmss in GMT+7 (VNPay format) */
   private formatDate(date: Date): string {
+    // Force date to GMT+7 timezone regardless of the server's timezone
+    const gmt7Time = date.getTime() + (date.getTimezoneOffset() * 60 * 1000) + (7 * 60 * 60 * 1000);
+    const gmt7Date = new Date(gmt7Time);
+
     const pad = (n: number) => String(n).padStart(2, '0');
     return [
-      date.getFullYear(),
-      pad(date.getMonth() + 1),
-      pad(date.getDate()),
-      pad(date.getHours()),
-      pad(date.getMinutes()),
-      pad(date.getSeconds()),
+      gmt7Date.getFullYear(),
+      pad(gmt7Date.getMonth() + 1),
+      pad(gmt7Date.getDate()),
+      pad(gmt7Date.getHours()),
+      pad(gmt7Date.getMinutes()),
+      pad(gmt7Date.getSeconds()),
     ].join('');
   }
 }

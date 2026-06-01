@@ -381,6 +381,9 @@ export class SessionCompletedBillingConsumer {
     } catch (err) {
       this.logger.error(`Pricing API failed — using upstream values: ${err}`);
       energyFeeVnd = Math.ceil((payload.kwhConsumed ?? 0) * 3_500);
+      if (energyFeeVnd < 1000) {
+        energyFeeVnd = 1000;
+      }
       idleFeeVnd   = Math.ceil(Math.max(0, (payload.idleMinutes ?? 0) - 20) * 1_000);
       totalFeeVnd  = energyFeeVnd + idleFeeVnd;
       chargeableIdleMinutes = Math.max(0, (payload.idleMinutes ?? 0) - 20);

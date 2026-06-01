@@ -33,9 +33,33 @@ export class TransactionRepository implements ITransactionRepository {
     return e ? this.toDomain(e) : null;
   }
 
-  async findByUserId(userId: string, limit = 20, offset = 0): Promise<Transaction[]> {
+  async findByUserId(userId: string, limit = 20, offset = 0, type?: string, status?: string): Promise<Transaction[]> {
+    const where: any = { userId };
+    if (type) {
+      where.type = type.toLowerCase();
+    }
+    if (status) {
+      where.status = status.toLowerCase();
+    }
     const entities = await this.repo.find({
-      where:  { userId },
+      where,
+      order:  { createdAt: 'DESC' },
+      take:   limit,
+      skip:   offset,
+    });
+    return entities.map(this.toDomain.bind(this));
+  }
+
+  async findAll(limit = 20, offset = 0, type?: string, status?: string): Promise<Transaction[]> {
+    const where: any = {};
+    if (type) {
+      where.type = type.toLowerCase();
+    }
+    if (status) {
+      where.status = status.toLowerCase();
+    }
+    const entities = await this.repo.find({
+      where,
       order:  { createdAt: 'DESC' },
       take:   limit,
       skip:   offset,
