@@ -453,7 +453,9 @@ export class OcppGatewayService implements OnModuleInit, OnModuleDestroy {
     status: string,
     errorCode: string | null,
   ): Promise<void> {
+    const eventId = uuidv4();
     await this.amqp.publish('ev.charging', 'charger.status.changed', {
+      eventId,
       eventType:  'charger.status.changed',
       chargerId,
       status,       // OCPP status: Available | Charging | Offline | Faulted ...
