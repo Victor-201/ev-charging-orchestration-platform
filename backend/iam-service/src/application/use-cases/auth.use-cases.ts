@@ -152,6 +152,7 @@ export class LoginUseCase {
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
     @Inject(EMAIL_VERIFICATION_REPOSITORY) private readonly emailVerifRepo: IEmailVerificationRepository,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(cmd: LoginCommand): Promise<TokenPair> {
@@ -257,9 +258,20 @@ export class LoginUseCase {
     const roles = await this.roleRepo.findRolesByUserId(user.id);
     const roleNames = roles.map(r => r.name);
 
+    let stationId: string | null = null;
+    let stationIds: string[] = [];
+    if (roleNames.includes('staff')) {
+      const dbStaff = await this.dataSource.query(
+        `SELECT station_id FROM staff_profiles WHERE user_id = $1 AND is_active = true`,
+        [user.id]
+      );
+      stationIds = dbStaff.map((p: any) => p.station_id);
+      stationId = stationIds[0] || null;
+    }
+
     const expiresIn = parseInt(this.config.get('JWT_EXPIRES_IN_SECONDS', '900'));
     const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, roles: roleNames },
+      { sub: user.id, email: user.email, roles: roleNames, stationId, stationIds },
       { expiresIn },
     );
 
@@ -307,6 +319,7 @@ export class RefreshTokenUseCase {
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(rawToken: string): Promise<TokenPair> {
@@ -323,12 +336,23 @@ export class RefreshTokenUseCase {
     const roles = await this.roleRepo.findRolesByUserId(user.id);
     const roleNames = roles.map(r => r.name);
 
+    let stationId: string | null = null;
+    let stationIds: string[] = [];
+    if (roleNames.includes('staff')) {
+      const dbStaff = await this.dataSource.query(
+        `SELECT station_id FROM staff_profiles WHERE user_id = $1 AND is_active = true`,
+        [user.id]
+      );
+      stationIds = dbStaff.map((p: any) => p.station_id);
+      stationId = stationIds[0] || null;
+    }
+
     // Rotate session: revoke current refresh token to prevent reuse.
     await this.sessionRepo.revokeById(session.id);
 
     const expiresIn = parseInt(this.config.get('JWT_EXPIRES_IN_SECONDS', '900'));
     const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, roles: roleNames },
+      { sub: user.id, email: user.email, roles: roleNames, stationId, stationIds },
       { expiresIn },
     );
 
@@ -565,6 +589,7 @@ export class VerifyEmailUseCase {
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async execute(
@@ -612,9 +637,20 @@ export class VerifyEmailUseCase {
     const roles = await this.roleRepo.findRolesByUserId(user.id);
     const roleNames = roles.map(r => r.name);
 
+    let stationId: string | null = null;
+    let stationIds: string[] = [];
+    if (roleNames.includes('staff')) {
+      const dbStaff = await this.dataSource.query(
+        `SELECT station_id FROM staff_profiles WHERE user_id = $1 AND is_active = true`,
+        [user.id]
+      );
+      stationIds = dbStaff.map((p: any) => p.station_id);
+      stationId = stationIds[0] || null;
+    }
+
     const expiresIn = parseInt(this.config.get('JWT_EXPIRES_IN_SECONDS', '900'));
     const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, roles: roleNames },
+      { sub: user.id, email: user.email, roles: roleNames, stationId, stationIds },
       { expiresIn },
     );
 

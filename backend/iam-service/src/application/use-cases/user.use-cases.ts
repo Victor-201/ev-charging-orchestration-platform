@@ -47,22 +47,40 @@ export class GetMyProfileUseCase {
       this.userRepo.findById(userId),
     ]);
 
-    if (!cache) throw new UserProfileNotFoundException(userId);
+    if (cache) {
+      return {
+        userId: cache.userId,
+        email: cache.email,
+        fullName: cache.fullName,
+        phone: cache.phone,
+        role: cache.roleName,
+        status: cache.status,
+        emailVerified: cache.emailVerified,
+        avatarUrl: profile?.avatarUrl ?? null,
+        address: profile?.address ?? null,
+        dateOfBirth: user?.dateOfBirth ?? null,
+        hasOutstandingDebt: cache.hasOutstandingDebt ?? false,
+        arrearsAmount: cache.arrearsAmount ?? 0,
+        mfaEnabled: user?.mfaEnabled ?? false,
+      };
+    }
+
+    if (!user) throw new UserProfileNotFoundException(userId);
 
     return {
-      userId: cache.userId,
-      email: cache.email,
-      fullName: cache.fullName,
-      phone: cache.phone,
-      role: cache.roleName,
-      status: cache.status,
-      emailVerified: cache.emailVerified,
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone ?? null,
+      role: 'user',
+      status: user.status,
+      emailVerified: user.emailVerified,
       avatarUrl: profile?.avatarUrl ?? null,
       address: profile?.address ?? null,
-      dateOfBirth: user?.dateOfBirth ?? null,
-      hasOutstandingDebt: cache.hasOutstandingDebt ?? false,
-      arrearsAmount: cache.arrearsAmount ?? 0,
-      mfaEnabled: user?.mfaEnabled ?? false,
+      dateOfBirth: user.dateOfBirth ?? null,
+      hasOutstandingDebt: false,
+      arrearsAmount: 0,
+      mfaEnabled: user.mfaEnabled,
     };
   }
 }

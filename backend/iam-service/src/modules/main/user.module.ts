@@ -8,6 +8,7 @@ import {
   VehicleAuditLogOrmEntity, ProfileAuditLogOrmEntity,
   UserArrearsOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/user.orm-entities';
+import { UserOrmEntity } from '../../infrastructure/persistence/typeorm/entities/auth.orm-entities';
 import { UserProfileRepository, UsersCacheRepository } from '../../infrastructure/persistence/typeorm/repositories/user-profile.repository';
 import { VehicleRepository } from '../../infrastructure/persistence/typeorm/repositories/vehicle.repository';
 import { OutboxEventBus, EVENT_BUS, OutboxPublisher } from '../../infrastructure/messaging/outbox/outbox.publisher';
@@ -45,6 +46,7 @@ import { AuthModule } from '../auth/auth.module';
       UserFcmTokenOrmEntity, ProcessedEventOrmEntity, OutboxOrmEntity,
       VehicleAuditLogOrmEntity, ProfileAuditLogOrmEntity,
       UserArrearsOrmEntity,       // Records detailed debt entries
+      UserOrmEntity,
     ]),
   ],
   controllers: [UserController, StaffController],

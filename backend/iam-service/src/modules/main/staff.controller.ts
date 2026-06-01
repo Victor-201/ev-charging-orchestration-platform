@@ -9,37 +9,16 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   StaffProfileOrmEntity,
   AttendanceOrmEntity,
+  UsersCacheOrmEntity,
 } from '../../infrastructure/persistence/typeorm/entities/user.orm-entities';
+import { UserOrmEntity } from '../../infrastructure/persistence/typeorm/entities/auth.orm-entities';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard }   from '../../shared/guards/roles.guard';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../shared/guards/jwt-auth.guard';
-
-class CreateStaffDto {
-  userId: string;
-  position: string;
-  shift: string;
-  notes?: string;
-  stationId?: string;
-}
-
-class UpdateStaffDto {
-  position?: string;
-  shift?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
-}
-
-class CheckInDto {
-  latitude: number;
-  longitude: number;
-  stationId?: string;
-}
-
-class CheckOutDto {
-  latitude: number;
-  longitude: number;
-}
+import { ListStaffQueryDto, ListAttendanceQueryDto } from './dto/user-query.dto';
+import { CreateStaffDto, UpdateStaffDto, CheckInDto, CheckOutDto } from './dto/staff.dto';
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,7 +28,26 @@ export class StaffController {
     private readonly staffRepo: Repository<StaffProfileOrmEntity>,
     @InjectRepository(AttendanceOrmEntity)
     private readonly attendanceRepo: Repository<AttendanceOrmEntity>,
+    @InjectRepository(UsersCacheOrmEntity)
+    private readonly usersCacheRepo: Repository<UsersCacheOrmEntity>,
   ) {}
+
+  /**
+   * GET /api/v1/users
+   * Admin/Staff only: List all users from the users cache read-model.
+   */
+  @Get('users')
+  @Roles('admin')
+  async listUsers(@Query('limit') limit?: string, @Query('offset') offset?: string) {
+    const limitNum = limit ? parseInt(limit, 10) : 1000;
+    const offsetNum = offset ? parseInt(offset, 10) : 0;
+    const [items, total] = await this.usersCacheRepo.findAndCount({
+      take: limitNum,
+      skip: offsetNum,
+      order: { fullName: 'ASC' },
+    });
+    return { items, total };
+  }
 
   /**
    * GET /api/v1/staff
@@ -58,21 +56,38 @@ export class StaffController {
   @Get('staff')
   @Roles('admin', 'staff')
   async listStaff(
-    @Query('position') position?: string,
-    @Query('shift') shift?: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListStaffQueryDto,
   ) {
-    const where: any = {};
-    if (position) where.position = position.toLowerCase();
-    if (shift) where.shift = shift.toLowerCase();
+    const qb = this.staffRepo.createQueryBuilder('staff');
+    qb.leftJoinAndMapOne('staff.User', UserOrmEntity, 'user', 'staff.userId = user.id');
 
-    return this.staffRepo.find({
-      where,
-      take: limit ? Number(limit) : 20,
-      skip: offset ? Number(offset) : 0,
-      order: { createdAt: 'DESC' },
-    });
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      qb.andWhere('staff.userId = :currentUserId', { currentUserId: user.id });
+    } else {
+      if (query.position) {
+        qb.andWhere('staff.position = :position', { position: query.position.toLowerCase() });
+      }
+      if (query.shift) {
+        qb.andWhere('staff.shift = :shift', { shift: query.shift.toLowerCase() });
+      }
+    }
+
+    qb.take(query.limit ?? 20)
+      .skip(query.offset ?? 0)
+      .orderBy('staff.createdAt', 'DESC');
+
+    const [items, total] = await qb.getManyAndCount();
+    return {
+      items: items.map(s => ({
+        ...s,
+        status: s.isActive ? 'ACTIVE' : 'INACTIVE',
+      })),
+      total,
+    };
   }
 
   /**
@@ -128,6 +143,21 @@ export class StaffController {
     }
 
     return this.staffRepo.save(staff);
+  }
+
+  /**
+   * DELETE /api/v1/staff/:id
+   * Admin only: Delete a staff profile.
+   */
+  @Delete('staff/:id')
+  @Roles('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteStaff(@Param('id', ParseUUIDPipe) id: string) {
+    const staff = await this.staffRepo.findOne({ where: { id } });
+    if (!staff) {
+      throw new NotFoundException('Staff profile not found');
+    }
+    await this.staffRepo.remove(staff);
   }
 
   /**
@@ -211,46 +241,64 @@ export class StaffController {
     return this.attendanceRepo.save(attendance);
   }
 
-  /**
-   * GET /api/v1/attendance
-   * Admin/Staff only: List attendance records.
-   */
   @Get('attendance')
   @Roles('admin', 'staff')
   async listAttendance(
-    @Query('userId') userId?: string,
-    @Query('stationId') stationId?: string,
-    @Query('fromDate') fromDate?: string,
-    @Query('toDate') toDate?: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListAttendanceQueryDto,
   ) {
     const qb = this.attendanceRepo.createQueryBuilder('att');
+    qb.innerJoinAndMapOne('att.staff', StaffProfileOrmEntity, 'staff', 'att.staffId = staff.id');
+    qb.leftJoinAndMapOne('att.User', UserOrmEntity, 'user', 'staff.userId = user.id');
 
-    if (userId) {
-      qb.innerJoin(StaffProfileOrmEntity, 'staff', 'att.staffId = staff.id')
-        .andWhere('staff.userId = :userId', { userId });
-    }
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
 
-    if (stationId) {
-      if (!userId) {
-        qb.innerJoin(StaffProfileOrmEntity, 'staff', 'att.staffId = staff.id');
+    if (isStaff && !isAdmin) {
+      qb.andWhere('staff.userId = :currentUserId', { currentUserId: user.id });
+    } else {
+      if (query.userId) {
+        qb.andWhere('staff.userId = :userId', { userId: query.userId });
       }
-      qb.andWhere('staff.stationId = :stationId', { stationId });
+      if (query.stationId) {
+        qb.andWhere('staff.stationId = :stationId', { stationId: query.stationId });
+      }
     }
 
-    if (fromDate) {
-      qb.andWhere('att.workDate >= :fromDate', { fromDate: new Date(fromDate) });
+    if (query.fromDate) {
+      qb.andWhere('att.workDate >= :fromDate', { fromDate: new Date(query.fromDate) });
     }
 
-    if (toDate) {
-      qb.andWhere('att.workDate <= :toDate', { toDate: new Date(toDate) });
+    if (query.toDate) {
+      qb.andWhere('att.workDate <= :toDate', { toDate: new Date(query.toDate) });
     }
 
-    qb.take(limit ? Number(limit) : 20)
-      .skip(offset ? Number(offset) : 0)
+    qb.take(query.limit ?? 20)
+      .skip(query.offset ?? 0)
       .orderBy('att.workDate', 'DESC');
 
-    return qb.getMany();
+    const [items, total] = await qb.getManyAndCount();
+    return {
+      items: items.map((att: any) => {
+        const match = /Lat:\s*([-\d.]+),\s*Lng:\s*([-\d.]+)/.exec(att.notes || '');
+        const latitude = match ? parseFloat(match[1]) : 10.8231;
+        const longitude = match ? parseFloat(match[2]) : 106.6297;
+
+        return {
+          id: att.id,
+          userId: att.staff?.userId ?? att.staffId,
+          stationId: att.staff?.stationId,
+          checkInTime: att.checkIn,
+          checkOutTime: att.checkOut,
+          latitude,
+          longitude,
+          status: att.status,
+          notes: att.notes,
+          createdAt: att.createdAt,
+          User: att.User,
+        };
+      }),
+      total,
+    };
   }
 }
