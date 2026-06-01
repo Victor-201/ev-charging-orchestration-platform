@@ -620,6 +620,7 @@ function Sub-Frontend-WebAdmin {
         Write-MenuItem "1" "Setup (npm install)" Green
         Write-MenuItem "2" "Run Dev Server"      Green
         Write-MenuItem "3" "Build Production"    Yellow
+        Write-MenuItem "4" "Run Production Server" Green
         Write-Host ""
         Show-Separator
         Write-MenuItem -IsBack
@@ -629,6 +630,7 @@ function Sub-Frontend-WebAdmin {
             "1" { Run-Frontend "web-admin\setup.ps1" }
             "2" { Run-Frontend "web-admin\run.ps1" }
             "3" { Run-Frontend "web-admin\build.ps1" }
+            "4" { Run-Frontend "web-admin\start.ps1" }
             "0" { return }
         }
     }

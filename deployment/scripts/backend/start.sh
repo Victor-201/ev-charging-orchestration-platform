@@ -92,10 +92,13 @@ if [[ "$NGROK" == "true" ]]; then
     sleep 1
     echo -e "${CYAN}[NGROK] Starting tunnel (domain: $NGROK_DOMAIN)...${NC}"
     
-    # Run ngrok.exe via Windows PowerShell to ensure it detaches completely and survives WSL terminal close
-    powershell.exe -NoProfile -Command "Start-Process ngrok.exe -ArgumentList 'http --domain=$NGROK_DOMAIN 8000' -NoNewWindow" </dev/null &>/dev/null &
+    # Extract WSL2 IP address to bypass buggy/broken Windows loopback port forwarding
+    WSL_IP=$(hostname -I | awk '{print $1}')
     
-    echo -e "${GREEN}[NGROK] Tunnel started in background.${NC}"
+    # Run ngrok.exe via Windows PowerShell to ensure it detaches completely and survives WSL terminal close
+    powershell.exe -NoProfile -Command "Start-Process ngrok.exe -ArgumentList 'http --domain=$NGROK_DOMAIN $WSL_IP:8000' -NoNewWindow" </dev/null &>/dev/null &
+    
+    echo -e "${GREEN}[NGROK] Tunnel started in background pointing to WSL IP $WSL_IP.${NC}"
 fi
 
 

@@ -385,6 +385,13 @@ services:
       # URL nội bộ → ev-infrastructure-service (tính phí TOU + Idle Fee)
       EV_INFRA_BASE_URL: http://ev-infrastructure:3003
       KIOSK_API_KEY: ${KIOSK_API_KEY}
+      # ── VNPay Payment Gateway ───────────────────────────────────────────
+      VNPAY_TMN_CODE:        ${VNPAY_TMN_CODE}
+      VNPAY_HASH_SECRET:     ${VNPAY_HASH_SECRET}
+      VNPAY_URL:             ${VNPAY_URL}
+      VNPAY_RETURN_URL:      ${VNPAY_RETURN_URL}
+      VNPAY_DEEP_LINK_SCHEME: ${VNPAY_DEEP_LINK_SCHEME}
+      ANDROID_APP_PACKAGE:   ${ANDROID_APP_PACKAGE}
     depends_on:
       postgres-billing:
         condition: service_healthy
