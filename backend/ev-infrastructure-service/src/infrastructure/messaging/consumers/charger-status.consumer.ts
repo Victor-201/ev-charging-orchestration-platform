@@ -31,43 +31,87 @@ export class ChargerStatusConsumer {
     queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
   })
   async handleChargerStatusChanged(payload: {
-    eventId: string;
+    eventId?: string;
     chargerId: string;
-    stationId: string;
-    newStatus: string;
+    stationId?: string;
+    newStatus?: string;
+    status?: string;
     changedAt: string;
   }): Promise<void> {
+    const eventId = payload.eventId ?? `ocpp-status:${payload.chargerId}:${payload.status ?? 'unknown'}:${payload.changedAt}`;
+
     // Idempotency check
     const processed = await this.processedRepo.findOne({
-      where: { eventId: payload.eventId },
+      where: { eventId },
     });
     if (processed) {
-      this.logger.debug(`Event ${payload.eventId} already processed — skipping`);
+      this.logger.debug(`Event ${eventId} already processed — skipping`);
       return;
     }
 
     try {
+      // Map status if needed
+      let finalStatus = payload.newStatus;
+      if (!finalStatus && payload.status) {
+        const ocppStatus = payload.status.toLowerCase();
+        switch (ocppStatus) {
+          case 'available':
+            finalStatus = 'available';
+            break;
+          case 'preparing':
+          case 'charging':
+          case 'finishing':
+            finalStatus = 'in_use';
+            break;
+          case 'reserved':
+            finalStatus = 'reserved';
+            break;
+          case 'unavailable':
+          case 'offline':
+            finalStatus = 'offline';
+            break;
+          case 'faulted':
+            finalStatus = 'faulted';
+            break;
+          default:
+            finalStatus = 'available';
+        }
+      }
+
+      if (!finalStatus) {
+        this.logger.warn(`No valid status in payload for charger ${payload.chargerId}`);
+        return;
+      }
+
+      // Check if charger exists and get stationId
+      const charger = await this.chargerRepo.findOneBy({ id: payload.chargerId });
+      if (!charger) {
+        this.logger.warn(`Charger ${payload.chargerId} not found in database — skipping status update`);
+        return;
+      }
+      const stationId = payload.stationId ?? charger.stationId;
+
       // Update charger status in DB
       await this.chargerRepo.update(
         { id: payload.chargerId },
         {
-          status: payload.newStatus,
+          status: finalStatus,
           updatedAt: new Date(payload.changedAt),
         },
       );
 
       // Invalidate / update Redis cache
-      await this.cache.setChargerStatus(payload.chargerId, payload.newStatus);
-      await this.cache.invalidateStation(payload.stationId);
+      await this.cache.setChargerStatus(payload.chargerId, finalStatus);
+      await this.cache.invalidateStation(stationId);
 
       // Mark as processed
       await this.processedRepo.save({
-        eventId: payload.eventId,
+        eventId,
         eventType: 'charger.status.changed',
       });
 
       this.logger.log(
-        `Charger ${payload.chargerId} status → ${payload.newStatus} (station ${payload.stationId})`,
+        `Charger ${payload.chargerId} status → ${finalStatus} (station ${stationId})`,
       );
     } catch (err) {
       this.logger.error(`Failed processing charger status event: ${err}`);

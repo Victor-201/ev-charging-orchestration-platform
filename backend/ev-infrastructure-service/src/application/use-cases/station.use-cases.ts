@@ -150,8 +150,13 @@ export class UpdateStationUseCase {
     const station = await this.stationRepo.findById(stationId);
     if (!station) throw new StationNotFoundException(stationId);
 
-    if (dto.name !== undefined || dto.address !== undefined) {
-      station.update({ name: dto.name, address: dto.address });
+    if (dto.name !== undefined || dto.address !== undefined || dto.latitude !== undefined || dto.longitude !== undefined) {
+      station.update({
+        name: dto.name,
+        address: dto.address,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+      });
     }
     if (dto.status !== undefined) {
       station.changeStatus(dto.status);

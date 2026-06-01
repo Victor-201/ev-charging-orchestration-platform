@@ -137,6 +137,8 @@ export class Station {
   update(changes: Partial<{
     name: string;
     address: string;
+    latitude: number;
+    longitude: number;
   }>): void {
     if (changes.name !== undefined) {
       if (changes.name.trim().length < 2) {
@@ -146,6 +148,9 @@ export class Station {
     }
     if (changes.address !== undefined) {
       this._address = changes.address.trim();
+    }
+    if (changes.latitude !== undefined && changes.longitude !== undefined) {
+      this._location = Location.create(changes.latitude, changes.longitude);
     }
     this._updatedAt = new Date();
     this._domainEvents.push(new StationUpdatedEvent(this.id, { name: this._name, address: this._address ?? undefined }));

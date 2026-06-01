@@ -3,10 +3,10 @@ import {
   HttpCode, HttpStatus, NotFoundException, BadRequestException,
   ConflictException, UnprocessableEntityException,
   UseGuards, Delete,
-  ParseUUIDPipe,
+  ParseUUIDPipe, UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CreateStationUseCase, UpdateStationUseCase, GetStationUseCase,
@@ -21,7 +21,8 @@ import {
   ListPricingRulesUseCase
 } from '../../application/use-cases/pricing.use-case';
 import {
-  CreateStationDto, UpdateStationDto, ListStationsQueryDto
+  CreateStationDto, UpdateStationDto, ListStationsQueryDto,
+  ListIncidentsQueryDto, ListMaintenanceQueryDto
 } from '../../application/dtos/station.dto';
 import {
   AddChargerDto, UpdateChargerStatusDto
@@ -112,6 +113,102 @@ export class StationController {
     return this.getCities.execute();
   }
 
+  @Get('pricing-rules')
+  @Roles('admin')
+  async listRules(
+    @Query('stationId')  stationId:  string,
+    @Query('activeOnly') activeOnly: string,
+  ) {
+    return this.listPricingRules.execute(
+      stationId  || undefined,
+      activeOnly === 'true',
+    );
+  }
+
+  @Get('incidents')
+  @Roles('admin', 'staff')
+  async listIncidents(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListIncidentsQueryDto,
+  ) {
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    const where: any = {};
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (allowedStations.length === 0) {
+        return { items: [], total: 0 };
+      }
+      if (query.stationId) {
+        if (!allowedStations.includes(query.stationId)) {
+          throw new UnauthorizedException('You do not have permission to view incidents for this station');
+        }
+        where.stationId = query.stationId;
+      } else {
+        where.stationId = In(allowedStations);
+      }
+    } else {
+      if (query.stationId) where.stationId = query.stationId;
+    }
+
+    if (query.severity) where.severity = query.severity.toLowerCase();
+    if (query.status) where.status = query.status.toLowerCase();
+
+    const [items, total] = await this.incidentRepo.findAndCount({
+      where,
+      take: query.limit ?? 20,
+      skip: query.offset ?? 0,
+      order: { createdAt: 'DESC' },
+    });
+    return { items, total };
+  }
+
+  @Get('maintenance')
+  @Roles('admin', 'staff')
+  async listMaintenance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListMaintenanceQueryDto,
+  ) {
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    const qb = this.maintenanceRepo.createQueryBuilder('maint');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (allowedStations.length === 0) {
+        return { items: [], total: 0 };
+      }
+      if (query.stationId) {
+        if (!allowedStations.includes(query.stationId)) {
+          throw new UnauthorizedException('You do not have permission to view maintenance schedule for this station');
+        }
+        qb.andWhere('maint.stationId = :stationId', { stationId: query.stationId });
+      } else {
+        qb.andWhere('maint.stationId IN (:...allowedStations)', { allowedStations });
+      }
+    } else {
+      if (query.stationId) {
+        qb.andWhere('maint.stationId = :stationId', { stationId: query.stationId });
+      }
+    }
+
+    const now = new Date();
+    if (query.status === 'SCHEDULED') {
+      qb.andWhere('maint.startTime > :now', { now });
+    } else if (query.status === 'IN_PROGRESS') {
+      qb.andWhere('maint.startTime <= :now AND maint.endTime >= :now', { now });
+    } else if (query.status === 'COMPLETED') {
+      qb.andWhere('maint.endTime < :now', { now });
+    }
+    qb.orderBy('maint.startTime', 'DESC')
+      .take(query.limit ?? 20)
+      .skip(query.offset ?? 0);
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
+
   @Get('by-charger/:chargerId')
   @Public()
   async getByCharger(@Param('chargerId', ParseUUIDPipe) chargerId: string) {
@@ -176,10 +273,11 @@ export class StationController {
    */
   @Post(':stationId/chargers')
   @HttpCode(HttpStatus.CREATED)
-  @Roles('admin', 'staff')
+  @Roles('admin')
   async addChargerToStation(
     @Param('stationId', ParseUUIDPipe) stationId: string,
     @Body() body: AddChargerDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.handleDomainErrors(() => this.addCharger.execute(stationId, body));
   }
@@ -191,9 +289,20 @@ export class StationController {
   @Patch(':stationId/chargers/:chargerId/status')
   @Roles('admin', 'staff')
   async updateStatus(
+    @Param('stationId', ParseUUIDPipe) stationId: string,
     @Param('chargerId', ParseUUIDPipe) chargerId: string,
     @Body() body: UpdateChargerStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (!allowedStations.includes(stationId)) {
+        throw new UnauthorizedException('You do not have permission to update charger status at this station');
+      }
+    }
     return this.handleDomainErrors(() => this.updateChargerStatus.execute(chargerId, body));
   }
 
@@ -263,21 +372,6 @@ export class StationController {
     });
   }
 
-  /**
-   * GET /api/v1/stations/pricing-rules?stationId=&activeOnly=true
-   * Admin/Staff: Lists configured pricing rules (TOU + Idle fees).
-   */
-  @Get('pricing-rules')
-  @Roles('admin', 'staff')
-  async listRules(
-    @Query('stationId')  stationId:  string,
-    @Query('activeOnly') activeOnly: string,
-  ) {
-    return this.listPricingRules.execute(
-      stationId  || undefined,
-      activeOnly === 'true',
-    );
-  }
 
   /**
    * POST /api/v1/stations/pricing-rules
@@ -350,29 +444,6 @@ export class StationController {
     await this.deactivateRule.execute(ruleId);
   }
 
-  /**
-   * GET /api/v1/stations/incidents
-   * Admin/Staff only: List station incidents.
-   */
-  @Get('incidents')
-  @Roles('admin', 'staff')
-  async listIncidents(
-    @Query('stationId') stationId?: string,
-    @Query('severity') severity?: string,
-    @Query('status') status?: string,
-    @Query('limit') limit?: number,
-  ) {
-    const where: any = {};
-    if (stationId) where.stationId = stationId;
-    if (severity) where.severity = severity.toLowerCase();
-    if (status) where.status = status.toLowerCase();
-
-    return this.incidentRepo.find({
-      where,
-      take: limit ? Number(limit) : 20,
-      order: { createdAt: 'DESC' },
-    });
-  }
 
   /**
    * POST /api/v1/stations/incidents
@@ -393,6 +464,16 @@ export class StationController {
     if (!body.stationId) {
       throw new BadRequestException('stationId is required');
     }
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (!allowedStations.includes(body.stationId)) {
+        throw new UnauthorizedException('You do not have permission to report incidents at this station');
+      }
+    }
+
     const incident = this.incidentRepo.create({
       id: uuidv4(),
       stationId: body.stationId,
@@ -417,6 +498,7 @@ export class StationController {
       status: string;
       resolutionNote?: string;
     },
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     if (!body.status) {
       throw new BadRequestException('status is required');
@@ -425,6 +507,17 @@ export class StationController {
     if (!incident) {
       throw new NotFoundException('Incident not found');
     }
+
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (!allowedStations.includes(incident.stationId)) {
+        throw new UnauthorizedException('You do not have permission to resolve incidents at this station');
+      }
+    }
+
     incident.status = body.status.toLowerCase();
     if (incident.status === 'resolved') {
       incident.resolvedAt = new Date();
@@ -432,31 +525,6 @@ export class StationController {
     return this.incidentRepo.save(incident);
   }
 
-  /**
-   * GET /api/v1/stations/maintenance
-   * Admin/Staff only: List scheduled maintenance records.
-   */
-  @Get('maintenance')
-  @Roles('admin', 'staff')
-  async listMaintenance(
-    @Query('stationId') stationId?: string,
-    @Query('status') status?: string,
-  ) {
-    const query = this.maintenanceRepo.createQueryBuilder('maint');
-    if (stationId) {
-      query.andWhere('maint.stationId = :stationId', { stationId });
-    }
-    const now = new Date();
-    if (status === 'SCHEDULED') {
-      query.andWhere('maint.startTime > :now', { now });
-    } else if (status === 'IN_PROGRESS') {
-      query.andWhere('maint.startTime <= :now AND maint.endTime >= :now', { now });
-    } else if (status === 'COMPLETED') {
-      query.andWhere('maint.endTime < :now', { now });
-    }
-    query.orderBy('maint.startTime', 'DESC');
-    return query.getMany();
-  }
 
   /**
    * POST /api/v1/stations/maintenance
@@ -492,6 +560,49 @@ export class StationController {
       scheduledBy: body.technicianId ?? user.id,
     });
     return this.maintenanceRepo.save(maint);
+  }
+
+  /**
+   * PATCH /api/v1/stations/maintenance/:id
+   * Admin/Staff: Update maintenance record (e.g., mark as completed).
+   */
+  @Patch('maintenance/:id')
+  @Roles('admin', 'staff')
+  async updateMaintenance(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: {
+      status?: string;
+      endTime?: string;
+      reason?: string;
+    },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const record = await this.maintenanceRepo.findOne({ where: { id } });
+    if (!record) {
+      throw new NotFoundException('Maintenance record not found');
+    }
+
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      if (!allowedStations.includes(record.stationId)) {
+        throw new UnauthorizedException('You do not have permission to update maintenance at this station');
+      }
+    }
+
+    if (body.endTime) {
+      const end = new Date(body.endTime);
+      if (isNaN(end.getTime())) throw new BadRequestException('Invalid endTime format');
+      record.endTime = end;
+    }
+
+    if (body.reason) {
+      record.reason = body.reason;
+    }
+
+    return this.maintenanceRepo.save(record);
   }
 
   private async handleDomainErrors<T>(fn: () => Promise<T>): Promise<T> {

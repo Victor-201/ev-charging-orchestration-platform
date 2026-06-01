@@ -61,6 +61,20 @@ export class UpdateStationDto {
   @IsOptional()
   @IsEnum(StationStatus)
   status?: StationStatus;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  @Type(() => Number)
+  longitude?: number;
 }
 
 // List Stations Query
@@ -115,6 +129,56 @@ export class ListStationsQueryDto {
   @IsNumber()
   @Min(1)
   @Max(1000) // allow fetching all stations in one request for map display
+  @Type(() => Number)
+  limit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  offset?: number;
+}
+
+// List Incidents Query
+export class ListIncidentsQueryDto {
+  @IsOptional()
+  @IsString()
+  stationId?: string;
+
+  @IsOptional()
+  @IsString()
+  severity?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  limit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  offset?: number;
+}
+
+// List Maintenance Query
+export class ListMaintenanceQueryDto {
+  @IsOptional()
+  @IsString()
+  stationId?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
   @Type(() => Number)
   limit?: number;
 

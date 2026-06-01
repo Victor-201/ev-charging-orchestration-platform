@@ -283,7 +283,10 @@ export class CalculateSessionFeeUseCase {
     }
 
     // Calculate fees
-    const energyFeeVnd = Math.ceil(opts.kwhConsumed * pricePerKwhVnd);
+    let energyFeeVnd = Math.ceil(opts.kwhConsumed * pricePerKwhVnd);
+    if (energyFeeVnd < 1000) {
+      energyFeeVnd = 1000;
+    }
     const chargeableIdleMinutes = Math.max(0, opts.idleMinutes - idleGraceMinutes);
     const idleFeeVnd   = Math.ceil(chargeableIdleMinutes * idleFeePerMinuteVnd);
     const totalFeeVnd  = energyFeeVnd + idleFeeVnd;
