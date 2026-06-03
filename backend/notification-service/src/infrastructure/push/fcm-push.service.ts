@@ -146,23 +146,28 @@ export class FcmPushService {
       return { token: message.token, success: true };
     }
 
+    const data: Record<string, string> = {
+      ...(message.data ?? {}),
+      title: message.title,
+      body:  message.body,
+      ...(message.imageUrl ? { imageUrl: message.imageUrl } : {}),
+    };
+
     const payload: admin.messaging.Message = {
       token: message.token,
-      notification: {
-        title: message.title,
-        body:  message.body,
-        ...(message.imageUrl ? { imageUrl: message.imageUrl } : {}),
-      },
+      data,
       android: {
         priority: 'high',
-        notification: { sound: 'default' },
       },
       apns: {
-        payload: { aps: { sound: 'default', badge: 1 } },
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+            'content-available': 1,
+          },
+        },
       },
-      ...(message.data && Object.keys(message.data).length > 0
-        ? { data: message.data }
-        : {}),
     };
 
     try {
