@@ -132,27 +132,45 @@ export class DeliveryEngine {
     // 4. Dispatch to channels
 
     const dispatches: Promise<void>[] = [];
+    const dispatchedChannels: string[] = [];
 
     // Channel: Realtime (Socket.IO)
-    if (params.channels.includes('in_app') && pref.enableRealtime) {
-      dispatches.push(this.dispatchRealtime(notification, params.realtimePayload));
+    if (params.channels.includes('in_app')) {
+      if (pref.enableRealtime) {
+        dispatches.push(this.dispatchRealtime(notification, params.realtimePayload));
+        dispatchedChannels.push('in_app');
+      } else {
+        this.logger.warn(`[${params.type}] in_app requested but enableRealtime=false for user=${params.userId}`);
+      }
     }
 
     // Channel: Push (FCM)
-    if (params.channels.includes('push') && pref.canSendPushNow()) {
-      dispatches.push(this.dispatchPush(notification));
+    if (params.channels.includes('push')) {
+      if (pref.canSendPushNow()) {
+        dispatches.push(this.dispatchPush(notification));
+        dispatchedChannels.push('push');
+      } else {
+        this.logger.warn(
+          `[${params.type}] push requested but blocked for user=${params.userId}: enablePush=${pref.enablePush} quietHoursStart=${pref.quietHoursStart} quietHoursEnd=${pref.quietHoursEnd} currentHour=${new Date().getUTCHours()}`,
+        );
+      }
     }
 
     // Channel: Email stub
-    if (params.channels.includes('email') && pref.enableEmail) {
-      dispatches.push(this.dispatchEmailStub(notification));
+    if (params.channels.includes('email')) {
+      if (pref.enableEmail) {
+        dispatches.push(this.dispatchEmailStub(notification));
+        dispatchedChannels.push('email');
+      } else {
+        this.logger.warn(`[${params.type}] email requested but enableEmail=false for user=${params.userId}`);
+      }
     }
 
     // Fire all channels in parallel - non-blocking on individual failures
     await Promise.allSettled(dispatches);
 
     this.logger.log(
-      `Dispatched ${params.type} -> user=${params.userId} channels=[${params.channels.join(',')}]`,
+      `Dispatched ${params.type} -> user=${params.userId} channels=[${dispatchedChannels.join(',')}]`,
     );
 
     return notification;
