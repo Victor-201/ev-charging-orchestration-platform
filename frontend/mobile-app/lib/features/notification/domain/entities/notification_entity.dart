@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../../core/utils/notification_translator.dart';
 
 /// Notification Alert and Preferences Domain Entity
 ///
@@ -23,21 +24,53 @@ class NotificationEntity extends Equatable {
     this.data,
   });
 
+  String get translatedTitle => NotificationTranslator.translateTitle(type, title);
+  String get translatedBody => NotificationTranslator.translateBody(type, body, data ?? {});
+
   String? get deepLink {
     switch (type) {
       case 'booking_confirmed':
+      case 'booking.confirmed':
       case 'booking_no_show':
+      case 'booking.no_show':
+      case 'booking.created':
+      case 'booking.reminder.upcoming':
+      case 'booking.reminder.payment_expiry':
         return '/bookings/${data?['bookingId']}';
+      case 'booking.cancelled':
+      case 'booking.expired':
+        return '/bookings';
       case 'charging_started':
+      case 'session.started':
       case 'idle_fee_started':
-        return '/charging/session/${data?['sessionId']}';
+      case 'billing.idle_fee_charged':
+      case 'charger.fault':
+      case 'charger_fault':
+        return data?['sessionId'] != null
+            ? '/charging/session/${data!['sessionId']}'
+            : '/charging';
       case 'charging_completed':
-        return '/charging/session/${data?['sessionId']}/summary';
+      case 'session.completed':
+        return data?['sessionId'] != null
+            ? '/charging/session/${data!['sessionId']}/summary'
+            : '/charging';
       case 'payment_success':
+      case 'payment.completed':
+      case 'payment.failed':
+      case 'billing.extra_charge':
+      case 'billing.refund_issued':
+        return '/wallet';
       case 'arrears_created':
+      case 'wallet.arrears.created':
+        return '/profile/arrears';
+      case 'wallet.arrears.cleared':
         return '/wallet';
       case 'queue_turn':
-        // Redirect to slot scheduler upon receiving the virtual queue allocation turn.
+      case 'queue.updated':
+        return data?['chargerId'] != null
+            ? '/bookings/new?chargerId=${data!['chargerId']}'
+            : '/bookings';
+      case 'charger.queue.ready':
         return data?['chargerId'] != null
             ? '/bookings/new?chargerId=${data!['chargerId']}'
             : '/bookings';

@@ -18,6 +18,7 @@ class ChargingSessionBloc
     on<ChargingStopRequested>(_onStop);
     on<ChargingTelemetryReceived>(_onTelemetry);
     on<ChargingSessionLoaded>(_onSessionLoaded);
+    on<ChargingSessionFetchRequested>(_onFetch);
     on<ChargingReset>(_onReset);
   }
 
@@ -35,7 +36,7 @@ class ChargingSessionBloc
       (session) {
         emit(ChargingActive(session: session));
         _repository.connectTelemetry(
-          chargerId: session.chargerId,
+          sessionId: session.id,
           onData: (data) => add(ChargingTelemetryReceived(data: data)),
         );
       },
@@ -69,6 +70,27 @@ class ChargingSessionBloc
     }
   }
 
+  Future<void> _onFetch(
+      ChargingSessionFetchRequested event, Emitter<ChargingState> emit) async {
+    emit(const ChargingLoading());
+    final result = await _repository.getActiveSession(event.sessionId);
+    result.fold(
+      (f) => emit(ChargingError(message: f.message)),
+      (session) {
+        if (session.status == 'COMPLETED' || session.endedAt != null) {
+          emit(ChargingCompleted(session: session));
+        } else {
+          emit(ChargingActive(session: session));
+          // Connect to telemetry!
+          _repository.connectTelemetry(
+            sessionId: session.id,
+            onData: (data) => add(ChargingTelemetryReceived(data: data)),
+          );
+        }
+      },
+    );
+  }
+
   void _onReset(ChargingReset event, Emitter<ChargingState> emit) {
     _repository.disconnectTelemetry();
     emit(const ChargingInitial());
@@ -86,6 +108,9 @@ class ChargingSessionBloc
           energyKwh: (s['energyKwh'] as num).toDouble(),
           socPercent: (s['socPercent'] as num).toDouble(),
           powerW: (s['powerW'] as num).toDouble(),
+          voltageV: (s['voltageV'] as num?)?.toDouble() ?? 0,
+          currentA: (s['currentA'] as num?)?.toDouble() ?? 0,
+          temperatureC: (s['temperatureC'] as num?)?.toDouble() ?? 0,
           amountDue: (s['amountDue'] as num).toDouble(),
           startedAt: DateTime.parse(s['startedAt']),
           endedAt: s['endedAt'] != null
@@ -111,6 +136,9 @@ class ChargingSessionBloc
           'energyKwh': state.session.energyKwh,
           'socPercent': state.session.socPercent,
           'powerW': state.session.powerW,
+          'voltageV': state.session.voltageV,
+          'currentA': state.session.currentA,
+          'temperatureC': state.session.temperatureC,
           'amountDue': state.session.amountDue,
           'startedAt': state.session.startedAt.toIso8601String(),
           'endedAt': state.session.endedAt?.toIso8601String(),

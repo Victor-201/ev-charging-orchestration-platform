@@ -30,9 +30,9 @@ abstract class IChargingSessionRepository {
     String? status,
   });
 
-  /// Establishes a WebSocket tunnel to stream real-time sensor metrics for a charger.
+  /// Establishes a Socket.IO connection to stream real-time sensor metrics for a session.
   void connectTelemetry({
-    required String chargerId,
+    required String sessionId,
     required void Function(TelemetryData) onData,
   });
 

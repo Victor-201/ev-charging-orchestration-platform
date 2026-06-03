@@ -34,11 +34,20 @@ import 'features/charging/presentation/bloc/charging_session_bloc.dart';
 import 'features/booking/presentation/bloc/booking_bloc.dart';
 import 'core/network/dio_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/services/fcm_route_handler.dart';
+import 'core/services/local_notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
+
+  await initLocalNotifications();
+
+  FirebaseMessaging.onBackgroundMessage(FcmRouteHandler.backgroundHandler);
 
   // Configures the local storage engine for HydratedBloc state persistence across app sessions.
   final storage = await HydratedStorage.build(
@@ -71,6 +80,9 @@ class _EVoltAppState extends State<EVoltApp> {
     _appRouter = AppRouter(authBloc: _authBloc);
     _authBloc.add(const AuthCheckRequested());
 
+    // Wire foreground & background FCM notifications routing
+    FcmRouteHandler.setupForegroundHandler(_appRouter.rootNavigatorKey);
+
     // Wire the real logout callback now that AuthBloc exists.
     // When a 401 occurs and the refresh token is also expired/revoked,
     // the interceptor will call this to properly log out the user.
@@ -97,22 +109,49 @@ class _EVoltAppState extends State<EVoltApp> {
         BlocProvider(create: (_) => getIt<ChargingSessionBloc>()),
         BlocProvider(create: (_) => getIt<BookingBloc>()),
       ],
-      child: MaterialApp.router(
-        title: 'EVoltSync',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        routerConfig: _appRouter.router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('vi', 'VN'),
-          Locale('en', 'US'),
-        ],
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) async {
+          if (state is AuthAuthenticated) {
+            try {
+              final messaging = FirebaseMessaging.instance;
+              final settings = await messaging.requestPermission(
+                alert: true,
+                badge: true,
+                sound: true,
+              );
+              if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+                final token = await messaging.getToken();
+                if (token != null) {
+                  debugPrint('[FCM] Token retrieved successfully: $token');
+                  if (context.mounted) {
+                    context.read<NotificationBloc>().add(
+                      NotificationRegisterDevice(pushToken: token),
+                    );
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('[FCM] Error requesting permission or token: $e');
+            }
+          }
+        },
+        child: MaterialApp.router(
+          title: 'EVoltSync',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: ThemeMode.system,
+          routerConfig: _appRouter.router,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('vi', 'VN'),
+            Locale('en', 'US'),
+          ],
+        ),
       ),
     );
   }

@@ -21,12 +21,12 @@ class DateUtils {
   static final _timeFormat     = DateFormat('HH:mm', 'vi_VN');
   static final _dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm', 'vi_VN');
 
-  static String formatDate(DateTime dt)     => _dateFormat.format(dt);
-  static String formatTime(DateTime dt)     => _timeFormat.format(dt);
-  static String formatDateTime(DateTime dt) => _dateTimeFormat.format(dt);
+  static String formatDate(DateTime dt)     => _dateFormat.format(dt.toLocal());
+  static String formatTime(DateTime dt)     => _timeFormat.format(dt.toLocal());
+  static String formatDateTime(DateTime dt) => _dateTimeFormat.format(dt.toLocal());
 
   /// Short time hour-minute formatter (e.g. 14:30)
-  static String formatTimeHm(DateTime dt) => _timeFormat.format(dt);
+  static String formatTimeHm(DateTime dt) => _timeFormat.format(dt.toLocal());
 
   /// Compares if two DateTime instances share the same calendar day
   static bool isSameDay(DateTime a, DateTime b) =>

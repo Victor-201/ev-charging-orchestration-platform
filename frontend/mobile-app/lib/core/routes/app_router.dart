@@ -36,9 +36,11 @@ import '../design_system/theme/app_colors.dart';
 /// Central app routing topology with persistent bottom navigation tabs
 class AppRouter {
   final AuthBloc authBloc;
+  final rootNavigatorKey = GlobalKey<NavigatorState>();
   AppRouter({required this.authBloc});
 
   late final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     debugLogDiagnostics: false,
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
@@ -242,8 +244,8 @@ class AppRouter {
                       path: 'summary', name: 'session-summary',
                       builder: (_, state) {
                         final session = state.extra as ChargingSessionEntity?;
-                        if (session != null) return SessionSummaryScreen(session: session);
-                        return const _LoadingScreen(label: 'Tóm tắt phiên sạc');
+                        final id = state.pathParameters['id']!;
+                        return SessionSummaryScreen(session: session, sessionId: id);
                       },
                     ),
                   ],
@@ -545,12 +547,4 @@ class GoRouterRefreshStream extends ChangeNotifier {
   late final dynamic _subscription;
   @override
   void dispose() { (_subscription as dynamic).cancel(); super.dispose(); }
-}
-
-class _LoadingScreen extends StatelessWidget {
-  final String label;
-  const _LoadingScreen({required this.label});
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: Text(label)), body: const Center(child: CircularProgressIndicator()));
 }

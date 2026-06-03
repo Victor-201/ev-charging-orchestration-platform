@@ -397,56 +397,72 @@ class StationDetailSheet extends StatelessWidget {
                                                     ),
                                                   ),
                                                 ),
-                                                InkWell(
-                                                  onTap: () {
-                                                    if (!isBookable) {
-                                                      String msg = 'Trụ sạc này hiện không thể đặt lịch.';
-                                                      final status = charger.status.toUpperCase();
-                                                      if (status == 'FAULTED' || status == 'OFFLINE') {
-                                                        msg = 'Trụ sạc này hiện đang ngoại tuyến hoặc đang lỗi, không thể đặt lịch.';
-                                                      } else if (status == 'IN_USE') {
-                                                        msg = 'Trụ sạc này hiện đang được sử dụng, vui lòng chọn trụ khác hoặc tham gia hàng chờ.';
-                                                      } else if (status == 'RESERVED') {
-                                                        msg = 'Trụ sạc này hiện đã được đặt trước cho lịch sạc sắp tới.';
-                                                      }
-                                                      EVToast.show(context, message: msg, isError: true);
-                                                      return;
-                                                    }
-                                                    Navigator.pop(context);
-                                                    context.push(
-                                                      '/bookings/new?stationId=${currentStation.id}&chargerId=${charger.id}&connectorType=${charger.connectorType}&physicalChargerId=${charger.id}',
-                                                      extra: {
-                                                        'stationId': currentStation.id,
-                                                        'chargerId': charger.id,
-                                                        'connectorType': charger.connectorType,
-                                                        'physicalChargerId': charger.id,
-                                                      },
-                                                    );
-                                                  },
-                                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                    decoration: BoxDecoration(
-                                                      gradient: isBookable ? AppColors.primaryGradient : null,
-                                                      color: isBookable ? null : AppColors.outlineLight,
-                                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                                      boxShadow: isBookable ? [
-                                                        BoxShadow(
-                                                          color: AppColors.primaryCyan.withValues(alpha: 0.3),
-                                                          blurRadius: 6,
-                                                          offset: const Offset(0, 3),
-                                                        )
-                                                      ] : null,
+                                                if (isBookable)
+                                                  InkWell(
+                                                    onTap: () {
+                                                      Navigator.pop(context);
+                                                      context.push(
+                                                        '/bookings/new?stationId=${currentStation.id}&chargerId=${charger.id}&connectorType=${charger.connectorType}&physicalChargerId=${charger.id}',
+                                                        extra: {
+                                                          'stationId': currentStation.id,
+                                                          'chargerId': charger.id,
+                                                          'connectorType': charger.connectorType,
+                                                          'physicalChargerId': charger.id,
+                                                        },
+                                                      );
+                                                    },
+                                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                      decoration: BoxDecoration(
+                                                        gradient: AppColors.primaryGradient,
+                                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: AppColors.primaryCyan.withValues(alpha: 0.3),
+                                                            blurRadius: 6,
+                                                            offset: const Offset(0, 3),
+                                                          )
+                                                        ],
+                                                      ),
+                                                      child: Text(
+                                                        'ĐẶT',
+                                                        style: AppTypography.labelMd.copyWith(
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w800,
+                                                        ),
+                                                      ),
                                                     ),
-                                                    child: Text(
-                                                      'ĐẶT',
-                                                      style: AppTypography.labelMd.copyWith(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.w800,
+                                                  )
+                                                else if (charger.status.toUpperCase() == 'IN_USE')
+                                                  InkWell(
+                                                    onTap: () {
+                                                      Navigator.pop(context);
+                                                      context.push('/bookings/queue/${charger.id}');
+                                                    },
+                                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                      decoration: BoxDecoration(
+                                                        gradient: AppColors.primaryGradient,
+                                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: AppColors.primaryCyan.withValues(alpha: 0.3),
+                                                            blurRadius: 6,
+                                                            offset: const Offset(0, 3),
+                                                          )
+                                                        ],
+                                                      ),
+                                                      child: Text(
+                                                        'XẾP HÀNG',
+                                                        style: AppTypography.labelMd.copyWith(
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w800,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
                                               ],
                                             ),
                                           ],

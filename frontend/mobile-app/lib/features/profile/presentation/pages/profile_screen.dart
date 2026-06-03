@@ -750,14 +750,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _MenuPill extends StatelessWidget {
   final String label;
-  final bool isDarkVariant;
   final bool isDanger;
   final Widget? trailing;
   final VoidCallback onTap;
 
   const _MenuPill({
     required this.label,
-    this.isDarkVariant = false,
     this.isDanger = false,
     this.trailing,
     required this.onTap,
@@ -767,19 +765,12 @@ class _MenuPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final Color bg = isDarkVariant
-        ? (isDark ? AppColors.darkPillBgDark : AppColors.darkPillBgLight)
-        : (isDark ? AppColors.pillBgDark : AppColors.pillBgLight);
-
-    final Color border = isDarkVariant
-        ? (isDark ? AppColors.darkPillBorderDark : AppColors.darkPillBorderLight)
-        : (isDark ? AppColors.pillBorderDark : AppColors.pillBorderLight);
+    final Color bg = isDark ? AppColors.pillBgDark : AppColors.pillBgLight;
+    final Color border = isDark ? AppColors.pillBorderDark : AppColors.pillBorderLight;
 
     final Color textColor = isDanger
         ? AppColors.error
-        : (isDarkVariant
-            ? (isDark ? AppColors.darkPillTextDark : AppColors.darkPillTextLight)
-            : (isDark ? AppColors.pillTextDark : AppColors.pillTextLight));
+        : (isDark ? AppColors.pillTextDark : AppColors.pillTextLight);
 
     return GestureDetector(
       onTap: onTap,

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
-import 'package:web_socket_channel/io.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../../domain/entities/charging_session_entity.dart';
 import '../../domain/repositories/i_charging_session_repository.dart';
 import '../../../../core/constants/api_paths.dart';
@@ -32,6 +32,9 @@ class ChargingSessionModel extends ChargingSessionEntity {
       energyKwh: (json['energyKwh'] as num?)?.toDouble() ?? 0,
       socPercent: (json['socPercent'] as num?)?.toDouble() ?? 0,
       powerW: (json['powerW'] as num?)?.toDouble() ?? 0,
+      voltageV: (json['voltageV'] as num?)?.toDouble() ?? 0,
+      currentA: (json['currentA'] as num?)?.toDouble() ?? 0,
+      temperatureC: (json['temperatureC'] as num?)?.toDouble() ?? 0,
       amountDue: (json['amountDue'] as num?)?.toDouble() ?? 0,
       startedAt: json['startedAt'] != null
           ? DateTime.parse(json['startedAt'].toString())
@@ -47,8 +50,7 @@ class ChargingSessionModel extends ChargingSessionEntity {
 class ChargingSessionRepositoryImpl
     implements IChargingSessionRepository {
   final DioClient _client;
-  IOWebSocketChannel? _wsChannel;
-  StreamSubscription? _wsSubscription;
+  io.Socket? _socket;
 
   ChargingSessionRepositoryImpl({required DioClient client})
       : _client = client;
@@ -141,32 +143,66 @@ class ChargingSessionRepositoryImpl
 
   @override
   void connectTelemetry({
-    required String chargerId,
+    required String sessionId,
     required void Function(TelemetryData) onData,
   }) {
-    final wsUrl =
-        '${AppConfig.current.wsBaseUrl}/sessions/$chargerId/telemetry';
-    _wsChannel = IOWebSocketChannel.connect(wsUrl);
-    _wsSubscription = _wsChannel!.stream.listen((raw) {
-      try {
-        // Stream raw real-time OCPP energy counts based on §3.5 standards
-        final json = raw as Map<String, dynamic>;
-        onData(TelemetryData(
-          chargerId: json['chargerId']?.toString() ?? chargerId,
-          powerW: (json['powerW'] as num?)?.toDouble() ?? 0,
-          socPercent: (json['socPercent'] as num?)?.toDouble() ?? 0,
-          energyKwh: (json['energyKwh'] as num?)?.toDouble() ?? 0,
-          amountDue: (json['amountDue'] as num?)?.toDouble() ?? 0,
-          timestamp: DateTime.now(),
-        ));
-      } catch (_) {}
+    final baseUrl = AppConfig.current.wsBaseUrl;
+
+    // Parse WS URL to support both ngrok and local dev
+    String connectionUrl;
+    String socketPath;
+
+    try {
+      final parsed = Uri.parse(baseUrl);
+      connectionUrl = '${parsed.scheme}://${parsed.host}${parsed.port != 0 ? ':${parsed.port}' : ''}/charging';
+      socketPath = '/socket.io';
+    } catch (_) {
+      connectionUrl = '$baseUrl/charging';
+      socketPath = '/socket.io';
+    }
+
+    _socket = io.io(connectionUrl, <String, dynamic>{
+      'path': socketPath,
+      'transports': ['websocket', 'polling'],
+      'reconnectionAttempts': 10,
+      'reconnectionDelay': 3000,
     });
+
+    _socket!.onConnect((_) {
+      _socket!.emit('join', {'sessionId': sessionId});
+    });
+
+    _socket!.on('charging_updated', (dynamic raw) {
+      if (raw is! Map) return;
+      final json = raw as Map<String, dynamic>;
+      final powerKw = (json['powerKw'] as num?)?.toDouble();
+      final powerW = powerKw != null ? powerKw * 1000 : 0.0;
+      final voltageV = (json['voltageV'] as num?)?.toDouble() ?? 0;
+      final currentA = (json['currentA'] as num?)?.toDouble() ?? 0;
+      final temperatureC = (json['temperatureC'] as num?)?.toDouble() ?? 0;
+
+      onData(TelemetryData(
+        chargerId: json['chargerId']?.toString() ?? '',
+        powerW: powerW,
+        socPercent: (json['socPercent'] as num?)?.toDouble() ?? 0,
+        energyKwh: (json['meterWh'] as num?)?.toDouble() != null
+            ? (json['meterWh'] as num).toDouble() / 1000
+            : 0,
+        voltageV: voltageV,
+        currentA: currentA,
+        temperatureC: temperatureC,
+        amountDue: (json['amountDue'] as num?)?.toDouble() ?? 0,
+        timestamp: DateTime.now(),
+      ));
+    });
+
+    _socket!.onConnectError((_) {});
+    _socket!.onDisconnect((_) {});
   }
 
   @override
   void disconnectTelemetry() {
-    _wsSubscription?.cancel();
-    _wsChannel?.sink.close();
-    _wsChannel = null;
+    _socket?.disconnect();
+    _socket = null;
   }
 }

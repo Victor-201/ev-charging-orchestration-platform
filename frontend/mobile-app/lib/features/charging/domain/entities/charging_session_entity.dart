@@ -9,6 +9,9 @@ class ChargingSessionEntity extends Equatable {
   final double energyKwh;
   final double socPercent; // 0–100
   final double powerW;
+  final double voltageV;
+  final double currentA;
+  final double temperatureC;
   final double amountDue;
   final DateTime startedAt;
   final DateTime? endedAt;
@@ -21,6 +24,9 @@ class ChargingSessionEntity extends Equatable {
     required this.energyKwh,
     required this.socPercent,
     required this.powerW,
+    this.voltageV = 0,
+    this.currentA = 0,
+    this.temperatureC = 0,
     required this.amountDue,
     required this.startedAt,
     this.endedAt,
@@ -45,6 +51,9 @@ class ChargingSessionEntity extends Equatable {
         energyKwh,
         socPercent,
         powerW,
+        voltageV,
+        currentA,
+        temperatureC,
         amountDue,
       ];
 }
@@ -55,6 +64,9 @@ class TelemetryData extends Equatable {
   final double powerW;
   final double socPercent;
   final double energyKwh;
+  final double voltageV;
+  final double currentA;
+  final double temperatureC;
   final double amountDue;
   final DateTime timestamp;
 
@@ -63,10 +75,23 @@ class TelemetryData extends Equatable {
     required this.powerW,
     required this.socPercent,
     required this.energyKwh,
+    this.voltageV = 0,
+    this.currentA = 0,
+    this.temperatureC = 0,
     required this.amountDue,
     required this.timestamp,
   });
 
   @override
-  List<Object?> get props => [chargerId, powerW, socPercent, timestamp];
+  List<Object?> get props => [
+        chargerId,
+        powerW,
+        socPercent,
+        energyKwh,
+        voltageV,
+        currentA,
+        temperatureC,
+        amountDue,
+        timestamp,
+      ];
 }

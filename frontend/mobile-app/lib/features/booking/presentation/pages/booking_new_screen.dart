@@ -595,7 +595,6 @@ class _BookingNewScreenState extends State<BookingNewScreen>
         );
       }
 
-      final now = DateTime.now();
       final isDark = Theme.of(context).brightness == Brightness.dark;
 
       return GridView.builder(

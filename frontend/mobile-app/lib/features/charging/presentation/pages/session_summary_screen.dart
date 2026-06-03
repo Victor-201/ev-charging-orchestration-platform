@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/charging_session_entity.dart';
+import '../../domain/repositories/i_charging_session_repository.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/design_system/theme/app_colors.dart';
 import '../../../../core/design_system/theme/app_layout.dart';
 import '../../../../core/design_system/theme/app_typography.dart';
@@ -15,8 +17,9 @@ import '../../../../core/design_system/widgets/liquid_glass_scaffold.dart';
 /// Displays final energy telemetry counts, duration metrics, and settlement costs
 /// at the end of a successful vehicle charging session.
 class SessionSummaryScreen extends StatefulWidget {
-  final ChargingSessionEntity session;
-  const SessionSummaryScreen({super.key, required this.session});
+  final String? sessionId;
+  final ChargingSessionEntity? session;
+  const SessionSummaryScreen({super.key, this.session, this.sessionId});
 
   @override
   State<SessionSummaryScreen> createState() => _SessionSummaryScreenState();
@@ -26,6 +29,9 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeIn;
+  ChargingSessionEntity? _session;
+  bool _loading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -34,7 +40,34 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
     _fadeIn = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _controller.forward();
+
+    if (widget.session != null) {
+      _session = widget.session;
+      _controller.forward();
+    } else if (widget.sessionId != null) {
+      _fetchSession();
+    } else {
+      _error = 'Không có thông tin phiên sạc';
+    }
+  }
+
+  Future<void> _fetchSession() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final result = await getIt<IChargingSessionRepository>().getActiveSession(widget.sessionId!);
+    result.fold(
+      (f) => setState(() {
+        _loading = false;
+        _error = f.message;
+      }),
+      (session) => setState(() {
+        _loading = false;
+        _session = session;
+        _controller.forward();
+      }),
+    );
   }
 
   @override
@@ -45,7 +78,46 @@ class _SessionSummaryScreenState extends State<SessionSummaryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.session;
+    if (_loading) {
+      return const LiquidGlassScaffold(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return LiquidGlassScaffold(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                const SizedBox(height: 16),
+                Text(_error!, style: const TextStyle(color: Colors.white, fontSize: 16), textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _fetchSession,
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_session == null) {
+      return const LiquidGlassScaffold(
+        child: Center(
+          child: Text('Không tìm thấy thông tin phiên sạc'),
+        ),
+      );
+    }
+
+    final s = _session!;
 
     return LiquidGlassScaffold(
       child: FadeTransition(

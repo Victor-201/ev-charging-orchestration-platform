@@ -42,6 +42,13 @@ class ChargingSessionLoaded extends ChargingEvent {
   List<Object?> get props => [session];
 }
 
+class ChargingSessionFetchRequested extends ChargingEvent {
+  final String sessionId;
+  const ChargingSessionFetchRequested({required this.sessionId});
+  @override
+  List<Object?> get props => [sessionId];
+}
+
 class ChargingReset extends ChargingEvent {
   const ChargingReset();
 }

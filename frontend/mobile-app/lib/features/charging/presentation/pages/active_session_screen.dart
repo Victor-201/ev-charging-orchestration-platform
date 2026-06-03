@@ -50,6 +50,11 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
             bookingId: widget.bookingId,
             qrToken: widget.qrToken,
           ));
+    } else if (widget.sessionId != 'new') {
+      // Lazy load session details and hook up telemetry if active
+      context.read<ChargingSessionBloc>().add(
+            ChargingSessionFetchRequested(sessionId: widget.sessionId),
+          );
     }
   }
 
@@ -142,9 +147,9 @@ class _ActiveSessionScreenState extends State<ActiveSessionScreen> {
           children: [
             _MetricTile(label: 'Công suất', value: '${(s.powerW / 1000).toStringAsFixed(1)} kW', icon: Icons.bolt_outlined, color: AppColors.secondary),
             _MetricTile(label: 'Điện năng', value: '${s.energyKwh.toStringAsFixed(2)} kWh', icon: Icons.battery_charging_full_outlined, color: AppColors.primary),
-            const _MetricTile(label: 'Điện áp', value: '-- V', icon: Icons.electric_meter_outlined, color: AppColors.amber),
-            const _MetricTile(label: 'Dòng điện', value: '-- A', icon: Icons.cable_outlined, color: AppColors.chargerReserved),
-            const _MetricTile(label: 'Nhiệt độ', value: '-- °C', icon: Icons.thermostat_outlined, color: AppColors.error),
+            _MetricTile(label: 'Điện áp', value: s.voltageV > 0 ? '${s.voltageV.toStringAsFixed(0)} V' : '-- V', icon: Icons.electric_meter_outlined, color: AppColors.amber),
+            _MetricTile(label: 'Dòng điện', value: s.currentA > 0 ? '${s.currentA.toStringAsFixed(1)} A' : '-- A', icon: Icons.cable_outlined, color: AppColors.chargerReserved),
+            _MetricTile(label: 'Nhiệt độ', value: s.temperatureC > 0 ? '${s.temperatureC.toStringAsFixed(1)} °C' : '-- °C', icon: Icons.thermostat_outlined, color: AppColors.error),
             _MetricTile(label: 'Chi phí', value: VndFormatter.format(s.amountDue), icon: Icons.monetization_on_outlined, color: AppColors.chargerAvailable),
           ],
         ),

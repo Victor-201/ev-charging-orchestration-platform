@@ -4,8 +4,8 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // Thêm id("com.google.gms.google-services") sau khi có google-services.json từ Firebase Console
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 // ─── Đọc signing config từ key.properties ────────────────────────────────────
