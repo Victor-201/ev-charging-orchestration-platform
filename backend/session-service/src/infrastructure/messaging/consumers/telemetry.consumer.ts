@@ -6,6 +6,7 @@ import { FaultDetectionService } from '../../../application/use-cases/reconcilia
 import {
   TelemetryOrmEntity,
   ProcessedEventOrmEntity,
+  SessionOrmEntity,
 } from '../../persistence/typeorm/entities/session.orm-entities';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,6 +27,8 @@ export class TelemetryConsumer {
     private readonly telemetryRepo: Repository<TelemetryOrmEntity>,
     @InjectRepository(ProcessedEventOrmEntity)
     private readonly processedRepo: Repository<ProcessedEventOrmEntity>,
+    @InjectRepository(SessionOrmEntity)
+    private readonly sessionRepo: Repository<SessionOrmEntity>,
     private readonly faultDetection: FaultDetectionService,
   ) {}
 
@@ -45,6 +48,7 @@ export class TelemetryConsumer {
     powerKw: number;
     currentA: number;
     voltageV: number;
+    meterWh?: number;
     socPercent?: number;
     errorCode?: string;
     timestamp: string;
@@ -59,6 +63,21 @@ export class TelemetryConsumer {
     }
 
     try {
+      let estimatedSoc = payload.socPercent ?? null;
+      if (estimatedSoc === null && payload.meterWh != null) {
+        const sessionOrm = await this.sessionRepo.findOne({
+          where: { id: payload.sessionId },
+          select: ['startSocPercent', 'startMeterWh'],
+        });
+        if (sessionOrm?.startSocPercent != null) {
+          const energyDeltaWh = payload.meterWh - Number(sessionOrm.startMeterWh);
+          const batteryCapacityWh = Number(process.env.ESTIMATED_BATTERY_CAPACITY_WH || 60_000);
+          estimatedSoc = Math.min(100, Math.max(0,
+            Math.round(sessionOrm.startSocPercent + (energyDeltaWh / batteryCapacityWh) * 100)
+          ));
+        }
+      }
+
       // Persist telemetry reading
       await this.telemetryRepo.save({
         id:           uuidv4(),
@@ -67,7 +86,7 @@ export class TelemetryConsumer {
         powerKw:      payload.powerKw,
         currentA:     payload.currentA,
         voltageV:     payload.voltageV,
-        socPercent:   payload.socPercent ?? null,
+        socPercent:   estimatedSoc,
         errorCode:    payload.errorCode ?? null,
         recordedAt:   new Date(payload.timestamp),
       });
