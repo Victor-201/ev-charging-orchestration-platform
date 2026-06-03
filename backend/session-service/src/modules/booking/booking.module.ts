@@ -31,6 +31,8 @@ import {
   AutoExpireBookingsJob,
   NoShowDetectionJob,
   GetQueuePositionUseCase,
+  BookingReminderJob,
+  PaymentWarningJob,
 } from '../../application/use-cases/booking-jobs.use-case';
 import {
   JoinQueueUseCase,
@@ -113,6 +115,8 @@ import { StationStatusChangedConsumer } from '../../infrastructure/messaging/con
     AutoExpireBookingsJob,       // expire PENDING_PAYMENT after 5 minutes
     NoShowDetectionJob,          // no-show penalty after 10 minutes
     GetQueuePositionUseCase,
+    BookingReminderJob,
+    PaymentWarningJob,
     // Queue use cases
     JoinQueueUseCase,
     LeaveQueueUseCase,

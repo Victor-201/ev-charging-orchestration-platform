@@ -230,7 +230,7 @@ export class BookingController {
 
   // DELETE /api/v1/bookings/:id
   /**
-   * User cancels their own booking.
+   * User cancels their own booking, or Admin/Staff cancels booking.
    * Deposit will be automatically refunded 100% to wallet after event processing.
    */
   @Delete(':id')
@@ -240,10 +240,30 @@ export class BookingController {
     @Body() dto: CancelBookingDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
+    const booking = await this.bookingRepo.findById(id);
+    if (!booking) {
+      throw new NotFoundException(`Booking ${id} does not exist`);
+    }
+
+    const isStaff = user.role === 'staff' || user.roles?.includes('staff');
+    const isAdmin = user.role === 'admin' || user.roles?.includes('admin');
+
+    if (isStaff && !isAdmin) {
+      const allowedStations = user.stationIds || [];
+      const charger = await this.chargerReadRepo.findOne({
+        where: { chargerId: booking.chargerId },
+      });
+      if (!charger || !allowedStations.includes(charger.stationId)) {
+        throw new UnauthorizedException('You do not have permission to cancel this booking');
+      }
+    } else if (!isAdmin && booking.userId !== user.id) {
+      throw new UnauthorizedException('You do not have permission to cancel this booking');
+    }
+
     await this.cancelBooking.execute({
       bookingId: id,
-      userId:    user.id,
-      reason:    dto.reason ?? 'User cancelled',
+      userId:    booking.userId,
+      reason:    dto.reason ?? (isAdmin ? 'Admin cancelled' : isStaff ? 'Staff cancelled' : 'User cancelled'),
     });
   }
 
