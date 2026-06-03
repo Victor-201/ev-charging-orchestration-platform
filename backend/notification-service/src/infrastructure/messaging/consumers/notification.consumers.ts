@@ -6,12 +6,15 @@ import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { DeliveryEngine } from '../../../domain/services/delivery.engine';
 import { ProcessedEventOrmEntity } from '../../persistence/typeorm/entities/notification.orm-entities';
 import { NOTIFICATION_TEMPLATES } from '../../../domain/events/notification.events';
+import { NotificationChannel } from '../../../domain/entities/notification.aggregate';
 import type {
   BookingCreatedEvent, BookingConfirmedEvent, BookingCancelledEvent,
   PaymentCompletedEvent, PaymentFailedEvent,
-  SessionStartedEvent, SessionCompletedEvent,
+  SessionStartedEvent, SessionCompletedEvent, SessionTelemetryPushEvent,
   QueueUpdatedEvent,
   BillingIdleFeeChargedEvent, BillingExtraChargeEvent, BillingRefundIssuedEvent,
+  WalletArrearsCreatedEvent, WalletArrearsClearedEvent,
+  ChargerQueueReadyEvent,
   EmailVerificationRequestedEvent,
 } from '../../../domain/events/notification.events';
 
@@ -309,11 +312,16 @@ export class QueueNotificationConsumer {
     if (await this.engine.isProcessed(eventId, this.peRepo)) return;
     await this.engine.markProcessed(eventId, 'queue.updated', this.peRepo);
 
+    const isCalled = payload.status === 'called';
     const tpl = NOTIFICATION_TEMPLATES['queue.updated'];
+
+    // When user's turn is called, send push notification too (reliable delivery)
+    const channels: NotificationChannel[] = isCalled ? ['in_app', 'push'] : ['in_app'];
+
     await this.engine.dispatch({
       userId:   payload.userId,
       type:     'queue.updated',
-      channels: ['in_app'],
+      channels,
       title:    tpl.title(payload),
       body:     tpl.body(payload),
       metadata: {
@@ -321,6 +329,7 @@ export class QueueNotificationConsumer {
         position:             payload.position,
         estimatedWaitMinutes: payload.estimatedWaitMinutes,
         status:               payload.status,
+        chargerId:            payload.chargerId,
       },
       realtimePayload: {
         queueUpdate: {
@@ -407,6 +416,63 @@ export class BookingLifecycleExtendedConsumer {
     });
 
     this.logger.log(`booking.no_show notification: user=${payload.userId} booking=${payload.bookingId}`);
+  }
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'booking.reminder.upcoming',
+    queue:        'notification.booking.reminder.upcoming',
+    queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
+  })
+  async onBookingReminderUpcoming(payload: {
+    eventId?: string;
+    bookingId: string;
+    userId: string;
+    startTime: string;
+  }): Promise<void> {
+    const eventId = payload.eventId ?? `booking.reminder.upcoming:${payload.bookingId}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'booking.reminder.upcoming', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['booking.reminder.upcoming'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'booking.reminder.upcoming',
+      channels: ['in_app', 'push'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: { bookingId: payload.bookingId, startTime: payload.startTime },
+    });
+
+    this.logger.log(`booking.reminder.upcoming notification sent for user=${payload.userId} booking=${payload.bookingId}`);
+  }
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'booking.reminder.payment_expiry',
+    queue:        'notification.booking.reminder.payment_expiry',
+    queueOptions: { durable: true, deadLetterExchange: 'ev.charging.dlx' },
+  })
+  async onBookingReminderPaymentExpiry(payload: {
+    eventId?: string;
+    bookingId: string;
+    userId: string;
+  }): Promise<void> {
+    const eventId = payload.eventId ?? `booking.reminder.payment_expiry:${payload.bookingId}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'booking.reminder.payment_expiry', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['booking.reminder.payment_expiry'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'booking.reminder.payment_expiry',
+      channels: ['in_app', 'push'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: { bookingId: payload.bookingId },
+    });
+
+    this.logger.log(`booking.reminder.payment_expiry notification sent for user=${payload.userId} booking=${payload.bookingId}`);
   }
 }
 
@@ -576,6 +642,137 @@ export class BillingNotificationConsumer {
   }
 }
 
+// WalletArrearsNotificationConsumer
+// Handles: wallet.arrears.created, wallet.arrears.cleared
+
+@Injectable()
+export class WalletArrearsNotificationConsumer {
+  private readonly logger = new Logger(WalletArrearsNotificationConsumer.name);
+
+  constructor(
+    @InjectRepository(ProcessedEventOrmEntity)
+    private readonly peRepo: Repository<ProcessedEventOrmEntity>,
+    private readonly engine: DeliveryEngine,
+  ) {}
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'wallet.arrears.created',
+    queue:        'notification.wallet.arrears.created',
+    queueOptions: buildQueueOpts('dlq.notification.wallet.arrears.created'),
+  })
+  async onArrearsCreated(payload: WalletArrearsCreatedEvent): Promise<void> {
+    const eventId = payload.eventId ?? `wallet.arrears.created:${payload.transactionId}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'wallet.arrears.created', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['wallet.arrears.created'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'wallet.arrears.created',
+      channels: ['push', 'in_app'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: {
+        arrearsAmount:    payload.arrearsAmount,
+        totalOutstanding: payload.totalOutstanding,
+        transactionId:    payload.transactionId,
+        relatedSessionId: payload.relatedSessionId,
+        dueDate:          payload.dueDate,
+      },
+    });
+
+    this.logger.warn(
+      `wallet.arrears.created: user=${payload.userId} amount=${payload.arrearsAmount}VND total=${payload.totalOutstanding}VND`,
+    );
+  }
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'wallet.arrears.cleared',
+    queue:        'notification.wallet.arrears.cleared',
+    queueOptions: buildQueueOpts('dlq.notification.wallet.arrears.cleared'),
+  })
+  async onArrearsCleared(payload: WalletArrearsClearedEvent): Promise<void> {
+    const eventId = payload.eventId ?? `wallet.arrears.cleared:${payload.transactionId}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'wallet.arrears.cleared', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['wallet.arrears.cleared'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'wallet.arrears.cleared',
+      channels: ['push', 'in_app'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: {
+        clearedAmount:    payload.clearedAmount,
+        totalOutstanding: payload.totalOutstanding,
+        transactionId:    payload.transactionId,
+      },
+    });
+
+    this.logger.log(
+      `wallet.arrears.cleared: user=${payload.userId} cleared=${payload.clearedAmount}VND`,
+    );
+  }
+}
+
+// ChargerQueueReadyNotificationConsumer
+// Handles: charger.queue.ready (notify user at front of queue that charger is free)
+
+@Injectable()
+export class ChargerQueueReadyNotificationConsumer {
+  private readonly logger = new Logger(ChargerQueueReadyNotificationConsumer.name);
+
+  constructor(
+    @InjectRepository(ProcessedEventOrmEntity)
+    private readonly peRepo: Repository<ProcessedEventOrmEntity>,
+    private readonly engine: DeliveryEngine,
+  ) {}
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'charger.queue.ready',
+    queue:        'notification.charger.queue.ready',
+    queueOptions: buildQueueOpts('dlq.notification.charger.queue.ready'),
+  })
+  async onChargerQueueReady(payload: ChargerQueueReadyEvent): Promise<void> {
+    const eventId = payload.eventId ?? `charger.queue.ready:${payload.queueId}`;
+    if (await this.engine.isProcessed(eventId, this.peRepo)) return;
+    await this.engine.markProcessed(eventId, 'charger.queue.ready', this.peRepo);
+
+    const tpl = NOTIFICATION_TEMPLATES['charger.queue.ready'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'charger.queue.ready',
+      channels: ['push', 'in_app'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: {
+        queueId:      payload.queueId,
+        chargerId:    payload.chargerId,
+        stationId:    payload.stationId,
+        stationName:  payload.stationName,
+        chargerName:  payload.chargerName,
+        position:     payload.position,
+      },
+      realtimePayload: {
+        queueUpdate: {
+          chargerId:  payload.chargerId,
+          queueId:    payload.queueId,
+          status:     'called',
+          position:   payload.position,
+        },
+      },
+    });
+
+    this.logger.log(
+      `charger.queue.ready: user=${payload.userId} charger=${payload.chargerId} station=${payload.stationName ?? payload.stationId}`,
+    );
+  }
+}
+
 // AuthNotificationConsumer
 
 @Injectable()
@@ -614,5 +811,57 @@ export class AuthNotificationConsumer {
     });
 
     this.logger.log(`user.email_verification_requested notification: email=${payload.email}`);
+  }
+}
+
+/**
+ * SessionTelemetryPushConsumer
+ *
+ * Listens for session.telemetry events and sends FCM data-only push notifications
+ * with real-time telemetry data. Throttled to 1 push per 30 seconds per session
+ * to avoid flooding the user with notifications.
+ *
+ * The push is a data-only message (no visible notification banner unless the app
+ * chooses to show one) so the mobile app can display the latest telemetry values
+ * even when in background.
+ */
+@Injectable()
+export class SessionTelemetryPushConsumer {
+  private readonly logger = new Logger(SessionTelemetryPushConsumer.name);
+  private static readonly PUSH_THROTTLE_MS = 30_000;
+  private static lastPushedAt = new Map<string, number>();
+
+  constructor(
+    private readonly engine: DeliveryEngine,
+  ) {}
+
+  @RabbitSubscribe({
+    exchange:     'ev.charging',
+    routingKey:   'session.telemetry',
+    queue:        'notification.charging.telemetry',
+    queueOptions: buildQueueOpts('dlq.notification.charging.telemetry'),
+  })
+  async onTelemetry(payload: SessionTelemetryPushEvent): Promise<void> {
+    // Throttle: only push every 30 seconds per session
+    const lastPush = SessionTelemetryPushConsumer.lastPushedAt.get(payload.sessionId) ?? 0;
+    const now = Date.now();
+    if (now - lastPush < SessionTelemetryPushConsumer.PUSH_THROTTLE_MS) return;
+    SessionTelemetryPushConsumer.lastPushedAt.set(payload.sessionId, now);
+
+    // Build telemetry data payload for the FCM data message
+    const tpl = NOTIFICATION_TEMPLATES['session.telemetry_push'];
+    await this.engine.dispatch({
+      userId:   payload.userId,
+      type:     'session.telemetry_push' as any,
+      channels: ['push'],
+      title:    tpl.title(payload),
+      body:     tpl.body(payload),
+      metadata: { telemetry: true, silent: true },
+    });
+
+    this.logger.debug(
+      `Telemetry push: user=${payload.userId} session=${payload.sessionId} ` +
+      `power=${payload.powerKw}kW soc=${payload.socPercent}%`,
+    );
   }
 }

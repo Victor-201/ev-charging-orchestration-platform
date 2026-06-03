@@ -91,6 +91,20 @@ export interface SessionCompletedEvent {
   endTime:         string;
 }
 
+export interface SessionTelemetryPushEvent {
+  eventType:     'session.telemetry';
+  sessionId:     string;
+  userId:        string;
+  chargerId:     string;
+  powerKw:       number | null;
+  meterWh:       number | null;
+  socPercent:    number | null;
+  voltageV:      number | null;
+  currentA:      number | null;
+  temperatureC:  number | null;
+  recordedAt:    string;
+}
+
 // Queue Events
 
 export interface QueueUpdatedEvent {
@@ -141,6 +155,42 @@ export interface BillingRefundIssuedEvent {
   transactionId:    string;
 }
 
+// Wallet / Arrears Events
+
+export interface WalletArrearsCreatedEvent {
+  eventType:            'wallet.arrears.created';
+  eventId:              string;
+  userId:               string;
+  arrearsAmount:        number;
+  totalOutstanding:     number;
+  transactionId:        string;
+  relatedSessionId?:    string;
+  dueDate?:             string;
+}
+
+export interface WalletArrearsClearedEvent {
+  eventType:            'wallet.arrears.cleared';
+  eventId:              string;
+  userId:               string;
+  clearedAmount:        number;
+  totalOutstanding:     number;
+  transactionId:        string;
+}
+
+// Queue Ready Event
+
+export interface ChargerQueueReadyEvent {
+  eventType:    'charger.queue.ready';
+  eventId:      string;
+  queueId:      string;
+  userId:       string;
+  chargerId:    string;
+  stationId?:   string;
+  stationName?: string;
+  chargerName?: string;
+  position:     number;
+}
+
 // IAM / User Events
 
 export interface EmailVerificationRequestedEvent {
@@ -163,75 +213,100 @@ export interface NotificationTemplate {
 /** Centralized template registry */
 export const NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate> = {
   'booking.created': {
-    title: ()        => 'Đặt lịch thành công',
+    title: ()        => 'Booking Created',
     body:  (p: BookingCreatedEvent) =>
-      `Lịch sạc #${p.bookingId.slice(0,8)} đã được tạo. Bắt đầu: ${new Date(p.startTime).toLocaleString('vi-VN')}.`,
+      `Booking #${p.bookingId.slice(0,8)} created${p.stationId ? ' at station' : ''}. Start: ${new Date(p.startTime).toLocaleString('en-US')}.`,
+  },
+  'booking.reminder.upcoming': {
+    title: (p: any) => p.customTitle ?? 'Upcoming Booking Reminder',
+    body: (p: any) => p.customBody ??
+      `Your booking${p.stationName ? ` at ${p.stationName}` : ''} starts at ${new Date(p.startTime).toLocaleTimeString('en-US')}. Please arrive on time!`,
+  },
+  'booking.reminder.payment_expiry': {
+    title: () => 'Payment Expiration Warning',
+    body: (p: any) =>
+      `Your booking${p.stationName ? ` at ${p.stationName}` : ''} will be cancelled in 1 minute if deposit remains unpaid.`,
   },
   'booking.confirmed': {
-    title: ()        => 'Lịch sạc được xác nhận',
+    title: ()        => 'Booking Confirmed',
     body:  (p: BookingConfirmedEvent) =>
-      `Lịch sạc #${p.bookingId.slice(0,8)}${p.stationName ? ` tại ${p.stationName}` : ''} đã được xác nhận!`,
+      `Booking #${p.bookingId.slice(0,8)}${p.stationName ? ` at ${p.stationName}` : ''} has been confirmed!`,
   },
   'booking.cancelled': {
-    title: ()        => 'Lịch sạc đã hủy',
+    title: ()        => 'Booking Cancelled',
     body:  (p: BookingCancelledEvent) =>
-      `Lịch sạc #${p.bookingId.slice(0,8)} đã bị hủy.${p.reason ? ` Lý do: ${p.reason}` : ''}`,
+      `Booking #${p.bookingId.slice(0,8)} has been cancelled.${p.reason ? ` Reason: ${p.reason}` : ''}`,
   },
   'payment.completed': {
-    title: ()        => 'Thanh toán thành công',
+    title: ()        => 'Payment Successful',
     body:  (p: PaymentCompletedEvent) =>
-      `Thanh toán ${p.amount.toLocaleString('vi-VN')} VND thành công.`,
+      `Payment of ${p.amount.toLocaleString('en-US')} VND completed.`,
   },
   'payment.failed': {
-    title: ()        => 'Thanh toán thất bại',
+    title: ()        => 'Payment Failed',
     body:  (p: PaymentFailedEvent) =>
-      `Thanh toán ${p.amount.toLocaleString('vi-VN')} VND thất bại.${p.reason ? ` ${p.reason}` : ' Vui lòng thử lại.'}`,
+      `Payment of ${p.amount.toLocaleString('en-US')} VND failed.${p.reason ? ` ${p.reason}` : ' Please try again.'}`,
   },
   'session.started': {
-    title: ()        => 'Bắt đầu sạc',
+    title: ()        => 'Charging Started',
     body:  (p: SessionStartedEvent) =>
-      `Phiên sạc của bạn đã bắt đầu lúc ${new Date(p.startTime).toLocaleTimeString('vi-VN')}.`,
+      `Your charging session${p.stationId ? ' has' : ''} started at ${new Date(p.startTime).toLocaleTimeString('en-US')}.`,
+  },
+  'session.telemetry_push': {
+    title: () => 'Charging Update',
+    body: (p: SessionTelemetryPushEvent) =>
+      `Power: ${p.powerKw?.toFixed(1) ?? '--'} kW | SOC: ${p.socPercent != null ? `${p.socPercent}%` : '--'}` +
+      `${p.temperatureC != null ? ` | Temp: ${p.temperatureC.toFixed(1)}°C` : ''}`,
   },
   'session.completed': {
-    title: ()        => 'Sạc hoàn tất',
+    title: ()        => 'Charging Completed',
     body:  (p: SessionCompletedEvent) =>
-      `Bạn đã sạc ${p.kwhConsumed.toFixed(2)} kWh trong ${Math.round(p.durationMinutes)} phút. Cảm ơn!`,
+      `You consumed ${p.kwhConsumed.toFixed(2)} kWh in ${Math.round(p.durationMinutes)} minutes. Thank you!`,
   },
   'queue.updated': {
-    title: ()        => 'Cập nhật hàng đợi',
+    title: ()        => 'Queue Position Updated',
     body:  (p: QueueUpdatedEvent) =>
       p.status === 'called'
-        ? `Đến lượt bạn! Hãy đến trạm sạc ngay.`
-        : `Vị trí của bạn trong hàng đợi: #${p.position}. Chờ khoảng ${p.estimatedWaitMinutes} phút.`,
+        ? `It's your turn! Please navigate to the station immediately.`
+        : `Your position in queue is: #${p.position}. Estimated wait: ${p.estimatedWaitMinutes} minutes.`,
   },
   'billing.idle_fee_charged': {
-    title: ()        => 'Phí chiếm dụng trụ sạc',
+    title: ()        => 'Charger Occupancy Idle Fee',
     body:  (p: BillingIdleFeeChargedEvent) =>
-      `Xe bạn đã cắm súng ${p.chargeableIdleMinutes + p.idleGraceMinutes} phút sau khi sạc đầy ` +
-      `(${p.idleGraceMinutes} phút miễn phí). Phí chiếm dụng: ${p.idleFeeVnd.toLocaleString('vi-VN')} VND ` +
-      `(${p.idleFeePerMinuteVnd.toLocaleString('vi-VN')} VND/phút × ${p.chargeableIdleMinutes} phút). Vui lòng rút súng!`,
+      `Your vehicle remained occupied for ${p.chargeableIdleMinutes + p.idleGraceMinutes} minutes after fully charged ` +
+      `(${p.idleGraceMinutes} minutes free grace period). Occupancy fee: ${p.idleFeeVnd.toLocaleString('en-US')} VND ` +
+      `(${p.idleFeePerMinuteVnd.toLocaleString('en-US')} VND/minute × ${p.chargeableIdleMinutes} minutes). Please unplug!`,
   },
   'billing.extra_charge': {
-    title: ()        => 'Trừ thêm từ ví',
+    title: ()        => 'Extra Charge Deducted',
     body:  (p: BillingExtraChargeEvent) =>
-      `Phiên sạc của bạn tốn tổng ${p.totalFeeVnd.toLocaleString('vi-VN')} VND ` +
-      `(cọc: ${p.depositAmount.toLocaleString('vi-VN')} VND). ` +
-      `Đã trừ thêm ${p.extraAmountVnd.toLocaleString('vi-VN')} VND từ ví.`,
+      `Your session cost a total of ${p.totalFeeVnd.toLocaleString('en-US')} VND ` +
+      `(deposit: ${p.depositAmount.toLocaleString('en-US')} VND). ` +
+      `Deducted an additional ${p.extraAmountVnd.toLocaleString('en-US')} VND from your wallet.`,
   },
   'billing.refund_issued': {
-    title: ()        => 'Hoàn tiền vào ví',
+    title: ()        => 'Refund Issued to Wallet',
     body:  (p: BillingRefundIssuedEvent) =>
-      `Phiên sạc hoàn tất. Tổng phí: ${p.totalFeeVnd.toLocaleString('vi-VN')} VND. ` +
-      `Đã hoàn ${p.refundAmountVnd.toLocaleString('vi-VN')} VND tiền cọc thừa về ví của bạn.`,
+      `Session completed. Total fee: ${p.totalFeeVnd.toLocaleString('en-US')} VND. ` +
+      `Refunded ${p.refundAmountVnd.toLocaleString('en-US')} VND excess deposit to your wallet.`,
   },
-  'user.email_verification_requested': {
-    title: ()        => 'Xác thực tài khoản EVoltSync của bạn',
-    body:  (p: EmailVerificationRequestedEvent) => 
-      `<h2>Chào mừng đến với EVoltSync!</h2>` +
-      `<p>Cảm ơn bạn đã đăng ký. Vui lòng xác thực địa chỉ email của bạn để tiếp tục.</p>` +
-      `<p><b>Mã xác nhận 6 số của bạn:</b> <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${p.shortCode}</span></p>` +
-      `<p>Hoặc bấm vào nút bên dưới để tự động xác thực:</p>` +
-      `<a href="ev://app/auth/verify?token=${p.rawToken}" style="display: inline-block; padding: 12px 24px; background-color: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">Xác thực ngay</a>` +
-      `<p style="margin-top: 20px; font-size: 12px; color: #666;">Nếu bạn không yêu cầu email này, bạn có thể bỏ qua.</p>`,
+  'wallet.arrears.created': {
+    title: ()        => 'Debt Outstanding',
+    body:  (p: WalletArrearsCreatedEvent) =>
+      `Your wallet balance was insufficient for the charging session. ` +
+      `Outstanding debt: ${p.totalOutstanding.toLocaleString('en-US')} VND. ` +
+      `Please settle promptly to continue using our services.`,
+  },
+  'wallet.arrears.cleared': {
+    title: ()        => 'Debt Cleared',
+    body:  (p: WalletArrearsClearedEvent) =>
+      `Your outstanding debt of ${p.clearedAmount.toLocaleString('en-US')} VND has been cleared. ` +
+      `You can now book and charge again.`,
+  },
+  'charger.queue.ready': {
+    title: ()        => 'Charger Available – Your Turn!',
+    body:  (p: ChargerQueueReadyEvent) =>
+      `The charger${p.chargerName ? ` ${p.chargerName}` : ''}${p.stationName ? ` at ${p.stationName}` : ''} is now available. ` +
+      `Please proceed to start charging immediately.`,
   },
 };

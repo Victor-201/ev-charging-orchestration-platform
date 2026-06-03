@@ -13,12 +13,16 @@ export type NotificationChannel = 'in_app' | 'push' | 'email' | 'sms';
 export type NotificationType =
   | 'booking.created' | 'booking.confirmed' | 'booking.cancelled'
   | 'booking.expired' | 'booking.no_show'
+  | 'booking.reminder.upcoming' | 'booking.reminder.payment_expiry'
   | 'payment.completed' | 'payment.failed'
   | 'session.started' | 'session.completed'
   | 'queue.updated' | 'charger.fault' | 'system'
   | 'billing.idle_fee_charged'   // Idle fee charged
   | 'billing.extra_charge'       // Extra charge from wallet
-  | 'billing.refund_issued';     // Deposit refund to wallet
+  | 'billing.refund_issued'      // Deposit refund to wallet
+  | 'wallet.arrears.created'     // Outstanding debt recorded
+  | 'wallet.arrears.cleared'     // Debt fully settled
+  | 'charger.queue.ready';       // Queue position reached, charger available
 
 
 export type DevicePlatform = 'ios' | 'android' | 'web';

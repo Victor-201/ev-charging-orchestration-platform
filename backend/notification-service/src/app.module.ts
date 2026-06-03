@@ -43,7 +43,10 @@ import {
   BookingLifecycleExtendedConsumer,
   FaultNotificationConsumer,
   BillingNotificationConsumer,
+  WalletArrearsNotificationConsumer,
+  ChargerQueueReadyNotificationConsumer,
   AuthNotificationConsumer,
+  SessionTelemetryPushConsumer,
 } from './infrastructure/messaging/consumers/notification.consumers';
 
 // Application Use Cases
@@ -155,7 +158,10 @@ const ALL_ENTITIES = [
     BookingLifecycleExtendedConsumer,
     FaultNotificationConsumer,
     BillingNotificationConsumer,   // ← Idle Fee / Extra Charge / Refund notifications
+    WalletArrearsNotificationConsumer,  // ← Debt created / cleared notifications
+    ChargerQueueReadyNotificationConsumer,  // ← Queue your-turn notification
     AuthNotificationConsumer,
+    SessionTelemetryPushConsumer,
 
     // ── Guards ────────────────────────────────────────────────────────────────
     JwtAuthGuard,
