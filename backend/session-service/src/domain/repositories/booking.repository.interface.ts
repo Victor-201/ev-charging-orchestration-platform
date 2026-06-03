@@ -44,6 +44,11 @@ export interface IBookingRepository {
     status?: string,
     chargerIds?: string[],
   ): Promise<{ items: Booking[]; total: number }>;
+  /** Find confirmed bookings starting between startDate and endDate */
+  findConfirmedStartingBetween(start: Date, end: Date): Promise<Booking[]>;
+  /** Find pending payment bookings created between startDate and endDate */
+  findPendingPaymentCreatedBetween(start: Date, end: Date): Promise<Booking[]>;
+
   /**
    * Retrieves active upcoming bookings for the specified chargers.
    *

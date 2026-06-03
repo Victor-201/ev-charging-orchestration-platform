@@ -176,6 +176,26 @@ export class BookingRepository implements IBookingRepository {
     return entities.map(this.safeToDomain.bind(this)).filter((b): b is Booking => b !== null);
   }
 
+  async findConfirmedStartingBetween(start: Date, end: Date): Promise<Booking[]> {
+    const entities = await this.repo
+      .createQueryBuilder('b')
+      .where("b.status = 'confirmed'")
+      .andWhere('b.start_time >= :start', { start })
+      .andWhere('b.start_time <= :end', { end })
+      .getMany();
+    return entities.map(this.safeToDomain.bind(this)).filter((b): b is Booking => b !== null);
+  }
+
+  async findPendingPaymentCreatedBetween(start: Date, end: Date): Promise<Booking[]> {
+    const entities = await this.repo
+      .createQueryBuilder('b')
+      .where("b.status = 'pending_payment'")
+      .andWhere('b.created_at >= :start', { start })
+      .andWhere('b.created_at <= :end', { end })
+      .getMany();
+    return entities.map(this.safeToDomain.bind(this)).filter((b): b is Booking => b !== null);
+  }
+
   async getQueuePosition(userId: string, chargerId: string): Promise<number> {
     const count = await this.repo
       .createQueryBuilder('b')
