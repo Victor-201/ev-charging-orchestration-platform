@@ -28,10 +28,11 @@ import {
   EmailNotVerifiedException,
 } from '../../domain/exceptions/auth.exceptions';
 import { IEventBus, EVENT_BUS } from '../../infrastructure/messaging/outbox/outbox-event-bus';
-import { RoleAssignedEvent, EmailVerifiedEvent, EmailVerificationRequestedEvent } from '../../domain/events/auth.events';
+import { RoleAssignedEvent, RoleRevokedEvent, EmailVerifiedEvent, EmailVerificationRequestedEvent } from '../../domain/events/auth.events';
 import { InvalidVerificationCodeException } from '../../domain/exceptions/auth.exceptions';
 import { RiskScoringService, RiskLevel } from '../../domain/services/risk-scoring.service';
 import { Redis } from 'ioredis';
+import { USERS_CACHE_REPOSITORY, IUsersCacheRepository } from '../../domain/repositories/user-profile.repository.interface';
 
 
 
@@ -431,6 +432,7 @@ export class AssignRoleUseCase {
   constructor(
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+    @Inject(USERS_CACHE_REPOSITORY) private readonly cacheRepo: IUsersCacheRepository,
   ) {}
 
   async execute(
@@ -444,6 +446,18 @@ export class AssignRoleUseCase {
 
     await this.roleRepo.assignRoleToUser(targetUserId, role.id, assignedByUserId, expiresAt);
 
+    // Sync to cache directly
+    try {
+      const cache = await this.cacheRepo.findByUserId(targetUserId);
+      if (cache) {
+        cache.roleName = roleName;
+        cache.syncedAt = new Date();
+        await this.cacheRepo.upsert(cache);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update user cache directly in AssignRoleUseCase: ${err}`);
+    }
+
     const event = new RoleAssignedEvent(targetUserId, roleName, assignedByUserId);
     await this.eventBus.publishAll([event]);
     this.logger.log(`Role '${roleName}' assigned to user ${targetUserId} by ${assignedByUserId}`);
@@ -454,14 +468,35 @@ export class AssignRoleUseCase {
 
 @Injectable()
 export class RevokeRoleUseCase {
+  private readonly logger = new Logger(RevokeRoleUseCase.name);
+
   constructor(
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: IRoleRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+    @Inject(USERS_CACHE_REPOSITORY) private readonly cacheRepo: IUsersCacheRepository,
   ) {}
 
   async execute(targetUserId: string, roleName: string): Promise<void> {
     const role = await this.roleRepo.findByName(roleName);
     if (!role) throw new RoleNotFoundException(roleName);
     await this.roleRepo.revokeRoleFromUser(targetUserId, role.id);
+
+    // Sync to cache directly
+    try {
+      const cache = await this.cacheRepo.findByUserId(targetUserId);
+      if (cache) {
+        const remainingRoles = await this.roleRepo.findRolesByUserId(targetUserId);
+        cache.roleName = remainingRoles[0]?.name || 'user';
+        cache.syncedAt = new Date();
+        await this.cacheRepo.upsert(cache);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update user cache directly in RevokeRoleUseCase: ${err}`);
+    }
+
+    const event = new RoleRevokedEvent(targetUserId, roleName);
+    await this.eventBus.publishAll([event]);
+    this.logger.log(`Role '${roleName}' revoked from user ${targetUserId}`);
   }
 }
 

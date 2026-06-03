@@ -14,6 +14,8 @@ import { SessionRepository } from '../../infrastructure/persistence/typeorm/repo
 import { RoleRepository } from '../../infrastructure/persistence/typeorm/repositories/role.repository';
 import { EmailVerificationRepository } from '../../infrastructure/persistence/typeorm/repositories/email-verification.repository';
 import { OutboxEventBus, EVENT_BUS } from '../../infrastructure/messaging/outbox/outbox-event-bus';
+import { USERS_CACHE_REPOSITORY } from '../../domain/repositories/user-profile.repository.interface';
+import { UsersCacheRepository } from '../../infrastructure/persistence/typeorm/repositories/user-profile.repository';
 import {
   RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
   ChangePasswordUseCase, AssignRoleUseCase, RevokeRoleUseCase,
@@ -71,6 +73,7 @@ import { RiskScoringService } from '../../domain/services/risk-scoring.service';
     { provide: SESSION_REPOSITORY, useClass: SessionRepository },
     { provide: ROLE_REPOSITORY, useClass: RoleRepository },
     { provide: EMAIL_VERIFICATION_REPOSITORY, useClass: EmailVerificationRepository },
+    { provide: USERS_CACHE_REPOSITORY, useClass: UsersCacheRepository },
     // Event bus
     { provide: EVENT_BUS, useClass: OutboxEventBus },
     // Guards
