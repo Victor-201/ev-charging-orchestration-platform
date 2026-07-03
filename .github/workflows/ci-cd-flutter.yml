@@ -1,0 +1,171 @@
+# ══════════════════════════════════════════════════════════════════════
+# ev-charging-orchestration-platform — Flutter Mobile CI/CD
+# Standard: devops.skill.md Section 9 + Section 2 (Firebase App Distribution)
+#
+# App: EVoltSync (Flutter 3.x, SDK >=3.11.0)
+# Target: Firebase App Distribution (beta) → Play Store (release)
+#
+# Pipeline:
+#   • analyze → test → build APK (debug/release) → upload to Firebase App Distribution
+#   • Release builds (on git tags vX.Y.Z) → Play Store internal track (manual promotion)
+#
+# Required GitHub Actions secrets:
+#   FIREBASE_APP_ID                — Firebase App Distribution app ID
+#   FIREBASE_SERVICE_ACCOUNT_KEY   — Firebase service account JSON (base64 encoded)
+#   GOOGLE_PLAY_SERVICE_ACCOUNT    — Google Play service account JSON (base64, for store releases)
+#   KEYSTORE_BASE64                — Android keystore (base64 encoded) for release signing
+#   KEYSTORE_PASSWORD              — Keystore password
+#   KEY_ALIAS                      — Key alias
+#   KEY_PASSWORD                   — Key password
+#   FIREBASE_TESTERS_GROUP         — Firebase App Distribution tester group name
+#
+# dart-defines (injected at build time from repo vars/secrets):
+#   API_BASE_URL, WS_BASE_URL, ENVIRONMENT
+# ══════════════════════════════════════════════════════════════════════
+
+name: flutter-ci-cd
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/mobile-app/**'
+      - '.github/workflows/ci-cd-flutter.yml'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/mobile-app/**'
+  workflow_dispatch:
+
+concurrency:
+  group: flutter-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ── Step 1: Analyze & Test ────────────────────────────────────────
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/mobile-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java (required for Android build tools)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze (dart analyze)
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+  # ── Step 2: Build Android APK (main branch → debug build) ─────────
+  build-android:
+    name: Build Android APK
+    needs: analyze-and-test
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/mobile-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Release build: decode keystore and sign APK
+      - name: Decode keystore (release only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Build APK
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            flutter build apk --release \
+              --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+              --dart-define=WS_BASE_URL=${{ secrets.WS_BASE_URL }} \
+              --dart-define=ENVIRONMENT=production \
+              --build-number=${{ github.run_number }}
+          else
+            flutter build apk --debug \
+              --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL_STAGING }} \
+              --dart-define=WS_BASE_URL=${{ secrets.WS_BASE_URL_STAGING }} \
+              --dart-define=ENVIRONMENT=staging \
+              --build-number=${{ github.run_number }}
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ github.sha }}
+          path: frontend/mobile-app/build/app/outputs/flutter-apk/*.apk
+          retention-days: 14
+
+  # ── Step 3: Distribute via Firebase App Distribution ─────────────
+  distribute-firebase:
+    name: Firebase App Distribution
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk-${{ github.sha }}
+          path: apk/
+
+      - name: Decode Firebase service account
+        run: |
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}" | \
+            base64 --decode > firebase-service-account.json
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFile: firebase-service-account.json
+          groups: ${{ secrets.FIREBASE_TESTERS_GROUP }}
+          file: apk/app-debug.apk
+          releaseNotes: |
+            Build from commit ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+            Run: ${{ github.run_number }}
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f firebase-service-account.json android/app/keystore.jks || true

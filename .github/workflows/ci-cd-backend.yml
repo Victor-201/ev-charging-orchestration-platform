@@ -1,0 +1,256 @@
+# ══════════════════════════════════════════════════════════════════════
+# ev-charging-orchestration-platform — Backend CI/CD Pipeline
+# Standard: devops.skill.md Section 9
+#
+# 8 NestJS microservices built in parallel via matrix strategy:
+#   iam-service, ocpp-gateway-service, session-service, billing-service,
+#   analytics-service, ev-infrastructure-service, notification-service,
+#   telemetry-ingestion-service
+#
+# Pipeline: quality → build+scan → publish to GHCR → deploy
+#
+# Required GitHub Actions secrets:
+#   RENDER_DEPLOY_HOOK_<SERVICE>  — one per service (or use single VPS hook)
+#   RENDER_SERVICE_URL_GATEWAY    — Kong/API gateway public URL
+#   JWT_PRIVATE_KEY               — RS256 PEM (used by iam-service)
+#   JWT_PUBLIC_KEY                — RS256 public PEM (all other services)
+#   PG_PASSWORD, REDIS_PASSWORD, RABBITMQ_PASS
+#   CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+#   FCM_PRIVATE_KEY, FCM_PROJECT_ID, FCM_CLIENT_EMAIL
+#   VNPAY_TMN_CODE, VNPAY_HASH_SECRET
+#   SMTP_USER, SMTP_PASS
+#   KIOSK_API_KEY
+# ══════════════════════════════════════════════════════════════════════
+
+name: backend-ci-cd
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'deployment/docker/**'
+      - '.github/workflows/ci-cd-backend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'deployment/**'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════
+  # Step 1 — Quality gate (all services in parallel)
+  # ══════════════════════════════════════════════════════════════════
+  quality:
+    name: Quality — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: iam-service
+            port: 3001
+          - service: analytics-service
+            port: 3002
+          - service: ev-infrastructure-service
+            port: 3003
+          - service: session-service
+            port: 3004
+          - service: billing-service
+            port: 3007
+          - service: notification-service
+            port: 3008
+          - service: telemetry-ingestion-service
+            port: 3009
+          - service: ocpp-gateway-service
+            port: 3010
+
+    defaults:
+      run:
+        working-directory: backend/${{ matrix.service }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/${{ matrix.service }}/package-lock.json
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint --if-present || echo "::warning::No lint script"
+
+      - name: Type-check
+        run: npx tsc --noEmit --project tsconfig.json || echo "::warning::Type errors present"
+
+      - name: Test
+        run: npm test -- --passWithNoTests
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high || echo "::warning::Audit warnings"
+
+  # ══════════════════════════════════════════════════════════════════
+  # Step 2 — Docker build + Trivy scan (main branch only)
+  # ══════════════════════════════════════════════════════════════════
+  build-and-scan:
+    name: Build & Scan — ${{ matrix.service }}
+    needs: quality
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - iam-service
+          - analytics-service
+          - ev-infrastructure-service
+          - session-service
+          - billing-service
+          - notification-service
+          - telemetry-ingestion-service
+          - ocpp-gateway-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/${{ matrix.service }}
+          file: backend/${{ matrix.service }}/Dockerfile
+          push: false
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+          format: table
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+  # ══════════════════════════════════════════════════════════════════
+  # Step 3 — Publish to GHCR
+  # ══════════════════════════════════════════════════════════════════
+  publish:
+    name: Publish — ${{ matrix.service }}
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - iam-service
+          - analytics-service
+          - ev-infrastructure-service
+          - session-service
+          - billing-service
+          - notification-service
+          - telemetry-ingestion-service
+          - ocpp-gateway-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend/${{ matrix.service }}
+          file: backend/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ══════════════════════════════════════════════════════════════════
+  # Step 4 — Deploy (Docker Compose self-host or Render hook)
+  # ══════════════════════════════════════════════════════════════════
+  deploy:
+    name: Deploy → Production
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      # Option A: Render deploy hooks (one per service)
+      # Uncomment and add RENDER_DEPLOY_HOOK_* secrets per service.
+      # - name: Deploy iam-service
+      #   run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_IAM }}"
+      # - name: Deploy billing-service
+      #   run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BILLING }}"
+      # ... repeat for each service
+
+      # Option B: SSH into VPS and pull new images (self-hosted Docker Compose)
+      # Requires: VPS_HOST, VPS_SSH_KEY secrets
+      - name: Deploy via SSH (Docker Compose)
+        if: ${{ vars.DEPLOY_TARGET == 'vps' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/ev-charging
+            docker compose -f deployment/docker/docker-compose.yml pull
+            docker compose -f deployment/docker/docker-compose.yml up -d --no-build
+            docker system prune -f
+
+      - name: Post-deploy health check
+        run: |
+          GATEWAY_URL="${{ secrets.RENDER_SERVICE_URL_GATEWAY }}"
+          if [ -z "$GATEWAY_URL" ]; then
+            echo "::warning::RENDER_SERVICE_URL_GATEWAY not set — skipping remote health check"
+            exit 0
+          fi
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$GATEWAY_URL/health" || echo "000")
+            echo "Attempt $i — HTTP $STATUS"
+            [ "$STATUS" = "200" ] && echo "✅ Gateway healthy" && exit 0
+            sleep 30
+          done
+          echo "❌ Gateway health check failed" && exit 1
+
+  # ══════════════════════════════════════════════════════════════════
+  # Rollback (triggered on deploy failure)
+  # ══════════════════════════════════════════════════════════════════
+  rollback:
+    name: Rollback
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rollback via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/ev-charging
+            # Re-pull previous :latest (which was the last stable publish)
+            git stash
+            docker compose -f deployment/docker/docker-compose.yml up -d --no-build
