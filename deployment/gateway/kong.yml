@@ -6,6 +6,18 @@ _format_version: "3.0"
 # Security:     RS256 JWT offloaded at gateway, rate-limited per consumer
 # ─────────────────────────────────────────────────────────────────────────────
 
+services:
+  # Health check endpoint (returns 200 for Render health checks)
+  - name: health-service
+    url: http://httpbin.org/anything
+    routes:
+      - name: health-route
+        paths:
+          - /health
+        strip_path: false
+        methods:
+          - GET
+
 plugins:
   # ── Global: Correlation ID ─────────────────────────────────────────────────
   - name: correlation-id
