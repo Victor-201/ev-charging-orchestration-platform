@@ -28,6 +28,7 @@ function startMinimalHealthServer(port: number) {
 function stopHealthServer(): Promise<void> {
   return new Promise(resolve => {
     if (healthServer) {
+      healthServer.closeAllConnections();
       healthServer.close(() => { healthServer = null; resolve(); });
     } else {
       resolve();
