@@ -22,6 +22,9 @@ function startMinimalHealthServer(port: number) {
       res.end();
     }
   });
+  healthServer.on('error', (err: any) => {
+    console.error(`[${SERVICE_NAME}] Health server error:`, err);
+  });
   healthServer.listen(port);
 }
 
@@ -122,5 +125,12 @@ async function start() {
     }
   })();
 }
+
+process.on('uncaughtException', err => {
+  console.error(`[${SERVICE_NAME}] UNCAUGHT EXCEPTION:`, err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error(`[${SERVICE_NAME}] UNHANDLED REJECTION:`, reason);
+});
 
 start();
