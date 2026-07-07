@@ -101,6 +101,7 @@ const App: React.FC = () => {
   const [expandedStation, setExpandedStation] = useState<string | null>(null);
   const [selectedStationId, setSelectedStationId] = useState(STATION_ID);
   const [selectedChargerPointId, setSelectedChargerPointId] = useState(POINT_ID);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getAllStationsUseCase = new GetAllStationsUseCase();
 
@@ -379,16 +380,26 @@ const App: React.FC = () => {
 
               {/* 2. Station list */}
               <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                    Danh sách trạm sạc
-                  </label>
-                  {isLoading && (
-                    <RefreshCw size={12} className="animate-spin text-[var(--primary)]" />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Tìm trạm..."
+                      className="w-full px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all focus:outline-none focus:border-[var(--primary)] pl-8"
+                      style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)", color: "var(--text-primary)" }}
+                    />
+                    <Zap size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
+                  </div>
+                  {isLoading ? (
+                    <RefreshCw size={14} className="animate-spin text-[var(--primary)] shrink-0" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-[var(--text-secondary)] whitespace-nowrap">{stations.length} trạm</span>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1">
+                <div className="flex flex-col gap-1.5 max-h-[360px] overflow-y-auto pr-1">
                   {(() => {
                     if (isLoading && stations.length === 0) {
                       return (
@@ -413,64 +424,74 @@ const App: React.FC = () => {
                       );
                     }
 
-                    return stations.map((station) => {
+                    const q = searchQuery.toLowerCase().trim();
+                    const filtered = q
+                      ? stations.filter(s => s.name?.toLowerCase().includes(q) || s.address?.toLowerCase().includes(q) || s.id.includes(q))
+                      : stations;
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-6 border border-dashed border-[var(--pill-border)] rounded-2xl text-xs text-[var(--text-secondary)]">
+                          Không tìm thấy trạm "{searchQuery}"
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((station) => {
                       const isStationSelected = station.id === selectedStationId;
                       const isExpanded = expandedStation === station.id;
                       const stationMeta = getStationStatusMeta(station.status);
                       const chargers = station.chargers || [];
+                      const available = chargers.filter(c => c.status === 'available' || c.status === 'in_use').length;
 
                       return (
-                        <div key={station.id} className="flex flex-col rounded-2xl border overflow-hidden transition-all"
+                        <div key={station.id} className="flex flex-col rounded-xl border overflow-hidden transition-all"
                           style={{
                             borderColor: isStationSelected ? "var(--primary)" : "var(--pill-border)",
                             background: "var(--pill-bg)",
                           }}
                         >
-                          {/* Station header */}
                           <div
                             onClick={() => handleSelectStation(station.id)}
-                            className="flex items-center justify-between p-3 cursor-pointer active:scale-[0.98] transition-all"
+                            className="flex items-center justify-between px-3 py-2.5 cursor-pointer active:scale-[0.98] transition-all hover:bg-white/5"
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                                 style={{ background: isStationSelected ? "var(--primary)" : "var(--pill-border)", color: isStationSelected ? "#fff" : "var(--text-secondary)" }}
                               >
-                                <Zap size={15} />
+                                <Zap size={13} />
                               </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-bold truncate max-w-[180px]">
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-xs font-bold truncate max-w-[200px]">
                                   {station.name || station.id.substring(0, 12)}
                                 </span>
-                                <span className="text-[9px] font-mono text-[var(--text-secondary)] truncate max-w-[180px]">
-                                  {station.id}
+                                <span className="text-[8px] text-[var(--text-secondary)] truncate max-w-[200px] flex items-center gap-1">
+                                  <MapPin size={8} className="shrink-0" />
+                                  {station.address || station.id}
                                 </span>
-                                {station.address && (
-                                  <span className="text-[9px] text-[var(--text-secondary)] truncate max-w-[180px] flex items-center gap-1 mt-0.5">
-                                    <MapPin size={9} className="shrink-0" />
-                                    {station.address}
-                                  </span>
-                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[9px] font-medium text-[var(--text-secondary)]">
-                                {chargers.filter(c => c.status === 'available').length}/{chargers.length}
-                              </span>
-                              <span className={`text-[10px] font-semibold ${stationMeta.colorClass}`}>
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
+                                station.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
+                                station.status === 'closed' ? 'bg-red-500/10 text-red-500' :
+                                station.status === 'maintenance' ? 'bg-amber-500/10 text-amber-500' :
+                                'bg-slate-500/10 text-slate-400'
+                              }`}>
                                 {stationMeta.text}
                               </span>
-                              {isExpanded ? <ChevronDown size={14} className="text-[var(--text-secondary)]" /> : <ChevronRight size={14} className="text-[var(--text-secondary)]" />}
+                              <span className="text-[8px] font-mono text-[var(--text-secondary)]">{available}/{chargers.length}</span>
+                              {isExpanded ? <ChevronDown size={12} className="text-[var(--text-secondary)]" /> : <ChevronRight size={12} className="text-[var(--text-secondary)]" />}
                               {isStationSelected && (
-                                <div className="w-5 h-5 rounded-full bg-[var(--primary)] flex items-center justify-center text-white">
-                                  <Check size={11} strokeWidth={3} />
+                                <div className="w-4 h-4 rounded-full bg-[var(--primary)] flex items-center justify-center text-white">
+                                  <Check size={8} strokeWidth={3} />
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Expandable charger list */}
                           {isExpanded && chargers.length > 0 && (
-                            <div className="border-t border-[var(--pill-border)] px-3 py-2 flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
+                            <div className="border-t border-[var(--pill-border)] px-3 py-1.5 flex flex-col gap-1 max-h-[180px] overflow-y-auto">
                               {chargers.map((c) => {
                                 const isChargerSelected = c.id === selectedChargerPointId || c.connectors?.some(conn => conn.id === CHARGER_ID);
                                 const meta = getChargerStatusMeta(c.status);
@@ -485,37 +506,20 @@ const App: React.FC = () => {
                                   <div
                                     key={c.id}
                                     onClick={() => handleSelectCharger(station.id, c.id)}
-                                    className={`flex items-center justify-between p-2 rounded-xl border cursor-pointer active:scale-[0.98] transition-all ${
+                                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border cursor-pointer active:scale-[0.98] transition-all ${
                                       isChargerSelected
-                                        ? 'bg-[var(--primary)]/10 border-[var(--primary)]/40'
-                                        : 'bg-white/5 dark:bg-white/5 border-transparent hover:bg-white/10'
+                                        ? 'bg-[var(--primary)]/10 border-[var(--primary)]/30'
+                                        : 'bg-transparent border-transparent hover:bg-white/5'
                                     }`}
                                   >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold"
-                                        style={{ background: isChargerSelected ? "var(--primary)" : "var(--pill-border)", color: isChargerSelected ? "#fff" : "var(--text-secondary)" }}
-                                      >
-                                        <Zap size={11} />
-                                      </div>
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-semibold truncate max-w-[140px]">
-                                          {c.name || `Trụ ${c.id.substring(0, 4)}`}
-                                        </span>
-                                        {powerText && (
-                                          <span className="text-[8px] font-semibold text-[var(--primary)] truncate max-w-[140px]">
-                                            {powerText}
-                                          </span>
-                                        )}
-                                        {connectorsText && (
-                                          <span className="text-[7px] text-[var(--text-secondary)] truncate max-w-[140px] leading-tight">
-                                            {connectorsText}
-                                          </span>
-                                        )}
-                                      </div>
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <span className="text-[10px] font-semibold truncate max-w-[140px]">{c.name || `Trụ ${c.id.substring(0, 4)}`}</span>
+                                      {powerText && <span className="text-[8px] font-semibold text-[var(--primary)]">{powerText}</span>}
+                                      {connectorsText && <span className="text-[7px] text-[var(--text-secondary)] truncate max-w-[120px]">{connectorsText}</span>}
                                     </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className={`text-[9px] font-semibold ${meta.colorClass}`}>{meta.text}</span>
-                                      {isChargerSelected && <Check size={10} strokeWidth={3} className="text-[var(--primary)]" />}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <span className={`text-[8px] font-semibold ${meta.colorClass}`}>{meta.text}</span>
+                                      {isChargerSelected && <Check size={8} strokeWidth={3} className="text-[var(--primary)]" />}
                                     </div>
                                   </div>
                                 );

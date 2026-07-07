@@ -14,9 +14,18 @@ export class StationRepositoryImpl implements IStationRepository {
   }
 
   async getAllStations(): Promise<StationListResponse> {
-    const { data } = await apiClient.get<StationListResponse>('/stations', {
-      params: { limit: 50, offset: 0 },
-    });
-    return data;
+    const limit = 100;
+    let offset = 0;
+    let allItems: StationDetail[] = [];
+    let total = 0;
+    do {
+      const { data } = await apiClient.get<StationListResponse>('/stations', {
+        params: { limit, offset },
+      });
+      allItems = allItems.concat(data.items || []);
+      total = data.total;
+      offset += limit;
+    } while (allItems.length < total);
+    return { items: allItems, total, limit, offset };
   }
 }
