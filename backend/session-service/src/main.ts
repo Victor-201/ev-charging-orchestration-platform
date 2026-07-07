@@ -5,6 +5,7 @@ import * as http from 'http';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { Server as SocketIOServer } from 'socket.io';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -78,8 +79,27 @@ async function bootstrap() {
   const port = process.env.PORT ?? DEFAULT_PORT;
 
   const httpServer = http.createServer(expressApp);
+
+  // Create ONE Socket.IO server shared by all gateways.
+  // Without this, each gateway creates its own engine.io server, causing
+  // the second gateway's transport restrictions to overwrite the first.
+  const sharedIo = new SocketIOServer(httpServer, {
+    cors: { origin: '*', credentials: true },
+    transports: ['websocket', 'polling'],
+  });
+
+  // Override IoAdapter to route all gateway requests to the shared server
+  const ioAdapter = new (class extends IoAdapter {
+    override create(port: number, options?: any) {
+      if (options?.namespace) {
+        return sharedIo.of(options.namespace) as any;
+      }
+      return sharedIo;
+    }
+  })(httpServer);
+
   httpServer.listen(port);
-  app.useWebSocketAdapter(new IoAdapter(httpServer));
+  app.useWebSocketAdapter(ioAdapter);
 
   await app.init();
 
