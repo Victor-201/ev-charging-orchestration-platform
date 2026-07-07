@@ -1,6 +1,9 @@
 import './tracing';
 import 'reflect-metadata';
+import * as express from 'express';
+import * as http from 'http';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -16,7 +19,17 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const expressApp = express();
+
+  expressApp.get('/health', (_req: any, res: any) => {
+    res.status(200).json({ status: 'starting', service: SERVICE_NAME, timestamp: new Date().toISOString() });
+  });
+
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { bufferLogs: true });
+
+  expressApp.get('/health', (_req: any, res: any) => {
+    res.status(200).json({ status: 'ok', service: SERVICE_NAME, timestamp: new Date().toISOString() });
+  });
 
   app.enableShutdownHooks();
 
@@ -60,12 +73,13 @@ async function bootstrap() {
     });
   }
 
-  app.getHttpAdapter().get('/health', (_req: any, res: any) => {
-    res.status(200).json({ status: 'ok', service: SERVICE_NAME, timestamp: new Date().toISOString() });
-  });
-
   const port = process.env.PORT ?? DEFAULT_PORT;
-  await app.listen(port);
+
+  const httpServer = http.createServer(expressApp);
+  httpServer.listen(port);
+
+  await app.init();
+
   new Logger('Bootstrap').log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }
 
