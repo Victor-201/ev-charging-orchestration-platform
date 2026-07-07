@@ -21,17 +21,15 @@ process.on('unhandledRejection', (reason) => {
 
 async function bootstrap() {
   const expressApp = express();
+  let healthStatus = 'starting';
 
   expressApp.get('/health', (_req: any, res: any) => {
-    res.status(200).json({ status: 'starting', service: SERVICE_NAME, timestamp: new Date().toISOString() });
+    res.status(200).json({ status: healthStatus, service: SERVICE_NAME, timestamp: new Date().toISOString() });
   });
 
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { bufferLogs: true });
   app.useLogger(app.get(Logger));
-
-  expressApp.get('/health', (_req: any, res: any) => {
-    res.status(200).json({ status: 'ok', service: SERVICE_NAME, timestamp: new Date().toISOString() });
-  });
+  healthStatus = 'ok';
 
   app.enableShutdownHooks();
 
