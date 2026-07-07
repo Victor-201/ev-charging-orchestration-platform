@@ -140,6 +140,14 @@ export interface ConnectorInfo {
   maxPowerKw: number;
 }
 
+/** Paginated station list from GET /stations */
+export interface StationListResponse {
+  items: StationDetail[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /** A charger/pillar at a station */
 export interface ChargerInfo {
   id: string;

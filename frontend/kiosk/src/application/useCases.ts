@@ -5,6 +5,7 @@ import { PaymentRepositoryImpl } from "../data/repositories/PaymentRepositoryImp
 import { BookingRepositoryImpl } from "../data/repositories/BookingRepositoryImpl";
 import { 
   StationDetail, 
+  StationListResponse,
   ChargerInfo, 
   ChargingSession, 
   StopSessionResponse, 
@@ -24,6 +25,13 @@ export class GetStationChargersUseCase {
   private repo = new StationRepositoryImpl();
   execute(stationId: string): Promise<ChargerInfo[]> {
     return this.repo.getStationChargers(stationId);
+  }
+}
+
+export class GetAllStationsUseCase {
+  private repo = new StationRepositoryImpl();
+  execute(): Promise<StationListResponse> {
+    return this.repo.getAllStations();
   }
 }
 

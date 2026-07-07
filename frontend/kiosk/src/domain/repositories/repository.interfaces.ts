@@ -1,5 +1,6 @@
 import {
   StationDetail,
+  StationListResponse,
   ChargerInfo,
   ChargingSession,
   StopSessionResponse,
@@ -11,6 +12,7 @@ import {
 export interface IStationRepository {
   getStationDetail(stationId: string): Promise<StationDetail>;
   getStationChargers(stationId: string): Promise<ChargerInfo[]>;
+  getAllStations(): Promise<StationListResponse>;
 }
 
 export interface ISessionRepository {
