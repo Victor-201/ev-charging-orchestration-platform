@@ -341,42 +341,27 @@ const App: React.FC = () => {
             {/* Modal Body */}
             <div className="relative z-10 flex flex-col gap-5 max-h-[60vh] overflow-y-auto pr-1">
               
-              {/* 1. Diagnostics summary widgets */}
-              {(() => {
-                const currentStation = stations.find(s => s.id === selectedStationId);
-                return (
-                  <>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="p-2.5 rounded-xl border flex flex-col gap-0.5" style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)" }}>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Trạm</span>
-                        <span className="text-[10px] font-mono font-medium truncate" title={STATION_ID}>
-                          {currentStation?.name || STATION_ID?.substring(0, 12) || "—"}
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-xl border flex flex-col gap-0.5" style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)" }}>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Trạng thái</span>
-                        {(() => { const meta = getStationStatusMeta(currentStation?.status || null); return (<span className={`text-[10px] font-bold uppercase tracking-wide truncate ${meta.colorClass}`}>{meta.text}</span>); })()}
-                      </div>
-                      <div className="p-2.5 rounded-xl border flex flex-col gap-0.5" style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)" }}>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Trụ</span>
-                        <span className="text-[10px] font-bold truncate">
-                          {currentStation ? `${currentStation.availableChargers ?? '?'}/${currentStation.totalChargers ?? (currentStation.chargers?.length ?? 0)}` : "—"}
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-xl border flex flex-col gap-0.5" style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)" }}>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Kiosk</span>
-                        <span className="text-[10px] font-bold text-sky-500 uppercase tracking-wide truncate">{status}</span>
-                      </div>
-                    </div>
-                    {currentStation?.address && (
-                      <div className="text-[10px] text-[var(--text-secondary)] font-medium truncate px-0.5 flex items-center gap-1">
-                        <MapPin size={10} className="shrink-0" />
-                        <span>{currentStation.address}</span>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+              {/* 1. Current station & charger info */}
+              <div className="flex flex-col gap-2 rounded-xl border p-3" style={{ background: "var(--pill-bg)", borderColor: "var(--pill-border)" }}>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Cấu hình hiện tại</span>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Zap size={12} className="text-[var(--primary)] shrink-0" />
+                    <span className="font-bold text-[var(--text-primary)]">Trạm:</span>
+                    <span className="font-mono text-[var(--text-secondary)] truncate" title={STATION_ID}>{STATION_ID}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Zap size={12} className="text-amber-500 shrink-0" />
+                    <span className="font-bold text-[var(--text-primary)]">Trụ (Point):</span>
+                    <span className="font-mono text-[var(--text-secondary)] truncate" title={POINT_ID}>{POINT_ID || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Zap size={12} className="text-emerald-500 shrink-0" />
+                    <span className="font-bold text-[var(--text-primary)]">Charger (Connector):</span>
+                    <span className="font-mono text-[var(--text-secondary)] truncate" title={CHARGER_ID}>{CHARGER_ID || "—"}</span>
+                  </div>
+                </div>
+              </div>
 
               {/* 2. Station list */}
               <div className="flex flex-col gap-2">
