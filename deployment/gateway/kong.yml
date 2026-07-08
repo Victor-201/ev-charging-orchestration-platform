@@ -21,16 +21,12 @@ plugins:
     config:
       allowed_payload_size: 8 # MB — default max for all routes
 
-  # ── Global: CORS (production-hardened, no wildcard) ──────────────────────
+  # ── Global: CORS ──────────────────────────────────────────────────────────
   - name: cors
     enabled: true
     config:
       origins:
-        - "http://localhost:5000"   # Web-admin (Next.js)
-        - "http://localhost:5001"   # Kiosk (Vite)
-        - "https://ev-platform.yourdomain.com"
-        - "https://ev-admin.pages.dev"
-        - "https://ev-kiosk.pages.dev"
+        - "*"
       methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
       headers:
         - Authorization
@@ -44,7 +40,6 @@ plugins:
         - X-Correlation-ID
         - X-Request-ID
         - X-RateLimit-Remaining-Minute
-      credentials: true
       max_age: 3600
       preflight_continue: false
 
