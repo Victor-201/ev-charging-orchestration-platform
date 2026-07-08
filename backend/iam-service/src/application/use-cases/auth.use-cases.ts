@@ -173,8 +173,10 @@ export class LoginUseCase {
       await this.userRepo.save(user);
       
       if (cmd.ipAddress) {
-        await this.redis.incr(`auth:fail:ip:${cmd.ipAddress}`);
-        await this.redis.expire(`auth:fail:ip:${cmd.ipAddress}`, 900);
+        try {
+          await this.redis.incr(`auth:fail:ip:${cmd.ipAddress}`);
+          await this.redis.expire(`auth:fail:ip:${cmd.ipAddress}`, 900);
+        } catch {}
       }
       throw new InvalidCredentialsException();
     }
@@ -200,9 +202,12 @@ export class LoginUseCase {
       .filter(s => s.deviceFingerprint)
       .map(s => s.deviceFingerprint!);
 
-    const recentFails = cmd.ipAddress
-      ? parseInt((await this.redis.get(`auth:fail:ip:${cmd.ipAddress}`)) ?? '0', 10)
-      : 0;
+    let recentFails = 0;
+    if (cmd.ipAddress) {
+      try {
+        recentFails = parseInt((await this.redis.get(`auth:fail:ip:${cmd.ipAddress}`)) ?? '0', 10);
+      } catch {}
+    }
 
     const risk = this.riskScoring.calculate({
       ipAddress: cmd.ipAddress,
@@ -255,8 +260,10 @@ export class LoginUseCase {
         await this.userRepo.save(user);
 
         if (cmd.ipAddress) {
-          await this.redis.incr(`auth:fail:ip:${cmd.ipAddress}`);
-          await this.redis.expire(`auth:fail:ip:${cmd.ipAddress}`, 900);
+          try {
+            await this.redis.incr(`auth:fail:ip:${cmd.ipAddress}`);
+            await this.redis.expire(`auth:fail:ip:${cmd.ipAddress}`, 900);
+          } catch {}
         }
         throw new InvalidMfaTokenException();
       }
@@ -300,7 +307,7 @@ export class LoginUseCase {
     await this.sessionRepo.save(session);
 
     if (cmd.ipAddress) {
-      await this.redis.del(`auth:fail:ip:${cmd.ipAddress}`);
+      try { await this.redis.del(`auth:fail:ip:${cmd.ipAddress}`); } catch {}
     }
 
     this.logger.log(`Login: user=${user.id} session=${session.id} risk=${risk.level}`);
@@ -308,13 +315,17 @@ export class LoginUseCase {
   }
 
   private async checkIpRateLimit(ip: string): Promise<void> {
-    const key = `${this.RATE_LIMIT_KEY}${ip}`;
-    const count = await this.redis.incr(key);
-    if (count === 1) {
-      await this.redis.expire(key, this.RATE_WINDOW_SECONDS);
-    }
-    if (count > this.MAX_ATTEMPTS_PER_IP) {
-      throw new RateLimitExceededException();
+    try {
+      const key = `${this.RATE_LIMIT_KEY}${ip}`;
+      const count = await this.redis.incr(key);
+      if (count === 1) {
+        await this.redis.expire(key, this.RATE_WINDOW_SECONDS);
+      }
+      if (count > this.MAX_ATTEMPTS_PER_IP) {
+        throw new RateLimitExceededException();
+      }
+    } catch (e) {
+      if (e instanceof RateLimitExceededException) throw e;
     }
   }
 }
