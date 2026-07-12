@@ -12,4 +12,4 @@ EXPOSE 8000
 
 STOPSIGNAL SIGQUIT
 
-CMD ["/usr/local/bin/entrypoint.sh"]
+CMD PORT=${PORT:-8000} && export PORT && envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && /usr/local/bin/keep-warm.sh & nginx -g 'daemon off;'

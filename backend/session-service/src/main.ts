@@ -98,10 +98,10 @@ async function bootstrap() {
     }
   })(httpServer);
 
-  httpServer.listen(port);
+  await app.init();
   app.useWebSocketAdapter(ioAdapter);
 
-  await app.init();
+  httpServer.listen(port);
 
   new Logger('Bootstrap').log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }

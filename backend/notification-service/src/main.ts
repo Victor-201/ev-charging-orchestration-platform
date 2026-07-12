@@ -64,9 +64,9 @@ async function bootstrap() {
   const port = process.env.PORT ?? DEFAULT_PORT;
 
   const httpServer = http.createServer(expressApp);
-  httpServer.listen(port);
-
   await app.init();
+
+  httpServer.listen(port);
 
   new Logger('Bootstrap').log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }
