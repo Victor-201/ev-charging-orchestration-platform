@@ -48,15 +48,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex relative overflow-hidden">
+      <div className="min-h-screen flex relative">
         <Background />
         <Sidebar />
         <div 
-          className="flex-1 flex flex-col min-h-screen relative z-10 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          className="flex-1 flex flex-col min-h-screen relative z-10 overflow-x-auto transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
           style={{ marginLeft: 'calc(var(--sidebar-w, 72px) + 16px)' }}
         >
           <Topbar />
-          <main className="flex-1 p-6 relative z-10">{children}</main>
+          <main className="flex-1 p-6 relative z-10 min-w-0">{children}</main>
         </div>
       </div>
       <Toaster position="top-right" theme="dark" richColors />
