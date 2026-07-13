@@ -27,7 +27,6 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { bufferLogs: true });
-  healthStatus = 'ok';
 
   app.enableShutdownHooks();
 
@@ -75,9 +74,21 @@ async function bootstrap() {
 
   const httpServer = http.createServer(expressApp);
 
+  // Start listening immediately so the health endpoint is reachable during init.
+  // A readiness middleware blocks /api routes until init completes.
+  httpServer.listen(port);
+
+  // Readiness guard: non-health requests get 503 until the app is fully initialised.
+  expressApp.use('/api', (_req: any, res: any, next: any) => {
+    if (healthStatus !== 'ok') {
+      return res.status(503).json({ error: 'Service not ready', service: SERVICE_NAME });
+    }
+    next();
+  });
+
   await app.init();
 
-  httpServer.listen(port);
+  healthStatus = 'ok';
 
   new Logger('Bootstrap').log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }

@@ -1,9 +1,12 @@
 #!/bin/sh
-# Keep-warm script: pings all upstream services every 8 minutes
-# to prevent Render free-tier cold starts (spin-down after ~15 min idle).
+# Keep-warm script: keeps Render free-tier services alive by pinging
+# all upstream services + the gateway itself every 5 minutes.
+# Render spins down after ~15 min idle, so 5 min interval gives headroom.
 # Runs in background alongside nginx.
-#
-# Uses HEAD requests to /health on each upstream to minimise response payload.
+
+# We must also ping the gateway's own public URL so Render sees
+# "incoming traffic" and does NOT spin the gateway container down.
+GATEWAY_URL="https://ev-api-gateway.onrender.com/health"
 
 UPSTREAMS="
 https://ev-iam-service.onrender.com/health
@@ -17,8 +20,13 @@ https://ev-ocpp-gateway.onrender.com/health
 "
 
 while true; do
+    # Ping gateway itself first (self-warm via public URL)
+    curl -sf -o /dev/null --max-time 15 "$GATEWAY_URL" 2>/dev/null || true
+
+    # Then ping all upstreams
     for url in $UPSTREAMS; do
-        curl -sf -o /dev/null --max-time 10 "$url" 2>/dev/null || true
+        curl -sf -o /dev/null --max-time 15 "$url" 2>/dev/null || true
     done
-    sleep 480  # 8 minutes
+
+    sleep 300  # 5 minutes
 done

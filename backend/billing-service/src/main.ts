@@ -27,7 +27,6 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { bufferLogs: true });
-  healthStatus = 'ok';
 
   app.enableShutdownHooks();
 
@@ -75,9 +74,17 @@ async function bootstrap() {
   const port = process.env.PORT ?? DEFAULT_PORT;
 
   const httpServer = http.createServer(expressApp);
-  await app.init();
-
   httpServer.listen(port);
+
+  expressApp.use('/api', (_req: any, res: any, next: any) => {
+    if (healthStatus !== 'ok') {
+      return res.status(503).json({ error: 'Service not ready', service: SERVICE_NAME });
+    }
+    next();
+  });
+
+  await app.init();
+  healthStatus = 'ok';
 
   new Logger('Bootstrap').log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }
