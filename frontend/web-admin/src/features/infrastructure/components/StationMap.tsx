@@ -392,7 +392,6 @@ export default function StationMap({
         .leaflet-popup-content-wrapper { background: var(--card-bg) !important; border: 1.5px solid var(--card-border) !important; border-radius: 12px !important; color: var(--text-main) !important; box-shadow: var(--card-shadow) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .leaflet-popup-tip { background: var(--card-bg) !important; }
         .leaflet-popup-close-button { color: var(--text-faded) !important; }
-        .leaflet-tile-pane { filter: brightness(0.9) saturate(0.8); }
       `}</style>
       <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: '20px' }} />
     </>

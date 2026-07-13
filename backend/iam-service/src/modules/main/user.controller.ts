@@ -62,7 +62,6 @@ export class UserController {
    * to show user names instead of raw UUIDs.
    */
   @Get()
-  @Roles('admin', 'staff')
   @Header('Cache-Control', 'no-store')
   async list(
     @Query('ids') ids?: string,
