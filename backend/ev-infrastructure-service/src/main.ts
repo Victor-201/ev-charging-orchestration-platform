@@ -4,8 +4,8 @@ import * as express from 'express';
 import * as http from 'http';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
-import { Logger } from 'nestjs-pino';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger as PinoLogger } from 'nestjs-pino';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -28,7 +28,7 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), { bufferLogs: true });
-  app.useLogger(app.get(Logger));
+  app.useLogger(app.get(PinoLogger));
 
   app.enableShutdownHooks();
 
@@ -84,10 +84,19 @@ async function bootstrap() {
     next();
   });
 
-  await app.init();
+  // Initialise NestJS (lifecycle hooks). Time out after 60s so the server
+  // doesn't block forever if a hook (e.g. RabbitMQ) is unreachable.
+  await Promise.race([
+    app.init(),
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error('NestJS init timed out after 60s')), 60_000)
+    ),
+  ]).catch((err: Error) => {
+    new Logger('Bootstrap').warn(`[${SERVICE_NAME}] ${err.message} — starting anyway`);
+  });
   healthStatus = 'ok';
 
-  app.get(Logger).log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
+  app.get(PinoLogger).log(`[${SERVICE_NAME}] Running on :${port} | Swagger: /api/docs`);
 }
 
 bootstrap().catch(err => {

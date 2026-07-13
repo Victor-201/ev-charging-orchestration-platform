@@ -86,7 +86,16 @@ async function bootstrap() {
     next();
   });
 
-  await app.init();
+  // Initialise NestJS (lifecycle hooks). Time out after 60s so the server
+  // doesn't block forever if a hook (e.g. RabbitMQ) is unreachable.
+  await Promise.race([
+    app.init(),
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error('NestJS init timed out after 60s')), 60_000)
+    ),
+  ]).catch((err: Error) => {
+    new Logger('Bootstrap').warn(`[${SERVICE_NAME}] ${err.message} — starting anyway`);
+  });
 
   healthStatus = 'ok';
 
