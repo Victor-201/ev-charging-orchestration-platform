@@ -388,7 +388,7 @@ export default function StationMap({
   return (
     <>
       <style>{`
-        .leaflet-container { background: #1a1f2e !important; border-radius: 20px; }
+        .leaflet-container { background-color: #4a5268 !important; background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 50px 50px; border-radius: 20px; }
         .leaflet-popup-content-wrapper { background: var(--card-bg) !important; border: 1.5px solid var(--card-border) !important; border-radius: 12px !important; color: var(--text-main) !important; box-shadow: var(--card-shadow) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .leaflet-popup-tip { background: var(--card-bg) !important; }
         .leaflet-popup-close-button { color: var(--text-faded) !important; }

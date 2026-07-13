@@ -61,6 +61,7 @@ export class UserController {
    * Batch lookup users by comma-separated IDs — used by admin panel booking list
    * to show user names instead of raw UUIDs.
    */
+  @Roles('admin', 'staff')
   @Get()
   @Header('Cache-Control', 'no-store')
   async list(
@@ -75,7 +76,7 @@ export class UserController {
         where.userId = In(idList);
       }
     }
-    if (role) {
+    if (role && role !== 'all') {
       where.roleName = role;
     }
     const take = limit ? Math.min(parseInt(limit), 200) : 50;
