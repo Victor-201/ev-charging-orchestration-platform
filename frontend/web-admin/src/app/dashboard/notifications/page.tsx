@@ -104,7 +104,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* List Container */}
-      <div className="glass flex flex-col overflow-hidden min-h-0">
+      <div className="glass flex flex-col overflow-visible min-h-0">
         {isLoading ? (
           <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-white/5">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -172,3 +172,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+

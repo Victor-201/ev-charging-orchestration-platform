@@ -1036,7 +1036,7 @@ export default function MapPage() {
         {/* Station List */}
         <div 
           className={cn(
-            "glass flex flex-col overflow-hidden transition-all duration-300 min-h-0", 
+            "glass flex flex-col overflow-visible transition-all duration-300 min-h-0", 
             selectedStation ? "lg:col-span-1" : "lg:col-span-3 w-full"
           )} 
         >
@@ -1187,7 +1187,7 @@ export default function MapPage() {
 
         {/* Selected Station Map & Detailed View */}
         {selectedStation && (
-          <div className="lg:col-span-2 glass flex flex-col overflow-hidden animate-fade-in min-h-0">
+          <div className="lg:col-span-2 glass flex flex-col overflow-visible animate-fade-in min-h-0">
             <div className="px-5 py-3.5 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
               <div className="min-w-0 mr-2">
                 <h3 className="font-semibold text-text-main text-sm truncate">{selectedStation.name}</h3>
@@ -2436,3 +2436,4 @@ export default function MapPage() {
     </div>
   );
 }
+

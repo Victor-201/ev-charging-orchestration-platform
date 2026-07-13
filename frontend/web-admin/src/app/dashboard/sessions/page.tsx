@@ -317,7 +317,7 @@ export default function SessionsPage() {
       </div>
 
       {/* Table */}
-      <div className="glass flex flex-col overflow-hidden min-h-0">
+      <div className="glass flex flex-col overflow-visible min-h-0">
         <div className="px-5 py-4 border-b border-white/5 shrink-0">
           <p className="font-semibold text-text-main text-sm">{t('dashboard:sessions.table_title', { defaultValue: 'Danh sách phiên sạc' })}</p>
         </div>
@@ -914,3 +914,4 @@ export default function SessionsPage() {
     </div>
   );
 }
+

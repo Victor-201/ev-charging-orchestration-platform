@@ -255,7 +255,7 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
         {/* Left Column: User Table List */}
         <div className={cn(
-          "glass flex flex-col overflow-hidden min-h-0 transition-all duration-300",
+          "glass flex flex-col overflow-visible min-h-0 transition-all duration-300",
           selectedUser ? "lg:col-span-1" : "lg:col-span-3 w-full"
         )}>
             <div className="px-5 py-4 border-b border-white/5 shrink-0">
@@ -639,3 +639,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

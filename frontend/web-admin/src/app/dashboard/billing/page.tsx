@@ -253,7 +253,7 @@ export default function BillingPage() {
       {/* TRANSACTIONS TAB */}
       {tab === 'transactions' && (
         <div className="flex flex-col min-h-0 flex-1 gap-4">
-          <div className="glass flex flex-col overflow-hidden min-h-0 flex-1">
+          <div className="glass flex flex-col overflow-visible min-h-0 flex-1">
             <div className="px-5 py-4 border-b border-white/5 shrink-0">
               <p className="font-semibold text-text-main text-sm">{t('dashboard:billing.table_title_tx', { defaultValue: 'Danh sách lịch sử giao dịch' })}</p>
             </div>
@@ -365,7 +365,7 @@ export default function BillingPage() {
       {/* ARREARS TAB */}
       {tab === 'arrears' && (
         <div className="flex flex-col min-h-0 flex-1 gap-4">
-          <div className="glass flex flex-col overflow-hidden min-h-0 flex-1">
+          <div className="glass flex flex-col overflow-visible min-h-0 flex-1">
             <div className="px-5 py-4 border-b border-white/5 shrink-0">
               <p className="font-semibold text-text-main text-sm">{t('dashboard:billing.table_title_arrears', { defaultValue: 'Danh sách các khoản nợ đọng' })}</p>
             </div>
@@ -772,3 +772,4 @@ export default function BillingPage() {
     </div>
   );
 }
+

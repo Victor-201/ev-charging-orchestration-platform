@@ -552,7 +552,7 @@ export default function MaintenancePage() {
         </div>
       </div>
 
-      <div className="glass flex flex-col overflow-hidden min-h-0">
+      <div className="glass flex flex-col overflow-visible min-h-0">
         {tab === 'incidents' ? (
           <>
             <div className="px-5 py-4 border-b border-white/5 shrink-0">
@@ -948,3 +948,4 @@ export default function MaintenancePage() {
     </div>
   );
 }
+

@@ -442,7 +442,7 @@ export default function StaffPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
           {/* Staff List (left column) */}
-          <div className={cn("glass flex flex-col overflow-hidden min-h-0",
+          <div className={cn("glass flex flex-col overflow-visible min-h-0",
             tab === 'attendance' ? "lg:col-span-3" : selectedStaff ? "lg:col-span-1" : "lg:col-span-3 w-full")}>
             {tab === 'staff' ? (
               <>
@@ -625,7 +625,7 @@ export default function StaffPage() {
 
           {/* Right Panel */}
           {tab === 'staff' && selectedStaff && (
-            <div className="lg:col-span-2 glass flex flex-col overflow-hidden min-h-0">
+            <div className="lg:col-span-2 glass flex flex-col overflow-visible min-h-0">
               {selectedStaff ? (() => {
             const staffAttItems = selectedStaffAttData?.items ?? [];
             const staffCalDays = getMonthDays(staffCalYear, staffCalMonth);
@@ -1107,7 +1107,7 @@ export default function StaffPage() {
           </div>
 
           {/* Active charging sessions */}
-          <div className="glass flex flex-col overflow-hidden min-h-0 flex-1">
+          <div className="glass flex flex-col overflow-visible min-h-0 flex-1">
             <div className="px-5 py-4 border-b border-white/5 shrink-0">
               <p className="font-semibold text-text-main text-sm flex items-center gap-2">
                 <Zap className="w-4 h-4 text-cyan" />
@@ -1148,7 +1148,7 @@ export default function StaffPage() {
         </>
       ) : (
         /* Attendance tab for staff */
-        <div className="glass flex flex-col overflow-hidden min-h-0 flex-1">
+        <div className="glass flex flex-col overflow-visible min-h-0 flex-1">
           <div className="px-5 py-4 border-b border-white/5 shrink-0 flex items-center justify-between">
             <p className="font-semibold text-text-main text-sm">
               Lịch điểm danh - {VIETNAMESE_MONTHS[calMonth]} {calYear}
@@ -1203,3 +1203,4 @@ export default function StaffPage() {
     </div>
   );
 }
+
